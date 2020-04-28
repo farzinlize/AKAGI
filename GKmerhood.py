@@ -24,7 +24,13 @@ class GKmerhood:
 
     
     def initial_neighbourhood(self):
-        pass
+        for node in self.nodes:
+            neighbours = node.generate_neighbours()
+            for neighbour in neighbours:
+                if len(neighbour) >= self.kmin and len(neighbour) <= self.kmax:
+                    nodebour = self.trie.find(neighbour)
+                    if not node.is_neighbour(nodebour):
+                        node.add_neighbour(nodebour)
 
 
 
