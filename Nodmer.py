@@ -7,6 +7,18 @@ class Nodmer:
         self.neighbours = []
 
     
+    def is_neighbour(self, other):
+        for neighbour in self.neighbours:
+            if other.kmer == neighbour.kmer:
+                return True
+        return False
+
+
+    def add_neighbour(self, other):
+        self.neighbours += [other]
+        other.neighbours += [self]
+    
+
     def generate_neighbours(self):
         result = []
         for i in range(len(self.kmer)):
