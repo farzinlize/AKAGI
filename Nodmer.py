@@ -1,4 +1,4 @@
-from GKmerhood import GKmerhood
+# from GKmerhood import GKmerhood
 
 class Nodmer:
     def __init__(self, gkhood, kmer):
@@ -15,6 +15,38 @@ class Nodmer:
 
 
     def add_neighbour(self, other):
+
+        # binery search on sorted neighbourhood list
+        start = 0
+        end = len(self.neighbours)-1
+        while start <= end:
+            decision_is_made = False
+            mid = (end + start)//2
+            neighbour = self.neighbours[mid]
+            for i in range(min(len(neighbour.kmer), len(other.kmer))):
+                if neighbour.kmer[i] < other.kmer[i]:
+                    start = mid + 1
+                    decision_is_made = True
+                    break
+                elif neighbour.kmer[i] > other.kmer[i]:
+                    end = mid - 1
+                    decision_is_made = True
+                    break
+            if not decision_is_made:
+                if len(neighbour.kmer) == len(other.kmer):
+                    # print('AM I A JOKE TO YOU?')
+                    return # found - already a neighbour
+                elif len(neighbour.kmer) < len(other.kmer):
+                    start = mid + 1
+                elif len(neighbour.kmer) > len(other.kmer):
+                    end = mid - 1
+
+        # wasn't already a neighbour (add)
+        self.neighbours = self.neighbours[:start] + [other] + self.neighbours[start:]
+        other.add_neighbour(self)
+
+
+    def add_neighbour_inefficient(self, other):
         self.neighbours += [other]
         other.neighbours += [self]
     
