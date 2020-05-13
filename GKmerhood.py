@@ -8,6 +8,7 @@ class GKmerhood:
         self.alphabet = alphabet
         self.generate_dict(alphabet)
         self.nodes = self.initial_trie_nodes()
+        self.initial_neighbourhood()
 
 
     def generate_dict(self, alphabet):
@@ -29,13 +30,48 @@ class GKmerhood:
             for neighbour in neighbours:
                 if len(neighbour) >= self.kmin and len(neighbour) <= self.kmax:
                     nodebour = self.trie.find(neighbour)
-                    if not node.is_neighbour(nodebour):
-                        node.add_neighbour(nodebour)
+                    node.add_neighbour(nodebour)
 
 
+def test_main_2():
+    print("generating GKmerHood (it will take a while)")
+    gkhood = GKmerhood(5, 8)
+    print("finished!")
+
+    samples_5 = ['GTAGC', 'AATGC', 'TGCAT']
+    samples_6 = ['ATCTGA', 'TTTACG', 'AATGCA', 'GTACCA', 'ATTTTC']
+    samples_7 = ['ATCGTAC', 'TTATCGA', 'GTAGGGA', 'TTTTGTA']
+    samples_8 = ['GGTAGGTA', 'GCGTAGCA']
+
+    print('5-mers:')
+    for fmer in samples_5:
+        node = gkhood.trie.find(fmer)
+        print(node.kmer, ' - neighbours count:', len(node.neighbours))
+
+    print('6-mers:')
+    for smer in samples_6:
+        node = gkhood.trie.find(smer)
+        print(node.kmer, ' - neighbours count:', len(node.neighbours))
+
+    print('7-mers:')
+    for vmer in samples_7:
+        node = gkhood.trie.find(vmer)
+        print(node.kmer, ' - neighbours count:', len(node.neighbours))
+
+    print('8-mers:')
+    for gmer in samples_8:
+        node = gkhood.trie.find(gmer)
+        print(node.kmer, ' - neighbours count:', len(node.neighbours))
 
 
 def test_main():
-    pass
+    gkhood = GKmerhood(5, 7)
 
-# test_main()
+    sample = 'ATCTTA'
+    print('test 1 : all neighbours of ' + sample)
+    node = gkhood.trie.find(sample)
+    print(len(node.neighbours))
+    for each in node.neighbours:
+        print(each.kmer)
+
+test_main_2()
