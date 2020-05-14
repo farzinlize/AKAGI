@@ -34,7 +34,6 @@ class Nodmer:
                     break
             if not decision_is_made:
                 if len(neighbour.kmer) == len(other.kmer):
-                    # print('AM I A JOKE TO YOU?')
                     return # found - already a neighbour
                 elif len(neighbour.kmer) < len(other.kmer):
                     start = mid + 1
