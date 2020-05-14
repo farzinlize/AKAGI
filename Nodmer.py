@@ -1,5 +1,5 @@
 # from GKmerhood import GKmerhood
-from Queue import Queue
+from misc import Queue
 
 class Nodmer:
     def __init__(self, gkhood, kmer):
