@@ -1,4 +1,5 @@
 # from GKmerhood import GKmerhood
+from Queue import Queue
 
 class Nodmer:
     def __init__(self, gkhood, kmer):
@@ -65,3 +66,22 @@ class Nodmer:
         
         #last insertions
         return result + [self.kmer + letter for letter in self.graph.alphabet]
+
+
+    def dneighbours(self, dmax):
+        queue = Queue([self])
+        self.dneighbours = []
+        self.level = 0
+        while not queue.isEmpty():
+            current = queue.pop()
+            if current.level == dmax:
+                continue
+            for child in current.neighbours:
+                if hasattr(child, level):
+                    continue
+                child.level = current.level + 1
+                queue.insert(child)
+                self.dneighbours += [(child, child.level)]
+        for each in self.dneighbours:
+            delattr(each, level)
+        delattr(self, level)
