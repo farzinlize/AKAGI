@@ -70,7 +70,7 @@ class Nodmer:
 
     def dneighbours(self, dmax):
         queue = Queue([self])
-        self.dneighbours = []
+        dneighbours = []
         self.level = 0
         while not queue.isEmpty():
             current = queue.pop()
@@ -81,7 +81,8 @@ class Nodmer:
                     continue
                 child.level = current.level + 1
                 queue.insert(child)
-                self.dneighbours += [(child, child.level)]
-        for each in self.dneighbours:
+                dneighbours += [(child, child.level)]
+        for each in dneighbours:
             delattr(each, level)
         delattr(self, level)
+        return dneighbours
