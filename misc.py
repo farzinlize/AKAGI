@@ -1,3 +1,5 @@
+import os
+
 class Queue:
     def __init__(self, items=[]):
         self.queue = items
@@ -20,11 +22,11 @@ class Queue:
 class FileHandler:
     def __init__(self, gkhood, directory=None, max_size=1000000):
         if directory == None:
-            self.directory = 'find_file/'
+            self.directory = os.getcwd() + '\\find_file\\'
         else:
-            self.directory = directory+'/'
-        self.heaparray = [None for i in range()]
-        self.current_file = open('0.data', 'w')
+            self.directory = os.getcwd() + '\\' + directory + '\\'
+        os.mkdir(self.directory, 0o755)
+        self.current_file = open(self.directory + '0.data', 'w')
         self.file_index = 0
         self.position = 0
         self.max_size = max_size
@@ -33,7 +35,8 @@ class FileHandler:
     def next_file(self):
         self.current_file.close()
         self.file_index += 1
-        self.current_file = open(str(self.file_index)+'.data', 'w')
+        self.position = 0
+        self.current_file = open(self.directory + str(self.file_index)+'.data', 'w')
 
 
     def put(self, dneighbours):
@@ -41,6 +44,10 @@ class FileHandler:
         for each in dneighbours:
             self.current_file.write(each[0].kmer + '\t' + str(each[1]) + '\n')
             self.position += 1
+
+        # progressing commend
+        print('size ->', self.position - position)
+
         if self.position >= self.max_size:
             self.next_file()
         return data_index, position
@@ -52,8 +59,8 @@ class FileHandler:
 
 
     def reopen(self):
-        self.current_file = open(str(self.file_index)+'.data', 'a')
-        self.findfile = open(self.find_filename, 'a+')
+        self.current_file = open(self.directory + str(self.file_index)+'.data', 'a')
+        self.findfile = open(self.directory + self.find_filename, 'a+')
 
 
     def goto(self, line):
@@ -132,4 +139,15 @@ def test_main_2():
 
     f.close()
 
-test_main_3()
+
+def test_main_4():
+    o = os.getcwd()
+    directory = '\\dataset\\'
+    os.mkdir(o+directory, 0o755)
+    f = open(o+directory + '0.data', 'w')
+    f.write("hello")
+
+
+#######################################################
+# main function call
+# test_main_4()
