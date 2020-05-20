@@ -77,12 +77,12 @@ class Nodmer:
             if current.level == dmax:
                 continue
             for child in current.neighbours:
-                if hasattr(child, level):
+                if hasattr(child, 'level'):
                     continue
                 child.level = current.level + 1
                 queue.insert(child)
                 dneighbours += [(child, child.level)]
         for each in dneighbours:
-            delattr(each, level)
-        delattr(self, level)
+            delattr(each[0], 'level')
+        delattr(self, 'level')
         return dneighbours
