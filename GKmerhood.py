@@ -1,5 +1,6 @@
 from TrieFind import TrieNode
 from Nodmer import Nodmer
+from misc import FileHandler, heap_decode
 
 class GKmerhood:
     def __init__(self, k_min, k_max, alphabet='ATCG'):
@@ -31,6 +32,30 @@ class GKmerhood:
                 if len(neighbour) >= self.kmin and len(neighbour) <= self.kmax:
                     nodebour = self.trie.find(neighbour)
                     node.add_neighbour(nodebour)
+
+
+    def generate_dataset(self, dmax):
+        handler = FileHandler(self, 'dataset')
+        first_code = (4**(self.kmin+1) - 1)/3 + 1
+        with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.tree', 'w+') as tree:
+            for code in range(int(first_code), len(self.nodes)):
+                node = self.trie.find(heap_decode(code, self.alphabet))
+                if node == None:
+                    print('ERROR: node couldnt be found, code -> ' + code)
+                    continue
+                dneighbourhood = node.dneighbours(dmax)
+                file_index, position = handler.put(dneighbourhood)
+                tree.write(str(file_index) + '\t' + str(position) + '\n')
+
+
+
+############################################
+
+def main():
+    print("generating GKmerHood (it will take a while)")
+    gkhood = GKmerhood(5, 8)
+    print("finished!")
+    gkhood.generate_dataset(4)
 
 
 def test_main_2():
@@ -74,4 +99,6 @@ def test_main():
     for each in node.neighbours:
         print(each.kmer)
 
-test_main_2()
+##########################################################
+# main function call
+main()
