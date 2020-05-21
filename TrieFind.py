@@ -70,8 +70,6 @@ class TrieNode:
             motifs += child.extract_motif(q)
         return motifs
         
-        
-
 
 def binery_add(lst, item):
     start = 0
