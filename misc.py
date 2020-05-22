@@ -1,5 +1,9 @@
 import os
 
+'''
+    Queue structure implementation (FIFO)
+        First in (insert), first out (pop)
+'''
 class Queue:
     def __init__(self, items=[]):
         self.queue = items
@@ -19,6 +23,12 @@ class Queue:
         return len(self.queue) == 0
 
 
+'''
+    File handler object -> accumulate data packages in seprated file with size limit
+        at each line two value (neighbout-kmer and its distance) will be saved
+        after inserting all d-neighbours lines, if line count exceededs the limit, 
+        next set will be saved in another file
+'''
 class FileHandler:
     def __init__(self, gkhood, directory=None, max_size=1000000):
         if directory == None:
@@ -32,6 +42,9 @@ class FileHandler:
         self.max_size = max_size
 
 
+    '''
+        initiate next file by reseting position value and opening new file
+    '''
     def next_file(self):
         self.current_file.close()
         self.file_index += 1
@@ -63,12 +76,10 @@ class FileHandler:
         self.findfile = open(self.directory + self.find_filename, 'a+')
 
 
-    def goto(self, line):
-        self.findfile.seek(0)
-        for i in range(line):
-            self.findfile.readline()
-
-
+'''
+    calculate edit-distance between two kmer
+        [WARNING] take a lot of time due to calling 4 recursive at each level
+'''
 def edistance(kmer, lmer):
     if len(kmer) == 0:
         return len(lmer)
@@ -78,10 +89,18 @@ def edistance(kmer, lmer):
         return edistance(kmer[1:], lmer[1:])
     return min(edistance(kmer[1:], lmer)+1, edistance(kmer, lmer[1:])+1, edistance(kmer[1:], lmer[1:])+1)
 
-######################################################
 
-# only works for DNA (4 letter alphabets)
-# --------- #
+# ########################################## #
+#            heap array encoding             #
+# ########################################## #
+
+'''
+    heap array encoding functions -> assign an index of an array to all kmers
+        for each node in a trie as a complete tree (heap), it will line up each trie node
+        heap_encode uses dictionary to measure letter indexes but heap_decode uses an alphabet
+
+    [WARNING] it only works for DNA alphabet (or any 4 letter alphabet)
+'''
 def heap_encode(kmer, dictionary):
     code = 1
     for letter in kmer:
@@ -95,8 +114,13 @@ def heap_decode(code, alphabet):
         kmer = alphabet[-((code+2)%4+1)] + kmer
         code = (code+2) // 4 # parent
     return kmer
-######################################################
 
+
+# ########################################## #
+#           main fucntion section            #
+# ########################################## #
+
+# testing edistance function
 def test_main():
     kmer = 'GTCGCAGTCGCTGCC'
     lmer = 'CGCTGCCACCGCTG'
@@ -106,6 +130,7 @@ def test_main():
     print(edistance(pmer, kmer))
 
 
+# testing heap array encoding
 def test_main_3():
     d = {'A':0, 'C':1, 'T':2, 'G':3}
     alphabet = 'ACTG'
@@ -125,6 +150,7 @@ def test_main_3():
     print(kmer_4, heap_encode(kmer_4, d))
 
 
+# testing
 def test_main_2():
     f = open("test.data", 'w+')
     f.write('>5\t2\n>6\t2\n\n\n\n\n>7\t4\n')
@@ -140,6 +166,7 @@ def test_main_2():
     f.close()
 
 
+# testing how directory works in windows 
 def test_main_4():
     o = os.getcwd()
     directory = '\\dataset\\'
@@ -148,6 +175,6 @@ def test_main_4():
     f.write("hello")
 
 
-#######################################################
+##########################################
 # main function call
 # test_main_4()

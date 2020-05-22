@@ -1,29 +1,48 @@
 from Nodmer import Nodmer
 
+'''
+    Trie node object -> two purposed object for <searching> and <saving> kmers
+        each node belongs to a level of tree and has a label indicating coresponding kmer
+
+    <searching>: a trie binding to gkhood is used for searching a specific node for its kmer
+        also this object will generate all nodes (child_birth) for its gkhood.
+        each node within gkhood dimensions has a reference to coreponding node in gkhood
+    
+    <saving>: also known as motif tree, this object will save kmers occurrence information
+        starting with a single root node, for each new kmer the coresponding path will be traversed
+        or generated if it isn't exist. each node, in this mode, holds a sorted seen-list
+            seen-list -> a list containing sequence IDs that coresponding kmer had been seen
+'''
 class TrieNode:
     def __init__(self, lable='', level=0):
         self.label = lable
         self.childs = []
         self.level = level
-        self.hasNode = False
 
 
+    # ########################################## #
+    #             searching section              #
+    # ########################################## #
+
+    # root node is in first (zero) level
     def is_root(self):
         return self.level == 0
 
 
     def get_node(self):
-        if not self.hasNode:
-            raise Exception("this trie has no node")
-        return self.node
+        if hasattr(self, 'node'):
+            return self.node
 
 
     def create_node(self, gkhood):
         self.node = Nodmer(gkhood, self.label)
-        self.hasNode = True
         return self.node
 
 
+    '''
+        recursively, initial a complete tree up to gkhood maximum size level
+            each node that is within gkhood dimensions will generate a new node
+    '''
     def child_birth(self, gkhood):
         if self.level == gkhood.kmax:
             return [self.create_node(gkhood)]
@@ -36,6 +55,7 @@ class TrieNode:
         return grandchildsNodmers
 
 
+    # recursively will find a specific node coresponding to a specific kmer
     def find(self, kmer):
         if len(kmer) == 0:
             return self.get_node()
@@ -45,6 +65,10 @@ class TrieNode:
             if child.label[-1] == kmer[0]:
                 return child.find(kmer[1:])
 
+
+    # ########################################## #
+    #         saving seen kmers section          #
+    # ########################################## #
 
     def add_frame(self, kmer, seq_id):
         if len(kmer) == 0:
@@ -71,6 +95,7 @@ class TrieNode:
         return motifs
         
 
+# add an item to a sorted list using binery search
 def binery_add(lst, item):
     start = 0
     end = len(lst)-1
@@ -85,6 +110,11 @@ def binery_add(lst, item):
     return lst[:start] + [item] + lst[start:]
 
 
+# ########################################## #
+#           main fucntion section            #
+# ########################################## #
+
+# testing binery search-add
 def test_main():
     lst = []
     lst = binery_add(lst, 5)
@@ -95,4 +125,7 @@ def test_main():
     lst = binery_add(lst, 3)
     print(lst)
 
+
+##########################################
+# main function call
 # test_main()

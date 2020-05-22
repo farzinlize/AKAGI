@@ -1,6 +1,11 @@
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood
 
+'''
+    Graph interface object -> responsible for returning d-neighbourhood, extracted from GKhood
+        if an instance of gkhood is already in memory, the object will use the instance
+        and if not, the object will extract a location of requested data from a tree-like file
+'''
 class GKHoodTree:
     def __init__(self, filename='', gkhood=None):
         if gkhood != None:
@@ -18,11 +23,17 @@ class GKHoodTree:
 
         
 
-def find_motif_all_neighbours(gkhood_tree, dmax, fram_size, sequences):
+'''
+    motif finding function -> first version of motif-finding algorithm using gkhood
+        an empty trie tree will save all seen kmers in sequence
+        all frames of any sequences and its d-neighbours will be considered as seen kmers
+        the trie will return motifs (kmers that are present in all sequences)
+'''
+def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
     motifs_tree = TrieNode()
     for seq_id in range(len(sequences)):
         frame_start = 0
-        frame_end = fram_size
+        frame_end = frame_size
         while frame_end < len(sequences[seq_id]):
             frame = sequences[seq_id][frame_start:frame_end]
             dneighbours = gkhood_tree.dneighbours(frame, dmax)
@@ -34,6 +45,8 @@ def find_motif_all_neighbours(gkhood_tree, dmax, fram_size, sequences):
     return motifs_tree.extract_motif(len(sequences))
 
 
+
+# extract sequences from a fasta file
 def read_fasta(filename):
     sequences = []
     fasta = open(filename, 'r')
@@ -43,7 +56,11 @@ def read_fasta(filename):
         sequences += [line]
     return sequences
 
+# ########################################## #
+#           main fucntion section            #
+# ########################################## #
 
+# real main function for finding motifs using gkhood object in memory
 def main():
     print('generating gkhood (it will take some time)')
     gkhood = GKmerhood(5, 8)
@@ -54,4 +71,6 @@ def main():
     print('number of motifs->', len(motifs))
     print(motifs)
 
+##########################################
+# main function call
 main()
