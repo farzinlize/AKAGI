@@ -71,15 +71,20 @@ class TrieNode:
     # ########################################## #
 
     def add_frame(self, kmer, seq_id):
+
         if len(kmer) == 0:
+            # end of the path
             if not hasattr(self, 'found_list'):
                 self.found_list = []
             self.found_list = binery_add(self.found_list, seq_id)
             return
+        
+        # searching for proper path
         for child in self.childs:
             if child.label[-1] == kmer[0]:
                 return child.add_frame(kmer[1:], seq_id)
-        # proper child dose not exist
+
+        # proper child (path) dose not exist
         new_child = TrieNode(self.label + kmer[0], self.level+1)
         self.childs += [new_child]
         return new_child.add_frame(kmer[1:], seq_id)
