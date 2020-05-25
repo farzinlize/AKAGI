@@ -71,7 +71,16 @@ def main():
     print('number of motifs->', len(motifs))
     print(motifs)
 
-##########################################
+
+# testing read_fasta
+def test_main():
+    sequences = sequences = read_fasta('data/Real/dm01r.fasta')
+    print(sequences)
+
+
+# ########################################## #
+#           main fucntion call               #
+# ########################################## #
 
 # main function call
 if __name__ == "__main__":
