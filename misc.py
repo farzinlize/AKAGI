@@ -1,4 +1,4 @@
-import os
+import os, platform
 
 '''
     Queue structure implementation (FIFO)
@@ -30,11 +30,20 @@ class Queue:
         next set will be saved in another file
 '''
 class FileHandler:
-    def __init__(self, gkhood, directory=None, max_size=1000000):
-        if directory == None:
-            self.directory = os.getcwd() + '\\find_file\\'
+    def __init__(self, gkhood, directory_name=None, max_size=1000000):
+
+        # file address spliter is different in windows and linux
+        operating_system = platform.system()
+        if operating_system == 'Windows':
+            spliter = '\\'
+        else:   # operating_system == 'Linux'
+            spliter = '/'
+
+        if directory_name == None:
+            self.directory = os.getcwd() + spliter + 'dataset' + spliter
         else:
-            self.directory = os.getcwd() + '\\' + directory + '\\'
+            self.directory = os.getcwd() + spliter + directory_name + spliter
+            
         os.mkdir(self.directory, 0o755)
         self.current_file = open(self.directory + '0.data', 'w')
         self.file_index = 0
