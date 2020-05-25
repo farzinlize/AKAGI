@@ -72,5 +72,7 @@ def main():
     print(motifs)
 
 ##########################################
+
 # main function call
-main()
+if __name__ == "__main__":
+    main()

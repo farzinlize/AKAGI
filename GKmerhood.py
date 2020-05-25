@@ -139,4 +139,5 @@ def test_main():
 # ########################################## #
 
 # main function call
-# main()
+if __name__ == "__main__":
+    main()
