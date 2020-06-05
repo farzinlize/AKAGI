@@ -1,3 +1,5 @@
 __pycache__/*
 *.data
 *.tree
+/dataset/*
+output.txt
