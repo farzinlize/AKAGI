@@ -90,6 +90,25 @@ def main():
     gkhood.generate_dataset(4)
 
 
+def test_main_3():
+    print("[TEST-3] generating GKmerHood (it will take a while)")
+    gkhood = GKmerhood(5, 8)
+    first_code = int( (4**(gkhood.kmin+1) - 1)/3 + 1 )
+    last_code = len(gkhood.nodes)-1
+    kmer = heap_decode(first_code, gkhood.alphabet)
+    lmer = heap_decode(last_code, gkhood.alphabet)
+    print('first: kmer and code -> ', kmer, first_code)
+    print('last: kmer and code -> ', lmer, last_code)
+    node = gkhood.trie.find(kmer)
+    if node == None:
+        print('oh shit')
+    dn = node.dneighbours(4)
+    print(len(dn))
+    for each in dn:
+        if each[1] == 1:
+            print(each[0].kmer)
+
+
 # test main function for analyzing neighbours count for different kmers
 def test_main_2():
     print("generating GKmerHood (it will take a while)")
@@ -124,14 +143,19 @@ def test_main_2():
 
 # test main function for tseting gkhood implementation
 def test_main():
-    gkhood = GKmerhood(5, 7)
+    gkhood = GKmerhood(5, 8)
 
-    sample = 'ATCTTA'
+    sample = 'GGGGG'
     print('test 1 : all neighbours of ' + sample)
     node = gkhood.trie.find(sample)
     print(len(node.neighbours))
     for each in node.neighbours:
         print(each.kmer)
+
+    neighbours_list = node.generate_neighbours()
+    print(len(neighbours_list))
+    for each in neighbours_list:
+        print(each)
 
 
 # ########################################## #
@@ -140,4 +164,4 @@ def test_main():
 
 # main function call
 if __name__ == "__main__":
-    main()
+    test_main_3()
