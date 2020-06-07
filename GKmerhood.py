@@ -1,6 +1,7 @@
 from TrieFind import TrieNode
 from Nodmer import Nodmer
 from misc import FileHandler, heap_decode
+import json
 
 '''
     Graph object -> hold all information of nodes and graph properties
@@ -65,9 +66,10 @@ class GKmerhood:
     '''
     def generate_dataset(self, dmax):
         handler = FileHandler(self, 'dataset')
-        first_code = (4**(self.kmin+1) - 1)/3 + 1
+        first_code = (4**(self.kmin) - 1)//3 + 1
+        last_code = (4**(self.kmax) - 1)//3
         with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.tree', 'w+') as tree:
-            for code in range(int(first_code), len(self.nodes)):
+            for code in range(first_code, last_code+1):
                 node = self.trie.find(heap_decode(code, self.alphabet))
                 if node == None:
                     print('ERROR: node couldnt be found, code -> ' + code)
@@ -75,6 +77,25 @@ class GKmerhood:
                 dneighbourhood = node.dneighbours(dmax)
                 file_index, position = handler.put(dneighbourhood)
                 tree.write(str(file_index) + '\t' + str(position) + '\n')
+
+        self.generate_dataset_metadata(dmax)
+        
+
+    '''
+        generating metadata json file to store dataset information described in code
+    '''
+    def generate_dataset_metadata(self, dmax):
+        with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.metadata', 'w+') as meta:
+            first_code = (4**(self.kmin) - 1)//3
+            metadata_dict = { 
+                'kmax':self.kmax,
+                'kmin':self.kmin,
+                'dmax':dmax,
+                'bias':first_code,
+                'alphabet':self.alphabet
+            }
+            meta.write(json.dumps(metadata_dict))
+
 
 
 # ########################################## #
@@ -88,6 +109,49 @@ def main():
     gkhood = GKmerhood(5, 8)
     print("finished!")
     gkhood.generate_dataset(4)
+
+
+# repairing dataset
+def repair():
+    print("generating GKmerHood (it will take a while)")
+    gkhood = GKmerhood(5, 8)
+    print("finished!")
+    dmax = 4
+    handler = FileHandler(gkhood, 'repair')
+    real_first_code = (4**(gkhood.kmin) - 1)//3 + 1
+    last_remaining_code = (4**(gkhood.kmin+1) - 1)//3
+    with open('repair.tree', 'w+') as repair_tree:
+        for code in range(real_first_code, last_remaining_code+1):
+            node = gkhood.trie.find(heap_decode(code, gkhood.alphabet))
+            if node == None:
+                print('ERROR: node couldnt be found, code -> ' + code)
+                continue
+            dneighbourhood = node.dneighbours(dmax)
+            file_index, position = handler.put(dneighbourhood)
+            repair_tree.write(str(file_index) + '\t' + str(position) + '\n')
+
+
+# generating metadata seperatly
+def metadata_main():
+    print('METADATA - main')
+    print("generating GKmerHood (it will take a while)")
+    gkhood = GKmerhood(5, 8)
+    print("finished!")
+    gkhood.generate_dataset_metadata(4)
+
+
+# merge tree (tested)
+def merge_tree():
+    tree1 = open('gkhood5_8.tree', 'r')
+    tree2 = open('repair.tree', 'r')
+    merged = open('gkhood5_8_REPAIRED.tree', 'w+')
+    for line in tree2:
+        merged.write('R'+line)
+    for line in tree1:
+        merged.write(line)
+    tree1.close()
+    tree2.close()
+    merged.close()
 
 
 def test_main_3():
@@ -164,4 +228,4 @@ def test_main():
 
 # main function call
 if __name__ == "__main__":
-    test_main_3()
+    metadata_main()
