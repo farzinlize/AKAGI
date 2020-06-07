@@ -1,5 +1,9 @@
 import os, platform
 
+# ########################################## #
+#                 class part                 #
+# ########################################## #
+
 '''
     Queue structure implementation (FIFO)
         First in (insert), first out (pop)
@@ -85,6 +89,11 @@ class FileHandler:
         self.findfile = open(self.directory + self.find_filename, 'a+')
 
 
+# ########################################## #
+#                 functions                  #
+# ########################################## #
+
+
 '''
     calculate edit-distance between two kmer
         [WARNING] take a lot of time due to calling 4 recursive at each level
@@ -97,6 +106,13 @@ def edistance(kmer, lmer):
     if kmer[0] == lmer[0]:
         return edistance(kmer[1:], lmer[1:])
     return min(edistance(kmer[1:], lmer)+1, edistance(kmer, lmer[1:])+1, edistance(kmer[1:], lmer[1:])+1)
+
+
+def alphabet_to_dictionary(alphabet):
+    dictionary = {}
+    for i in range(len(alphabet)):
+        dictionary.update({alphabet[i]:i})
+    return dictionary
 
 
 # ########################################## #
