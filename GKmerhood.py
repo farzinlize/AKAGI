@@ -86,7 +86,7 @@ class GKmerhood:
     '''
     def generate_dataset_metadata(self, dmax):
         with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.metadata', 'w+') as meta:
-            first_code = (4**(self.kmin) - 1)//3
+            first_code = (4**(self.kmin) - 1)//3 + 1 
             metadata_dict = { 
                 'kmax':self.kmax,
                 'kmin':self.kmin,
