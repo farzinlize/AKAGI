@@ -58,7 +58,7 @@ class GKHoodTree:
         line = heap_encode(kmer, self.dictionary) - self.metadata['bias']
         dn_length = self.tree[line+1][1] - self.tree[line][1]
         dneghbours = []
-        with open(self.directory + self.tree[line][0], 'r') as host:
+        with open(self.directory + self.tree[line][0] + '.data', 'r') as host:
 
             # skip lines
             for _ in range(self.tree[line][1]):
@@ -124,6 +124,32 @@ def main():
     print(motifs)
 
 
+def test_main_2():
+    tree = GKHoodTree('gkhood5_8', 'dataset')
+
+    sample = 'GGGGGG'
+    dn = tree.dneighbours(sample, 4)
+    line = heap_encode(sample, tree.dictionary) - tree.metadata['bias']
+
+    print('sample -> ', sample, ' line -> ', line)
+    print(len(dn))
+    for each in dn:
+        if each[1] > 1:
+            break
+        print(each)
+
+    print('##############################')
+
+    sample_2 = 'AGCGCA'
+    dn_2 = tree.dneighbours(sample_2, 1)
+    line_2 = heap_encode(sample_2, tree.dictionary) - tree.metadata['bias']
+
+    print('sample -> ', sample_2, ' line ->', line_2)
+    print(len(dn_2))
+    for each in dn_2:
+        print(each)
+
+
 def test_json_read():
     with open('gkhood5_8.metadata', 'r') as meta:
         data = json.load(meta)
@@ -144,4 +170,4 @@ def test_main():
 
 # main function call
 if __name__ == "__main__":
-    main()
+    test_main_2()
