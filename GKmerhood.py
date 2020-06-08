@@ -65,7 +65,7 @@ class GKmerhood:
         this function only works for DNA alphabet (or any 4 letter alphabet)
     '''
     def generate_dataset(self, dmax):
-        handler = FileHandler(self, 'dataset')
+        handler = FileHandler('dataset')
         first_code = (4**(self.kmin) - 1)//3 + 1
         last_code = (4**(self.kmax) - 1)//3
         with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.tree', 'w+') as tree:

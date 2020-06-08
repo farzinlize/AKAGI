@@ -7,7 +7,7 @@ def repair():
     gkhood = GKmerhood(5, 8)
     print("finished!")
     dmax = 4
-    handler = FileHandler(gkhood, 'repair')
+    handler = FileHandler('repair')
     real_first_code = (4**(gkhood.kmin) - 1)//3 + 1
     last_remaining_code = (4**(gkhood.kmin+1) - 1)//3
     with open('head_repair.tree', 'w+') as head_tree:

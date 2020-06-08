@@ -34,7 +34,7 @@ class Queue:
         next set will be saved in another file
 '''
 class FileHandler:
-    def __init__(self, gkhood, directory_name=None, max_size=1000000):
+    def __init__(self, directory_name=None, max_size=1000000):
 
         # file address spliter is different in windows and linux
         operating_system = platform.system()
