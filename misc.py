@@ -34,7 +34,9 @@ class Queue:
         next set will be saved in another file
 '''
 class FileHandler:
-    def __init__(self, directory_name=None, max_size=1000000):
+    def __init__(self, directory_name=None, max_size=1000000, filename_prefix=''):
+
+        self.prefix = filename_prefix
 
         # file address spliter is different in windows and linux
         operating_system = platform.system()
@@ -47,9 +49,13 @@ class FileHandler:
             self.directory = os.getcwd() + spliter + 'dataset' + spliter
         else:
             self.directory = os.getcwd() + spliter + directory_name + spliter
-            
-        os.mkdir(self.directory, 0o755)
-        self.current_file = open(self.directory + '0.data', 'w')
+
+        try:
+            os.mkdir(self.directory, 0o755)
+        except:
+            print('[WARNING] directory already excist')
+
+        self.current_file = open(self.directory + self.prefix + '0.data', 'w')
         self.file_index = 0
         self.position = 0
         self.max_size = max_size
@@ -62,7 +68,7 @@ class FileHandler:
         self.current_file.close()
         self.file_index += 1
         self.position = 0
-        self.current_file = open(self.directory + str(self.file_index)+'.data', 'w')
+        self.current_file = open(self.directory + self.prefix + str(self.file_index)+'.data', 'w')
 
 
     def put(self, dneighbours):
@@ -85,7 +91,7 @@ class FileHandler:
 
 
     def reopen(self):
-        self.current_file = open(self.directory + str(self.file_index)+'.data', 'a')
+        self.current_file = open(self.directory + self.prefix + str(self.file_index)+'.data', 'a')
         self.findfile = open(self.directory + self.find_filename, 'a+')
 
 
