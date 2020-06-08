@@ -111,26 +111,6 @@ def main():
     gkhood.generate_dataset(4)
 
 
-# repairing dataset
-def repair():
-    print("generating GKmerHood (it will take a while)")
-    gkhood = GKmerhood(5, 8)
-    print("finished!")
-    dmax = 4
-    handler = FileHandler(gkhood, 'repair')
-    real_first_code = (4**(gkhood.kmin) - 1)//3 + 1
-    last_remaining_code = (4**(gkhood.kmin+1) - 1)//3
-    with open('repair.tree', 'w+') as repair_tree:
-        for code in range(real_first_code, last_remaining_code+1):
-            node = gkhood.trie.find(heap_decode(code, gkhood.alphabet))
-            if node == None:
-                print('ERROR: node couldnt be found, code -> ' + code)
-                continue
-            dneighbourhood = node.dneighbours(dmax)
-            file_index, position = handler.put(dneighbourhood)
-            repair_tree.write(str(file_index) + '\t' + str(position) + '\n')
-
-
 # generating metadata seperatly
 def metadata_main():
     print('METADATA - main')
@@ -138,20 +118,6 @@ def metadata_main():
     gkhood = GKmerhood(5, 8)
     print("finished!")
     gkhood.generate_dataset_metadata(4)
-
-
-# merge tree (tested)
-def merge_tree():
-    tree1 = open('gkhood5_8.tree', 'r')
-    tree2 = open('repair.tree', 'r')
-    merged = open('gkhood5_8_REPAIRED.tree', 'w+')
-    for line in tree2:
-        merged.write('R'+line)
-    for line in tree1:
-        merged.write(line)
-    tree1.close()
-    tree2.close()
-    merged.close()
 
 
 def test_main_3():
