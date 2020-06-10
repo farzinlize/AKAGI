@@ -78,13 +78,14 @@ class GKmerhood:
                 file_index, position = handler.put(dneighbourhood)
                 tree.write(str(file_index) + '\t' + str(position) + '\n')
 
-        self.generate_dataset_metadata(dmax)
+        number_of_files = handler.close()
+        self.generate_dataset_metadata(dmax, number_of_files)
         
 
     '''
         generating metadata json file to store dataset information described in code
     '''
-    def generate_dataset_metadata(self, dmax):
+    def generate_dataset_metadata(self, dmax, number_of_files):
         with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.metadata', 'w+') as meta:
             first_code = (4**(self.kmin) - 1)//3 + 1 
             metadata_dict = { 
@@ -92,7 +93,8 @@ class GKmerhood:
                 'kmin':self.kmin,
                 'dmax':dmax,
                 'bias':first_code,
-                'alphabet':self.alphabet
+                'alphabet':self.alphabet,
+                'files':number_of_files
             }
             meta.write(json.dumps(metadata_dict))
 
@@ -117,7 +119,7 @@ def metadata_main():
     print("generating GKmerHood (it will take a while)")
     gkhood = GKmerhood(5, 8)
     print("finished!")
-    gkhood.generate_dataset_metadata(4)
+    gkhood.generate_dataset_metadata(4, 1800) # not real number of files as argument
 
 
 def test_main_3():
