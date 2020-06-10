@@ -87,12 +87,11 @@ class FileHandler:
 
     def close(self):
         self.current_file.close()
-        self.findfile.close()
+        return self.file_index+1
 
 
     def reopen(self):
         self.current_file = open(self.directory + self.prefix + str(self.file_index)+'.data', 'a')
-        self.findfile = open(self.directory + self.find_filename, 'a+')
 
 
 # ########################################## #
