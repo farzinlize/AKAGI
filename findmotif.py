@@ -73,13 +73,25 @@ class GKHoodTree:
         
         return dneghbours
 
+
+    def get_position(self, kmer):
+
+        # return None if there is no dataset
+        if hasattr(self, 'gkhood'):
+            return None
+
+        line = heap_encode(kmer, self.dictionary) - self.metadata['bias']
+        return self.tree[line]
         
+
 
 '''
     motif finding function -> first version of motif-finding algorithm using gkhood
         an empty trie tree will save all seen kmers in sequence
         all frames of any sequences and its d-neighbours will be considered as seen kmers
         the trie will return motifs (kmers that are present in all sequences)
+
+    [WARNING] function requires strings for d-neighbours kmer, but GKhoodTree class may provide Nodmers
 '''
 def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
     motifs_tree = TrieNode()
@@ -91,11 +103,10 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
             dneighbours = gkhood_tree.dneighbours(frame, dmax)
             motifs_tree.add_frame(frame, seq_id)
             for each in dneighbours:
-                motifs_tree.add_frame(each[0].kmer, seq_id)
+                motifs_tree.add_frame(each[0], seq_id)
             frame_start += 1
             frame_end += 1
     return motifs_tree.extract_motif(len(sequences))
-
 
 
 # extract sequences from a fasta file
@@ -105,8 +116,27 @@ def read_fasta(filename):
     for line in fasta:
         if line[0] == '>':
             continue
-        sequences += [line]
+        sequences += [line[:-1]]
     return sequences
+
+
+def sequence_dataset_files(filename, sequences, frame_size):
+    tree = GKHoodTree('gkhood5_8', 'dataset')
+
+    required_files_mask = [0 for i in range(tree.metadata['files'])]
+
+    for sequence in sequences:
+        frame_start = 0
+        frame_end = frame_size
+        while frame_end <= len(sequence):
+            frame = sequence[frame_start:frame_end]
+            file_index = int(tree.get_position(frame)[0])
+            required_files_mask[file_index] += 1
+            frame_start += 1
+            frame_end += 1
+
+    return [index for index in range(tree.metadata['files']) if required_files_mask[index] != 0]
+
 
 # ########################################## #
 #           main fucntion section            #
@@ -114,14 +144,18 @@ def read_fasta(filename):
 
 # real main function for finding motifs using gkhood object in memory
 def main():
-    print('generating gkhood (it will take some time)')
-    gkhood = GKmerhood(5, 8)
-    print('gkhood is generated successfully')
     sequences = read_fasta('data/Real/dm01r.fasta')
-    tree = GKHoodTree(gkhood=gkhood)
-    motifs = find_motif_all_neighbours(tree, 3, 7, sequences)
+    tree = GKHoodTree('gkhood5_8', 'dataset')
+    motifs = find_motif_all_neighbours(tree, 3, 6, sequences)
     print('number of motifs->', len(motifs))
     print(motifs)
+
+
+def main_required_files():
+    sequences = read_fasta('data/Real/hm24r.fasta')
+    req_files = sequence_dataset_files('dm01r.req', sequences, 7)
+    print(len(req_files))
+    print(req_files)
 
 
 def test_main_2():
@@ -170,4 +204,4 @@ def test_main():
 
 # main function call
 if __name__ == "__main__":
-    test_main_2()
+    main()
