@@ -92,12 +92,12 @@ class TrieNode:
         # searching for proper path
         for child in self.childs:
             if child.label[-1] == kmer[0]:
-                return child.add_frame(kmer[1:], seq_id)
+                return child.add_frame(kmer[1:], seq_id, position)
 
         # proper child (path) dose not exist
         new_child = TrieNode(self.label + kmer[0], self.level+1)
         self.childs += [new_child]
-        return new_child.add_frame(kmer[1:], seq_id)
+        return new_child.add_frame(kmer[1:], seq_id, position)
 
 
     '''
@@ -113,7 +113,7 @@ class TrieNode:
                 else:
                     motifs += [self]
         for child in self.childs:
-            motifs += child.extract_motif(q)
+            motifs += child.extract_motifs(q, result_kmer)
         return motifs
         
         
@@ -124,7 +124,7 @@ def binery_special_add(found_list, seq_id, position):
     while start <= end:
         mid = (start+end)//2
         if found_list[0][mid] == seq_id:
-            found_list[1] = binery_add(found_list[1], position)
+            found_list[1][mid] = binery_add(found_list[1][mid], position)
             return found_list
         elif found_list[0][mid] < seq_id:
             start = mid + 1
