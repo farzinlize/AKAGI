@@ -100,24 +100,22 @@ class TrieNode:
         return new_child.add_frame(kmer[1:], seq_id)
 
 
-    def extract_motifs(self, q):
+    '''
+        extracting motifs, nodes that are present in q number of sequences
+            result_kmer -> indicates output type: 0 for object and 1 for kmer only
+    '''
+    def extract_motifs(self, q, result_kmer=1):
         motifs = []
         if hasattr(self, 'found_list'):
             if len(self.found_list[0]) >= q:
-                motifs += [self]
+                if result_kmer:
+                    motifs += [self.label]
+                else:
+                    motifs += [self]
         for child in self.childs:
             motifs += child.extract_motif(q)
         return motifs
-    
-    
-    def extract_motifs_kmers(self, q):
-        motifs = []
-        if hasattr(self, 'found_list'):
-            if len(self.found_list[0]) >= q:
-                motifs += [self.label]
-        for child in self.childs:
-            motifs += child.extract_motif(q)
-        return motifs
+        
         
 
 def binery_special_add(found_list, seq_id, position):

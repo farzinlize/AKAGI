@@ -146,10 +146,7 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences, result_k
                 progress = 0
                 progress_time = currentTime()
 
-    if result_kmer:
-        return motifs_tree.extract_motifs_kmers(q)
-    else:
-        return motifs_tree.extract_motifs(q)
+    return motifs_tree.extract_motifs(q, result_kmer)
 
 
 # extract sequences from a fasta file
