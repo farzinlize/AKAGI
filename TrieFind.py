@@ -70,13 +70,23 @@ class TrieNode:
     #         saving seen kmers section          #
     # ########################################## #
 
-    def add_frame(self, kmer, seq_id):
+    '''
+        any node with found_list attribute is considered a leaf presenting motif
+        found_list is an abstract structure that is constructed by lists
+        a found_list has two list:
+            found_list[0] -> seq_ids
+            found_list[1] -> position of occurence on each sequence
+        each element with same index in both list are related described below:
+            any element in second list such as found_list[1][i] is a list of position that
+            this node of tree occures in sequence number of found_list[0][i]
+    '''
+    def add_frame(self, kmer, seq_id, position):
 
         if len(kmer) == 0:
             # end of the path
             if not hasattr(self, 'found_list'):
-                self.found_list = []
-            self.found_list = binery_add(self.found_list, seq_id)
+                self.found_list = [[], []]
+            self.found_list = binery_special_add(self.found_list, seq_id, position)
             return
         
         # searching for proper path
@@ -89,16 +99,43 @@ class TrieNode:
         self.childs += [new_child]
         return new_child.add_frame(kmer[1:], seq_id)
 
-    
-    def extract_motif(self, q):
+
+    def extract_motifs(self, q):
         motifs = []
         if hasattr(self, 'found_list'):
-            if len(self.found_list) >= q:
+            if len(self.found_list[0]) >= q:
+                motifs += [self]
+        for child in self.childs:
+            motifs += child.extract_motif(q)
+        return motifs
+    
+    
+    def extract_motifs_kmers(self, q):
+        motifs = []
+        if hasattr(self, 'found_list'):
+            if len(self.found_list[0]) >= q:
                 motifs += [self.label]
         for child in self.childs:
             motifs += child.extract_motif(q)
         return motifs
         
+
+def binery_special_add(found_list, seq_id, position):
+    start = 0
+    end = len(found_list[0]) - 1
+    while start <= end:
+        mid = (start+end)//2
+        if found_list[0][mid] == seq_id:
+            found_list[1] = binery_add(found_list[1], position)
+            return found_list
+        elif found_list[0][mid] < seq_id:
+            start = mid + 1
+        else:
+            end = mid - 1
+    found_list[0] = found_list[0][:start] + [seq_id] + found_list[0][start:]
+    found_list[1] = found_list[1][:start] + [[position]] + found_list[1][start:]
+    return found_list
+
 
 # add an item to a sorted list using binery search
 def binery_add(lst, item):
