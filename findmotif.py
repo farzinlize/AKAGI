@@ -2,6 +2,7 @@ from TrieFind import TrieNode
 from GKmerhood import GKmerhood
 from misc import heap_encode, alphabet_to_dictionary
 import os, platform, json
+from time import time as currentTime
 
 
 '''
@@ -94,19 +95,56 @@ class GKHoodTree:
     [WARNING] function requires strings for d-neighbours kmer, but GKhoodTree class may provide Nodmers
 '''
 def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
+
+    # define threshold to report progress
+    PROGRESS_THRESHOLD = 100
+
     motifs_tree = TrieNode()
     for seq_id in range(len(sequences)):
+
+        # progress value
+        DSE_sum = 0
+        A2T_sum = 0
+        progress_time = currentTime()
+        progress = 0
+        print('processing sequence: ', seq_id)
+
         frame_start = 0
         frame_end = frame_size
         while frame_end < len(sequences[seq_id]):
+
             frame = sequences[seq_id][frame_start:frame_end]
+
+            # dneighbours extraction
+            now = currentTime()
             dneighbours = gkhood_tree.dneighbours(frame, dmax)
-            motifs_tree.add_frame(frame, seq_id)
+            dataset_extraction_time = currentTime() - now
+
+            # adding motifs to tree
+            now = currentTime()
+            motifs_tree.add_frame(frame, seq_id, frame_start)
             for each in dneighbours:
-                motifs_tree.add_frame(each[0], seq_id)
+                motifs_tree.add_frame(each[0], seq_id, frame_start)
+            add_to_tree_time = currentTime() - now
+
             frame_start += 1
             frame_end += 1
-    return motifs_tree.extract_motif(len(sequences))
+
+            # average time calculation
+            DSE_sum += dataset_extraction_time
+            A2T_sum += add_to_tree_time
+
+            progress += 1
+            if progress == PROGRESS_THRESHOLD:
+                print('progress checkout: ', currentTime() - progress_time, 'seconds')
+                print('> DSE average: ', DSE_sum/progress, '\tA2T average: ', A2T_sum/progress)
+                DSE_sum = 0
+                A2T_sum = 0
+                progress = 0
+                progress_time = currentTime()
+
+
+    return motifs_tree.extract_motifs_kmers(len(sequences))
 
 
 # extract sequences from a fasta file
@@ -142,13 +180,14 @@ def sequence_dataset_files(filename, sequences, frame_size):
 #           main fucntion section            #
 # ########################################## #
 
-# real main function for finding motifs using gkhood object in memory
+# real main function for finding motifs using a generated dataset
 def main():
     sequences = read_fasta('data/Real/dm01r.fasta')
     tree = GKHoodTree('gkhood5_8', 'dataset')
-    motifs = find_motif_all_neighbours(tree, 3, 6, sequences)
+    motifs = find_motif_all_neighbours(tree, 2, 6, sequences)
     print('number of motifs->', len(motifs))
-    print(motifs)
+    for motif in motifs:
+        print(motif)
 
 
 def main_required_files():
