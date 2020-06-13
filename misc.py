@@ -120,6 +120,17 @@ def alphabet_to_dictionary(alphabet):
     return dictionary
 
 
+# extract sequences from a fasta file
+def read_fasta(filename):
+    sequences = []
+    fasta = open(filename, 'r')
+    for line in fasta:
+        if line[0] == '>':
+            continue
+        sequences += [line[:-1]]
+    return sequences
+
+
 # ########################################## #
 #            heap array encoding             #
 # ########################################## #
