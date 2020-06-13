@@ -93,11 +93,14 @@ class GKHoodTree:
         the trie will return motifs (kmers that are present in all sequences)
 
     [WARNING] function requires strings for d-neighbours kmer, but GKhoodTree class may provide Nodmers
-'''
-def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences, result_kmer=1, q=-1):
 
-    if q == -1:
-        q = len(sequences)
+    *************************** UPDATE *************************************
+        function will return the whole motif tree for further processing
+'''
+# previous function definition :
+# def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences, result_kmer=1, q=-1):
+
+def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 
     # define threshold to report progress
     PROGRESS_THRESHOLD = 100
@@ -146,7 +149,10 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences, result_k
                 progress = 0
                 progress_time = currentTime()
 
-    return motifs_tree.extract_motifs(q, result_kmer)
+    # previous version return value
+    # return motifs_tree.extract_motifs(q, result_kmer)
+
+    return motifs_tree
 
 
 # extract sequences from a fasta file
