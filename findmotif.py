@@ -155,6 +155,49 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
     return motifs_tree
 
 
+# ########################################## #
+#          chaining motifs section           #
+# ########################################## #
+
+def motif_chain(motifs, sequences, q=-1):
+
+    if q == -1:
+        q = len(sequences)
+
+    on_sequence = on_sequence_found_structure(motifs, sequences, q)
+
+    for motif in motifs:
+        next_tree = TrieNode()
+        for seq_id in motif.found_list[0]:
+            for isomer_position in motif.found_list[1][seq_id]:
+                next_position = isomer_position + motif.level
+                if next_position >= len(sequences[seq_id]):
+                    continue
+                for next_motif in on_sequence[seq_id][next_position]:
+                    next_tree.add_frame(next_motif, seq_id, next_position)
+        for next_chain in next_tree.extract_motifs(q, 0):
+            motif.add_chain(next_chain)
+
+    
+
+def on_sequence_found_structure(motifs, sequences, q):
+
+    struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
+
+    for motif in motifs:
+        for seq_id in motif.found_list[0]:
+            for position in motif.found_list[1][seq_id]:
+                struct[seq_id][position] += [motif]
+
+    return struct
+
+
+def chain_sort(motifs):
+    for motif in motifs:
+        if hasattr(motif, 'upchain'):
+            continue
+
+
 # extract sequences from a fasta file
 def read_fasta(filename):
     sequences = []
