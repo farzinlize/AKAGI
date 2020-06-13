@@ -115,7 +115,21 @@ class TrieNode:
         for child in self.childs:
             motifs += child.extract_motifs(q, result_kmer)
         return motifs
-        
+
+
+    # ########################################## #
+    #              chain section                 #
+    # ########################################## #
+
+    def add_chain(self, other):
+        if not hasattr(self, 'chain'):
+            self.chain = []
+        self.chain += [other]
+        other.chained_up(self)
+
+
+    def chained_up(self, father):
+        self.father = father
         
 
 def binery_special_add(found_list, seq_id, position):
