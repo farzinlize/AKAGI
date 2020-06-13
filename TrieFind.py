@@ -129,7 +129,7 @@ class TrieNode:
 
 
     def chained_up(self, father):
-        self.father = father
+        self.upchain = father
         
 
 def binery_special_add(found_list, seq_id, position):
