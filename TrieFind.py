@@ -132,13 +132,14 @@ class TrieNode:
 
         [WARNING] only nodes with found_list attribute could be chained (or could be a motif)
     '''
-    def make_chain(self, chain_level=0):
+    def make_chain(self, chain_level=0, up_chain=None):
         if not hasattr(self, 'found_list'):
             raise Exception('should be a motif')
         self.end_chain_positions = self.found_list
         self.close_chain = False
         self.chain_level = chain_level
         self.next_chains = []
+        self.up_chain = up_chain
         return self
 
 
@@ -148,6 +149,12 @@ class TrieNode:
     
     def chained_done(self):
         self.close_chain = True
+
+
+    def chain_sequence(self):
+        if self.chain_level == 0:
+            return self.label
+        return self.up_chain.chain_sequence() +  self.label
 
 
 def binery_special_add(found_list, seq_id, position):
