@@ -1,14 +1,10 @@
 from functools import reduce
 from matplotlib import pyplot
+from misc import Queue
 import numpy
 
-def location_histogram_main(d, frame_size):
-    from findmotif import read_fasta, find_motif_all_neighbours
-    from GKmerhood import GKHoodTree
+def location_histogram_main(motifs, sequences, frame_size):
 
-    sequences = read_fasta('data/Real/dm01r.fasta')
-    tree = GKHoodTree('gkhood5_8', 'dataset')
-    motifs = find_motif_all_neighbours(tree, d, frame_size, sequences, result_kmer=0)
     print('number of motifs->', len(motifs))
     
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
@@ -36,6 +32,21 @@ def location_histogram(motifs, sequences, sequence_mask):
     pyplot.legend(loc='upper right')
     pyplot.show()
     print('exiting the plot function')
+
+
+def motif_chain_report(motifs, filename):
+    with open(filename, 'w') as report:
+        queue = Queue(motifs)
+        current_level = 0
+        report.write('> 1-chained\n')
+        while not queue.isEmpty():
+            link = queue.pop()
+            if current_level < link.chain_level:
+                current_level = link.chain_level
+                report.write('> %d-chained\n'%(current_level+1))
+            report.write(link.chain_sequence()+'\n')
+            for child in link.next_chains:
+                queue.insert(child)
 
 
 if __name__ == "__main__":
