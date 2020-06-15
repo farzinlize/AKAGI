@@ -216,6 +216,26 @@ def test_main_4():
     f.write("hello")
 
 
-##########################################
+def f(lst):
+    for n in lst:
+        n.label = 'ch'
+    return lst
+
+
+def workbench_tests():
+    from TrieFind import TrieNode
+    nodeA = TrieNode(lable='abc', level=7)
+    nodeB = TrieNode(lable='zxc', level=10)
+    lst = [nodeA, nodeB]
+    print(lst[0].label)
+    f(lst)
+    print(lst[0].label)
+
+
+# ########################################## #
+#           main fucntion call               #
+# ########################################## #
+
 # main function call
-# test_main_4()
+if __name__ == "__main__":
+    workbench_tests()
