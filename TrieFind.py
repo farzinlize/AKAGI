@@ -121,16 +121,34 @@ class TrieNode:
     #              chain section                 #
     # ########################################## #
 
+    '''
+        add chain arrtibutes to motif nodes:
+            end_chain_position: a structured list just like found_list that indicates
+                where could a chain continue
+            close_chain: any links is assumed open untill it is chained to all possible condidates
+                unless there isn't any. after that the chain is closed.
+            chain_level: level of the link in chain
+            next_chains: a list of links that are chained down from this node
+
+        [WARNING] only nodes with found_list attribute could be chained (or could be a motif)
+    '''
+    def make_chain(self, chain_level=0):
+        if not hasattr(self, 'found_list'):
+            raise Exception('should be a motif')
+        self.end_chain_positions = self.found_list
+        self.close_chain = False
+        self.chain_level = chain_level
+        self.next_chains = []
+        return self
+
+
     def add_chain(self, other):
-        if not hasattr(self, 'chain'):
-            self.chain = []
-        self.chain += [other]
-        other.chained_up(self)
+        self.next_chains += [other]
 
+    
+    def chained_done(self):
+        self.close_chain = True
 
-    def chained_up(self, father):
-        self.upchain = father
-        
 
 def binery_special_add(found_list, seq_id, position):
     start = 0
