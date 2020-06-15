@@ -116,7 +116,7 @@ def on_sequence_found_structure(motifs, sequences):
     return struct
 
 
-def motif_chain(motifs, sequences, q=-1):
+def motif_chain(motifs, sequences, q=-1, overlap=0):
 
     # set defualt value of q
     if q == -1:
@@ -150,11 +150,12 @@ def motif_chain(motifs, sequences, q=-1):
 
         for seq_id in link.end_chain_positions[0]:
             for end_position in link.end_chain_positions[1][seq_id]:
-                next_position = end_position + link.level # link.level == len(link.label) == kmer-length
-                if next_position >= len(sequences[seq_id]):
-                    continue
-                for next_condidate in on_sequence[seq_id][next_position]:
-                    next_tree.add_frame(next_condidate.label, seq_id, next_position)
+                for distance in [i for i in range(-overlap, overlap+1)]:
+                    next_position = end_position + link.level + distance # link.level == len(link.label) == kmer-length
+                    if next_position >= len(sequences[seq_id]):
+                        continue
+                    for next_condidate in on_sequence[seq_id][next_position]:
+                        next_tree.add_frame(next_condidate.label, seq_id, next_position)
         for next_motif in next_tree.extract_motifs(q, 0):
             link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1))
             queue.insert(next_motif)
@@ -207,7 +208,7 @@ def main_chain():
     motifs = motif_tree.extract_motifs(len(sequences), 0)
     print('number of motifs->', len(motifs))
 
-    report = motif_chain(motifs, sequences)
+    report = motif_chain(motifs, sequences, overlap=1)
 
     print(report)
 
