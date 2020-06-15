@@ -26,6 +26,7 @@ def location_histogram_main(d, frame_size):
 
 
 def location_histogram(motifs, sequences, sequence_mask):
+    print('starting to show location histogram (length of lst is %d )'%len(motifs))
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
     histogram_lists = [reduce((lambda x,y:x+y), [motif.found_list[1][i] for motif in motifs]) for i in range(len(sequences))]
     alpha = 1 / (reduce((lambda x,y:x+y), sequence_mask))
@@ -34,6 +35,7 @@ def location_histogram(motifs, sequences, sequence_mask):
             pyplot.hist(histogram_lists[i], bins, alpha=alpha, label='seq_'+str(i))
     pyplot.legend(loc='upper right')
     pyplot.show()
+    print('exiting the plot function')
 
 
 if __name__ == "__main__":
