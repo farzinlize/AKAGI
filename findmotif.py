@@ -1,8 +1,8 @@
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import heap_encode, alphabet_to_dictionary, read_fasta
+from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue
 from time import time as currentTime
-
+from plot import location_histogram
 
 '''
     motif finding function -> first version of motif-finding algorithm using gkhood
@@ -77,12 +77,12 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 #          chaining motifs section           #
 # ########################################## #
 
-def motif_chain(motifs, sequences, q=-1):
+def motif_chain_old(motifs, sequences, q=-1):
 
     if q == -1:
         q = len(sequences)
 
-    on_sequence = on_sequence_found_structure(motifs, sequences, q)
+    on_sequence = on_sequence_found_structure(motifs, sequences)
 
     for motif in motifs:
         next_tree = TrieNode()
@@ -92,13 +92,19 @@ def motif_chain(motifs, sequences, q=-1):
                 if next_position >= len(sequences[seq_id]):
                     continue
                 for next_motif in on_sequence[seq_id][next_position]:
-                    next_tree.add_frame(next_motif, seq_id, next_position)
+                    next_tree.add_frame(next_motif.label, seq_id, next_position)
         for next_chain in next_tree.extract_motifs(q, 0):
             motif.add_chain(next_chain)
 
     
-
-def on_sequence_found_structure(motifs, sequences, q):
+'''
+    generate a 3-dimentional list to access motifs that occures at a specific location
+        dimentions are described below:
+            1. sequence_id -> there is a list for any sequence
+            2. position -> there is a list of motifs for any position on a specific sequence
+            3. motif -> refrence for motifs that occures at a pecific location (position) and a specific sequence
+'''
+def on_sequence_found_structure(motifs, sequences):
 
     struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
 
@@ -110,10 +116,59 @@ def on_sequence_found_structure(motifs, sequences, q):
     return struct
 
 
-def chain_sort(motifs):
-    for motif in motifs:
-        if hasattr(motif, 'upchain'):
-            continue
+def motif_chain(motifs, sequences, q=-1):
+
+    # set defualt value of q
+    if q == -1:
+        q = len(sequences)
+
+    on_sequence = on_sequence_found_structure(motifs, sequences)
+    queue = Queue(items=[motif.make_chain() for motif in motifs])
+
+    # reporting variables
+    current_level = 0
+    level_count = [0]
+    current_level_list = []
+
+    while not queue.isEmpty():
+        link = queue.pop()
+        next_tree = TrieNode()
+
+        # updating report variables
+        if current_level == link.chain_level:
+            level_count[current_level] += 1
+            current_level_list += [link]
+        elif link.chain_level > current_level:
+            level_count += [0 for _ in range(link.chain_level-current_level)]
+            current_level = link.chain_level
+
+            # plot each chain level locations
+            location_histogram(current_level_list, sequences, [1, 1, 0, 0])
+            current_level_list = []
+        else:
+            raise Exception('queue error: a node with lower chain level found in queue')
+
+        for seq_id in link.end_chain_positions[0]:
+            for end_position in link.end_chain_positions[1][seq_id]:
+                next_position = end_position + link.level # link.level == len(link.label) == kmer-length
+                if next_position >= len(sequences[seq_id]):
+                    continue
+                for next_condidate in on_sequence[seq_id][next_position]:
+                    next_tree.add_frame(next_condidate.label, seq_id, next_position)
+        for next_motif in next_tree.extract_motifs(q, 0):
+            link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1))
+            queue.insert(next_motif)
+        link.chained_done()
+
+    # plot last chain level locations
+    location_histogram(current_level_list, sequences, [1, 1, 0, 0])
+
+    # return reporting variable
+    return level_count
+
+
+def chains_sort(chains):
+    pass
 
 
 # ########################################## #
@@ -145,8 +200,20 @@ def sequence_dataset_files(filename, sequences, frame_size):
 #           main fucntion section            #
 # ########################################## #
 
+def main_chain():
+    sequences = read_fasta('data/Real/dm01r.fasta')
+    tree = GKHoodTree('gkhood5_8', 'dataset')
+    motif_tree = find_motif_all_neighbours(tree, 1, 6, sequences)
+    motifs = motif_tree.extract_motifs(len(sequences), 0)
+    print('number of motifs->', len(motifs))
+
+    report = motif_chain(motifs, sequences)
+
+    print(report)
+
+
 # real main function for finding motifs using a generated dataset
-def main():
+def main_find_motif():
     sequences = read_fasta('data/Real/dm01r.fasta')
     tree = GKHoodTree('gkhood5_8', 'dataset')
     motifs = find_motif_all_neighbours(tree, 2, 6, sequences)
@@ -200,4 +267,4 @@ def test_main():
 
 # main function call
 if __name__ == "__main__":
-    main()
+    main_chain()
