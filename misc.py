@@ -131,6 +131,15 @@ def read_fasta(filename):
     return sequences
 
 
+def make_location(location):
+    if location == '':
+        return
+    try:
+        os.makedirs(location)
+    except:
+        pass
+
+
 # ########################################## #
 #            heap array encoding             #
 # ########################################## #
