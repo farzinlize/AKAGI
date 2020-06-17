@@ -154,7 +154,11 @@ class TrieNode:
     def chain_sequence(self):
         if self.chain_level == 0:
             return self.label
-        return self.up_chain.chain_sequence() +  self.label
+        return self.up_chain.chain_sequence() + '|' + self.label
+
+    
+    def chain_locations_str(self):
+        return str(self.found_list)
 
 
 def binery_special_add(found_list, seq_id, position):
