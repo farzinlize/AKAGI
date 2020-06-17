@@ -126,7 +126,7 @@ def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=F
                 current_level_list += [link]
             elif link.chain_level > current_level:
                 # plot each chain level locations
-                location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%(current_level, level_count[current_level]))
+                location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%((current_level+1), level_count[current_level]))
 
                 level_count += [0 for _ in range(link.chain_level-current_level)]
                 current_level = link.chain_level
@@ -190,9 +190,9 @@ def sequence_dataset_files(filename, sequences, frame_size):
 
 def main_chain():
     # inputs
-    dataset_name = 'dm01r'
-    d = 1 ; overlap = 1
-    s_mask = None
+    dataset_name = 'mus11r'
+    d = 1 ; overlap = 3
+    s_mask = '010010000000'
 
     sequences = read_fasta('data/Real/%s.fasta'%(dataset_name))
     tree = GKHoodTree('gkhood5_8', 'dataset')
@@ -200,11 +200,12 @@ def main_chain():
     motifs = motif_tree.extract_motifs(len(sequences), 0)
     print('number of motifs->', len(motifs))
 
-    # report = motif_chain(motifs, sequences, overlap=overlap, sequence_mask=s_mask, report=True, report_directory='.\\results\\dm01r-full\\')
-    motif_chain(motifs, sequences, overlap=overlap, report=False)
+    report = motif_chain(motifs, sequences, overlap=overlap, sequence_mask=s_mask, report=True, report_directory='.\\results\\figures\\%s-masked\\'%(dataset_name))
+    print(report)
+    # motif_chain(motifs, sequences, overlap=overlap, report=False)
 
-    make_location('.\\test')
-    motif_chain_report(motifs, '.\\test\\%s-6-%d-%d'%(dataset_name, d, overlap))
+    make_location('.\\results\\%s'%dataset_name)
+    motif_chain_report(motifs, '.\\results\\%s\\%s-6-%d-%d'%(dataset_name, dataset_name, d, overlap))
 
 
 # real main function for finding motifs using a generated dataset

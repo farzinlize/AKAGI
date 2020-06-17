@@ -8,7 +8,7 @@ def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename
     histogram_lists = [reduce((lambda x,y:x+y), [motif.found_list[1][i] for motif in motifs]) for i in range(len(sequences))]
     alpha = 1 / (reduce((lambda x,y:int(x)+int(y)), sequence_mask))
     for i in range(len(sequences)):
-        if sequence_mask[i]:
+        if int(sequence_mask[i]):
             pyplot.hist(histogram_lists[i], bins, alpha=alpha, label='seq_'+str(i))
     pyplot.legend(loc='upper right')
     
@@ -16,7 +16,7 @@ def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename
         pyplot.savefig(savefilename)
     else:
         pyplot.show()
-        
+
     pyplot.clf()
 
 
