@@ -1,6 +1,6 @@
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue
+from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location
 from time import time as currentTime
 from report import location_histogram, motif_chain_report
 
@@ -96,7 +96,7 @@ def on_sequence_found_structure(motifs, sequences):
     return struct
 
 
-def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=False):
+def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=False, report_directory=''):
 
     if report and sequence_mask == None:
         sequence_mask = [1 for _ in range(len(sequences))]
@@ -113,6 +113,7 @@ def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=F
         current_level = 0
         level_count = [0]
         current_level_list = []
+        make_location(report_directory)
 
     while not queue.isEmpty():
         link = queue.pop()
@@ -124,11 +125,11 @@ def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=F
                 level_count[current_level] += 1
                 current_level_list += [link]
             elif link.chain_level > current_level:
+                # plot each chain level locations
+                location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%(current_level, level_count[current_level]))
+
                 level_count += [0 for _ in range(link.chain_level-current_level)]
                 current_level = link.chain_level
-
-                # plot each chain level locations
-                location_histogram(current_level_list, sequences, sequence_mask)
                 current_level_list = []
             else:
                 raise Exception('queue error: a node with lower chain level found in queue')
@@ -148,7 +149,7 @@ def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=F
 
     if report:
         # plot last chain level locations
-        location_histogram(current_level_list, sequences, sequence_mask)
+        location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%(current_level, level_count[current_level]))
 
         # return reporting variable
         return level_count
@@ -188,23 +189,29 @@ def sequence_dataset_files(filename, sequences, frame_size):
 # ########################################## #
 
 def main_chain():
-    sequences = read_fasta('data/Real/dm01r.fasta')
+    # inputs
+    dataset_name = 'dm01r'
+    d = 1 ; overlap = 1
+    s_mask = None
+
+    sequences = read_fasta('data/Real/%s.fasta'%(dataset_name))
     tree = GKHoodTree('gkhood5_8', 'dataset')
-    motif_tree = find_motif_all_neighbours(tree, 1, 6, sequences)
+    motif_tree = find_motif_all_neighbours(tree, d, 6, sequences)
     motifs = motif_tree.extract_motifs(len(sequences), 0)
     print('number of motifs->', len(motifs))
 
-    motif_chain(motifs, sequences, overlap=1, report=False)
-    # print(report)
+    # report = motif_chain(motifs, sequences, overlap=overlap, sequence_mask=s_mask, report=True, report_directory='.\\results\\dm01r-full\\')
+    motif_chain(motifs, sequences, overlap=overlap, report=False)
 
-    motif_chain_report(motifs, 'dm01r-6-1-1.chains')
+    make_location('.\\test')
+    motif_chain_report(motifs, '.\\test\\%s-6-%d-%d'%(dataset_name, d, overlap))
 
 
 # real main function for finding motifs using a generated dataset
 def main_find_motif():
     sequences = read_fasta('data/Real/dm01r.fasta')
     tree = GKHoodTree('gkhood5_8', 'dataset')
-    motifs = find_motif_all_neighbours(tree, 2, 6, sequences)
+    motifs = find_motif_all_neighbours(tree, 2, 6, sequences).extract_motifs(len(sequences))
     print('number of motifs->', len(motifs))
     for motif in motifs:
         print(motif)
