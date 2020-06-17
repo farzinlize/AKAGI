@@ -16,6 +16,8 @@ def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename
         pyplot.savefig(savefilename)
     else:
         pyplot.show()
+        
+    pyplot.clf()
 
 
 def motif_chain_report(motifs, filename):
