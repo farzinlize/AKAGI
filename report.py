@@ -5,7 +5,11 @@ import numpy
 
 def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename='figure.png'):
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
-    histogram_lists = [reduce((lambda x,y:x+y), [motif.found_list[1][i] for motif in motifs]) for i in range(len(sequences))]
+
+    histogram_lists = [reduce((lambda x,y:x+y), \
+            [[position.start_position for position in motif.found_list[1][i]] \
+            for motif in motifs]) for i in range(len(sequences)) if int(sequence_mask[i])]
+
     alpha = 1 / (reduce((lambda x,y:int(x)+int(y)), sequence_mask))
     for i in range(len(sequences)):
         if int(sequence_mask[i]):

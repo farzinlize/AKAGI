@@ -1,6 +1,6 @@
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location
+from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location, ExtraPosition
 from time import time as currentTime
 from report import location_histogram, motif_chain_report
 
@@ -46,9 +46,9 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 
             # adding motifs to tree
             now = currentTime()
-            motifs_tree.add_frame(frame, seq_id, frame_start)
+            motifs_tree.add_frame(frame, seq_id, ExtraPosition(frame_start, 0))
             for each in dneighbours:
-                motifs_tree.add_frame(each[0], seq_id, frame_start)
+                motifs_tree.add_frame(each[0], seq_id, ExtraPosition(frame_start, frame_size-len(each[0])))
             add_to_tree_time = currentTime() - now
 
             frame_start += 1
@@ -91,7 +91,7 @@ def on_sequence_found_structure(motifs, sequences):
     for motif in motifs:
         for seq_id in motif.found_list[0]:
             for position in motif.found_list[1][seq_id]:
-                struct[seq_id][position] += [motif]
+                struct[seq_id][position.start_position] += [(motif, position.end_margin)]
 
     return struct
 
@@ -135,13 +135,13 @@ def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=F
                 raise Exception('queue error: a node with lower chain level found in queue')
 
         for seq_id in link.end_chain_positions[0]:
-            for end_position in link.end_chain_positions[1][seq_id]:
-                for distance in [i for i in range(-overlap, overlap+1)]:
-                    next_position = end_position + link.level + distance # link.level == len(link.label) == kmer-length
+            for position in link.end_chain_positions[1][seq_id]:
+                for sliding in [i for i in range(-overlap, overlap+1)]:
+                    next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):
                         continue
                     for next_condidate in on_sequence[seq_id][next_position]:
-                        next_tree.add_frame(next_condidate.label, seq_id, next_position)
+                        next_tree.add_frame(next_condidate[0].label, seq_id, ExtraPosition(next_position, next_condidate[1], chain=position.get_chain()))
         for next_motif in next_tree.extract_motifs(q, 0):
             link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
             queue.insert(next_motif)
@@ -149,7 +149,7 @@ def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=F
 
     if report:
         # plot last chain level locations
-        location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%(current_level, level_count[current_level]))
+        location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%((current_level+1), level_count[current_level]))
 
         # return reporting variable
         return level_count
@@ -190,9 +190,9 @@ def sequence_dataset_files(filename, sequences, frame_size):
 
 def main_chain():
     # inputs
-    dataset_name = 'mus11r'
-    d = 1 ; overlap = 3
-    s_mask = '010010000000'
+    dataset_name = 'dm01r'
+    d = 1 ; overlap = 1
+    s_mask = '1000'
 
     sequences = read_fasta('data/Real/%s.fasta'%(dataset_name))
     tree = GKHoodTree('gkhood5_8', 'dataset')

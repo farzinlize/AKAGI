@@ -94,6 +94,43 @@ class FileHandler:
         self.current_file = open(self.directory + self.prefix + str(self.file_index)+'.data', 'a')
 
 
+class ExtraPosition:
+    def __init__(self, position, extra, chain=[]):
+        self.start_position = position
+        self.end_margin = extra
+        self.chain = chain
+
+    def get_chain(self):
+        return self.chain + [self.start_position]
+
+    def __lt__(self, other):
+        return self.start_position < other.start_position
+
+    def __le__(self, other):
+        return self.start_position <= other.start_position
+
+    def __eq__(self, other):
+        return self.start_position == other.start_position
+
+    def __ne__(self, other):
+        return self.start_position != other.start_position
+
+    def __gt__(self, other):
+        return self.start_position > other.start_position
+
+    def __ge__(self, other):
+        return self.start_position >= other.start_position
+
+    def __repr__(self):
+        return '(%d, %d, '%(self.start_position, self.end_margin)+str(self.chain)+')'
+
+    def __str__(self):
+        return '(%d, %d)'%(self.start_position, self.end_margin)
+
+    def __int__(self):
+        return self.start_position + self.end_margin
+
+
 # ########################################## #
 #                 functions                  #
 # ########################################## #
@@ -232,13 +269,11 @@ def f(lst):
 
 
 def workbench_tests():
-    from TrieFind import TrieNode
-    nodeA = TrieNode(lable='abc', level=7)
-    nodeB = TrieNode(lable='zxc', level=10)
-    lst = [nodeA, nodeB]
-    print(lst[0].label)
-    f(lst)
-    print(lst[0].label)
+    a = [ExtraPosition(25, 3), ExtraPosition(25, 7), ExtraPosition(1, 1)]
+    print(a[0]<=a[1])
+    print(str(a))
+    print(int(a[0]))
+    print(a[int(a[2])])
 
 
 # ########################################## #
