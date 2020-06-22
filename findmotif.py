@@ -3,6 +3,7 @@ from GKmerhood import GKmerhood, GKHoodTree
 from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location, ExtraPosition
 from time import time as currentTime
 from report import location_histogram, motif_chain_report
+import sys
 
 '''
     motif finding function -> first version of motif-finding algorithm using gkhood
@@ -190,11 +191,30 @@ def sequence_dataset_files(filename, sequences, frame_size):
 
 def main_chain():
     # inputs
-    dataset_name = 'dm01r'
-    d = 1 ; overlap = 1
-    s_mask = '1000'
+    s_mask = None
+
+    if len(sys.argv) < 4:
+        print('[ERROR] lack of argument found. use command template below to run this script')
+        print('python findmotif.py [dataset_name] [distance] [overlap] [mask->optional]')
+        return
+    elif len(sys.argv) == 5:
+        s_mask = sys.argv[4]
+    elif len(sys.argv) > 5:
+        print('[ERROR] too much argument found. use command template below to run this script')
+        print('python findmotif.py [dataset_name] [distance] [overlap] [mask->optional]')
+        return
+
+
+    dataset_name = sys.argv[1]
+    d = int(sys.argv[2]) ; overlap = int(sys.argv[3])
+
+    print('[START] motif finding using gkhood is runing for %s dataset with d=%d and overlap=%d'%(dataset_name, d, overlap))
 
     sequences = read_fasta('data/Real/%s.fasta'%(dataset_name))
+
+    if s_mask != None:
+        assert len(sequences) == len(s_mask)
+
     tree = GKHoodTree('gkhood5_8', 'dataset')
     motif_tree = find_motif_all_neighbours(tree, d, 6, sequences)
     motifs = motif_tree.extract_motifs(len(sequences), 0)
