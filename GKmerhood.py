@@ -67,8 +67,9 @@ class GKmerhood:
     def generate_dataset(self, dmax):
         handler = FileHandler('dataset')
         first_code = (4**(self.kmin) - 1)//3 + 1
-        last_code = (4**(self.kmax) - 1)//3
-        with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.tree', 'w+') as tree:
+        last_code = (4**(self.kmax+1) - 1)//3
+        gkhood_tree_name = 'gkhood'+str(self.kmin)+'_'+str(self.kmax)
+        with open(gkhood_tree_name+'.tree', 'w+') as tree:
             for code in range(first_code, last_code+1):
                 node = self.trie.find(heap_decode(code, self.alphabet))
                 if node == None:
@@ -79,23 +80,48 @@ class GKmerhood:
                 tree.write(str(file_index) + '\t' + str(position) + '\n')
 
         number_of_files = handler.close()
-        self.generate_dataset_metadata(dmax, number_of_files)
-        
+        self.generate_dataset_metadata(gkhood_tree_name, first_code, dmax, number_of_files)
+
+
+    '''
+        special function to generate single level dataset
+    '''
+    def single_level_dataset(self, dmax, level):
+        handler = FileHandler(directory_name='single_level_%s'%(str(level)))
+        first_code = (4**(level) - 1)//3 + 1
+        last_code = (4**(level+1) - 1)//3
+        sgkhood_tree_filename = 'sgkhood'+str(level)
+        with open(sgkhood_tree_filename+'.tree', 'w+') as tree:
+            for code in range(first_code, last_code+1):
+                node = self.trie.find(heap_decode(code, self.alphabet))
+                if node == None:
+                    print('ERROR: node couldnt be found, code -> ' + code)
+                    continue
+                dneighbourhood = node.dneighbours(dmax)
+                file_index, position = handler.put(dneighbourhood)
+                tree.write(str(file_index) + '\t' + str(position) + '\n')
+
+        number_of_files = handler.close()
+        self.generate_dataset_metadata(sgkhood_tree_filename, first_code, dmax, number_of_files, single_level=level)
 
     '''
         generating metadata json file to store dataset information described in code
     '''
-    def generate_dataset_metadata(self, dmax, number_of_files):
-        with open('gkhood'+str(self.kmin)+'_'+str(self.kmax)+'.metadata', 'w+') as meta:
-            first_code = (4**(self.kmin) - 1)//3 + 1 
+    def generate_dataset_metadata(self, tree_name, bias, dmax, number_of_files, single_level=None):
+        with open(tree_name+'.metadata', 'w+') as meta:
+
             metadata_dict = { 
                 'kmax':self.kmax,
                 'kmin':self.kmin,
                 'dmax':dmax,
-                'bias':first_code,
+                'bias':bias,
                 'alphabet':self.alphabet,
                 'files':number_of_files
             }
+
+            if single_level != None:
+                metadata_dict.update({'level':single_level})
+
             meta.write(json.dumps(metadata_dict))
 
 
@@ -275,4 +301,4 @@ def test_main():
 
 # main function call
 if __name__ == "__main__":
-    metadata_main()
+    main()
