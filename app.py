@@ -3,7 +3,6 @@ from time import strftime, gmtime
 from getopt import getopt
 from GKmerhood import GKmerhood
 from functools import reduce
-from misc import if_none_false
 import sys
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -45,5 +44,5 @@ if __name__ == "__main__":
             single_level_dataset(args_dict['kmin'], args_dict['kmax'], args_dict['level'], args_dict['dmax'])
         else:
             print('[ERROR] command %s is not supported'%command)
-    except:
-        print('[ERROR] missing necessery arguments. please check the description and try again')
+    except Exception as err:
+        print('something wrong happened; error message -> ' + str(err))
