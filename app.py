@@ -18,6 +18,11 @@ def single_level_dataset(kmin, kmax, level, dmax):
     print(strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
 
+def motif_finding_chain(sequnces_path, d, sliding, s_mask):
+    print('operation MFC: finding motif using chain algorithm\n\
+        arguments -> ')
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
