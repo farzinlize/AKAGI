@@ -1,4 +1,3 @@
-# from GKmerhood import GKmerhood
 from misc import Queue
 
 '''
