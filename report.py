@@ -24,22 +24,26 @@ def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename
     pyplot.clf()
 
 
-def motif_chain_report(motifs, filename):
+def motif_chain_report(motifs, filename, sequences):
     report_kmer = open(filename + '.labels', 'w')
     report_locations = open(filename + '.locations', 'w')
+    fasta_result = open(filename + '.fasta', 'w')
 
     queue = Queue(motifs)
     current_level = 0
     report_kmer.write('> 1-chained\n')
     report_locations.write('> 1-chained\n')
+    fasta_result.write('>1-chained\n')
     while not queue.isEmpty():
         link = queue.pop()
         if current_level < link.chain_level:
             current_level = link.chain_level
             report_kmer.write('> %d-chained\n'%(current_level+1))
             report_locations.write('> %d-chained\n'%(current_level+1))
+            fasta_result.write('>%d-chained\n'%(current_level+1))
         report_kmer.write(link.chain_sequence()+'\n')
         report_locations.write(link.chain_locations_str()+'\n')
+        fasta_result.write(link.instances_str(sequences))
         for child in link.next_chains:
             queue.insert(child)
 
