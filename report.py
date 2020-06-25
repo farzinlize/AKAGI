@@ -6,9 +6,12 @@ import numpy
 def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename='figure.png'):
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
 
-    histogram_lists = [reduce((lambda x,y:x+y), \
-            [[position.start_position for position in motif.found_list[1][i]] \
-            for motif in motifs]) for i in range(len(sequences)) if int(sequence_mask[i])]
+    histogram_lists = [[] for _ in range(len(sequences))]
+
+    for motif in motifs:
+        for index, seq_id in enumerate(motif.found_list[0]):
+            for position in motif.found_list[1][index]:
+                histogram_lists[seq_id] += [position.start_position]
 
     alpha = 1 / (reduce((lambda x,y:int(x)+int(y)), sequence_mask))
     for i in range(len(sequences)):
@@ -49,6 +52,7 @@ def motif_chain_report(motifs, filename, sequences):
 
     report_kmer.close()
     report_locations.close()
+    fasta_result.close()
 
 # ########################################## #
 #           main fucntion section            #

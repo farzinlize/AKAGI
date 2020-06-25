@@ -167,8 +167,8 @@ class TrieNode:
     
     def instances_str(self, sequences):
         result = '>pattern\n%s\n>instances\n'%(self.chain_sequence())
-        for seq_id in self.found_list[0]:
-            for position in self.found_list[1][seq_id]:
+        for index, seq_id in enumerate(self.found_list[0]):
+            for position in self.found_list[1][index]:
                 end_index = int(position) + self.level
                 start_index = position.start_position
                 if len(position.chain) != 0:
@@ -179,7 +179,7 @@ class TrieNode:
                     (start_index-len(sequences[seq_id])), 
                     sequences[seq_id][start_index:end_index], 
                     (end_index-start_index))
-                    
+
         return result
 
 

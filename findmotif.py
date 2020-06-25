@@ -90,8 +90,8 @@ def on_sequence_found_structure(motifs, sequences):
     struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
 
     for motif in motifs:
-        for seq_id in motif.found_list[0]:
-            for position in motif.found_list[1][seq_id]:
+        for index, seq_id in enumerate(motif.found_list[0]):
+            for position in motif.found_list[1][index]:
                 struct[seq_id][position.start_position] += [(motif, position.end_margin)]
 
     return struct
@@ -135,8 +135,8 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
             else:
                 raise Exception('queue error: a node with lower chain level found in queue')
 
-        for seq_id in link.end_chain_positions[0]:
-            for position in link.end_chain_positions[1][seq_id]:
+        for index, seq_id in enumerate(link.end_chain_positions[0]):
+            for position in link.end_chain_positions[1][index]:
                 for sliding in [i for i in range(-overlap, gap+1)]:
                     next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):
@@ -154,10 +154,6 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
 
         # return reporting variable
         return level_count
-
-
-def chains_sort(chains):
-    pass
 
 
 # ########################################## #
