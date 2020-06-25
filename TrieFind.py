@@ -151,6 +151,10 @@ class TrieNode:
         self.close_chain = True
 
 
+    # ########################################## #
+    #             report section                 #
+    # ########################################## #
+
     def chain_sequence(self):
         if self.chain_level == 0:
             return self.label
@@ -159,6 +163,24 @@ class TrieNode:
     
     def chain_locations_str(self):
         return str(self.found_list)
+
+    
+    def instances_str(self, sequences):
+        result = '>pattern\n%s\n>instances\n'%(self.chain_sequence())
+        for seq_id in self.found_list[0]:
+            for position in self.found_list[1][seq_id]:
+                end_index = int(position) + self.level
+                start_index = position.start_position
+                if len(position.chain) != 0:
+                    start_index = position.chain[0]
+                
+                result += '%d,%d,%s,%d\n'%(
+                    seq_id, 
+                    (start_index-len(sequences[seq_id])), 
+                    sequences[seq_id][start_index:end_index], 
+                    (end_index-start_index))
+                    
+        return result
 
 
 def binery_special_add(found_list, seq_id, position):
