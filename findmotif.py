@@ -97,7 +97,7 @@ def on_sequence_found_structure(motifs, sequences):
     return struct
 
 
-def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=False, report_directory=''):
+def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, report=False, report_directory=''):
 
     if report and sequence_mask == None:
         sequence_mask = [1 for _ in range(len(sequences))]
@@ -137,7 +137,7 @@ def motif_chain(motifs, sequences, q=-1, overlap=0, sequence_mask=None, report=F
 
         for seq_id in link.end_chain_positions[0]:
             for position in link.end_chain_positions[1][seq_id]:
-                for sliding in [i for i in range(-overlap, overlap+1)]:
+                for sliding in [i for i in range(-overlap, gap+1)]:
                     next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):
                         continue
