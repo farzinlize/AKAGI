@@ -4,3 +4,4 @@ __pycache__/*
 *.metadata
 /dataset/*
 output.txt
+/results/*
