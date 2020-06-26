@@ -211,15 +211,26 @@ def editDistDP(str1, str2):
                                    dp[i-1][j],        # Remove 
                                    dp[i-1][j-1])    # Replace 
     
-    for e in dp:
-        for r in e:
-            if len(str(r)) == 2:
-                print(r, end=' ')
-            else:
-                print(r, end='  ')
-        print()
+    # for e in dp:
+    #     for r in e:
+    #         if len(str(r)) == 2:
+    #             print(r, end=' ')
+    #         else:
+    #             print(r, end='  ')
+    #     print()
+
     return dp[m][n] 
-  
+
+
+def edit_distances_matrix(sequences):
+    result = ''
+    for a in sequences:
+        for b in sequences:
+            d = editDistDP(a, b)
+            result += ' ' + str(d) + ' '*(4-len(str(d)))
+        result += '\n\n'
+    return result
+
 
 # ########################################## #
 #            heap array encoding             #
