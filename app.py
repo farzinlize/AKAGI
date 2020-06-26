@@ -30,7 +30,14 @@ def single_level_dataset(kmin, kmax, level, dmax):
 
 def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overlap, h_report, s_mask):
     print('operation MFC: finding motif using chain algorithm (tree:%s)\n\
-        arguments -> f=%d, q=%d, d=%d, gap=%d, overlap=%d'%(DATASET_TREES[gkhood_index][0], frame_size, q, d, gap, overlap))
+        arguments -> f=%d, q=%d, d=%d, gap=%d, overlap=%d, dataset=%s'%(
+            DATASET_TREES[gkhood_index][0], 
+            frame_size, 
+            q, 
+            d, 
+            gap, 
+            overlap, 
+            dataset_name))
 
     sequences = read_fasta('data/%s.fasta'%(dataset_name))
 
@@ -42,12 +49,14 @@ def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overl
     if s_mask != None:
         assert len(sequences) == len(s_mask)
 
-
     tree = GKHoodTree(DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
+
+    last_time = currentTime()
     motif_tree = find_motif_all_neighbours(tree, d, frame_size, sequences)
     motifs = motif_tree.extract_motifs(q, 0)
-    print('number of motifs->', len(motifs))
+    print('\nnumber of motifs->%d | execute time->%s'%(len(motifs), strftime("%H:%M:%S", gmtime(currentTime() - last_time))))
 
+    last_time = currentTime()
     report = motif_chain(
         motifs, 
         sequences,
@@ -57,9 +66,10 @@ def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overl
         sequence_mask=s_mask, 
         report=h_report, 
         report_directory=HISTOGRAM_LOCATION%(dataset_name, frame_size, d, q, gap, overlap))
-    
+    print('chaining done in %s', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
+
     if report != None:
-        print(report)
+        print('number of chained-motif at each level: ', report)
 
     make_location('%s%s'%(RESULT_LOCATION, dataset_name))
     motif_chain_report(motifs, '%s%s/f%d-d%d-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, frame_size, d, q, gap, overlap), sequences)
@@ -92,13 +102,14 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
 
+    # arguments and options
     shortopt = 'd:m:M:l:s:g:O:hq:f:G:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=']
 
-    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'dm01r', 
-        'gap':3, 'overlap':2, 'mask':None, 'quorum':-1, 'frame_size':6, 'gkhood_index':0}
-    histogram_report = False
+    # default values
+    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'dm01r', 'gap':3, 
+        'overlap':2, 'mask':None, 'quorum':-1, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False}
 
     command = sys.argv[1]
 
@@ -121,7 +132,7 @@ if __name__ == "__main__":
         elif o == '--mask':
             args_dict.update({'mask':a})
         elif o in ['-h', '--histogram']:
-            histogram_report = True
+            args_dict.update({'histogram_report':True})
         elif o in ['-q', '--quorum']:
             args_dict.update({'quorum':int(a)})
         elif o in ['-f', '--frame']:
@@ -144,7 +155,7 @@ if __name__ == "__main__":
             args_dict['dmax'], 
             args_dict['gap'], 
             args_dict['overlap'], 
-            histogram_report, 
+            args_dict['histogram_report'], 
             args_dict['mask'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
