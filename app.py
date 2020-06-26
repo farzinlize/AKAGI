@@ -5,7 +5,7 @@ from functools import reduce
 
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain
-from misc import read_fasta, make_location
+from misc import read_fasta, make_location, edit_distances_matrix
 from report import motif_chain_report
 
 import sys
@@ -63,6 +63,29 @@ def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overl
 
     make_location('%s%s'%(RESULT_LOCATION, dataset_name))
     motif_chain_report(motifs, '%s%s/f%d-d%d-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, frame_size, d, q, gap, overlap), sequences)
+
+
+def sequences_distance_matrix(location):
+    with open('%s.fasta'%location, 'r') as fasta, open('%s.matrix'%location, 'w') as matrix:
+        sequences = []
+        reading = False
+        for line in fasta:
+            if reading:
+                if line[0] == '>':
+                    reading = False
+                    if len(sequences) != 0:
+                        matrix.write(edit_distances_matrix(sequences))
+                    sequences = []
+                    matrix.write(line)
+                else:
+                    sequences += [line.split(',')[2]]
+            else:
+                if '>instances' in line:
+                    reading = True
+                matrix.write(line)
+                
+        if len(sequences) != 0:
+            matrix.write(edit_distances_matrix(sequences))
 
 
 if __name__ == "__main__":
@@ -123,5 +146,7 @@ if __name__ == "__main__":
             args_dict['overlap'], 
             histogram_report, 
             args_dict['mask'])
+    elif command == 'SDM':
+        sequences_distance_matrix(args_dict['sequences'])
     else:
         print('[ERROR] command %s is not supported'%command)
