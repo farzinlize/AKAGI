@@ -223,7 +223,7 @@ def editDistDP(str1, str2):
 
 
 def edit_distances_matrix(sequences):
-    result = ''
+    result = '\n'
     for a in sequences:
         for b in sequences:
             d = editDistDP(a, b)
