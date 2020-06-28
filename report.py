@@ -3,6 +3,17 @@ from matplotlib import pyplot
 from misc import Queue
 import numpy
 
+
+class FastaInstance:
+    def __init__(self, instance_str):
+        instance_lst = instance_str.split(',')
+        self.start = int(instance_lst[1])
+        self.length = int(instance_lst[3])
+        self.end = self.start + self.length
+        self.substring = instance_lst[2]
+        self.seq_id = int(instance_lst[0])
+
+
 def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename='figure.png'):
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
 
@@ -54,6 +65,23 @@ def motif_chain_report(motifs, filename, sequences):
     report_locations.close()
     fasta_result.close()
 
+
+def count_overlap(m, b):
+    if m.start < b.start:
+        if b.start < m.end:
+            if m.end <= b.end:
+                return m.end - b.start
+            return b.length
+        return 0
+    elif m.start > b.start:
+        if m.start < b.end:
+            if m.end <= b.end:
+                return m.length
+            return b.end - m.start
+        return 0
+    return min(b.length, m.length)
+
+
 # ########################################## #
 #           main fucntion section            #
 # ########################################## #
@@ -91,5 +119,13 @@ def test_savefig():
     os.mkdir('.\\results\\new')
     pyplot.savefig('.\\results\\new\\s.png') 
 
+
+def test_count_overlap():
+    b = FastaInstance('0,-10,ATTCG,1')
+    m = FastaInstance('0,-7,CGATT,2')
+
+    print(count_overlap(m, b))
+
+
 if __name__ == "__main__":
-    test_reduce()
+    test_count_overlap()
