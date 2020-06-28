@@ -5,7 +5,7 @@ from functools import reduce
 
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain
-from misc import read_fasta, make_location, edit_distances_matrix
+from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report
 
 import sys
@@ -14,6 +14,7 @@ import sys
 DATASET_TREES = [('gkhood5_8', 'dataset')]
 HISTOGRAM_LOCATION = './results/figures/%s-f%d-d%d-q%d-g%d-o%d/'
 RESULT_LOCATION = './results/'
+BINDING_SITE_LOCATION = './data/answers.fasta'
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
@@ -79,6 +80,7 @@ def sequences_distance_matrix(location):
     with open('%s.fasta'%location, 'r') as fasta, open('%s.matrix'%location, 'w') as matrix:
         sequences = []
         reading = False
+        reading_pattern = False
         for line in fasta:
             if reading:
                 if line[0] == '>':
@@ -87,10 +89,15 @@ def sequences_distance_matrix(location):
                         matrix.write(edit_distances_matrix(sequences))
                     sequences = []
                     matrix.write(line)
+                    if 'pattern' in line:
+                        reading_pattern = True
                 else:
                     sequences += [line.split(',')[2]]
             else:
-                if '>instances' in line:
+                if reading_pattern:
+                    sequences += [line.replace('|', '')]
+                    reading_pattern = False
+                elif '>instances' in line:
                     reading = True
                 matrix.write(line)
                 
