@@ -232,6 +232,29 @@ def edit_distances_matrix(sequences):
     return result
 
 
+def normalize_sites(sites):
+    result = []
+    for site in sites:
+        result += [[int(site[0]), int(site[1]), site[2], int(site[3])]]
+    return result
+
+
+def extract_from_fasta(fasta, dataset):
+    read = False
+    binding_sites = []
+    for line in fasta:
+        if dataset in line:
+            read = True
+        elif read:
+            if '>' in line:
+                if 'instances' in line:
+                    continue
+                return normalize_sites(binding_sites)
+            else:
+                binding_sites += [line.split(',')]
+    return normalize_sites(binding_sites)
+
+
 # ########################################## #
 #            heap array encoding             #
 # ########################################## #
@@ -324,11 +347,9 @@ def f(lst):
 
 
 def workbench_tests():
-    a = [ExtraPosition(25, 3), ExtraPosition(25, 7), ExtraPosition(1, 1)]
-    print(a[0]<=a[1])
-    print(str(a))
-    print(int(a[0]))
-    print(a[int(a[2])])
+    l = extract_from_fasta(open('./data/answers.fasta', 'r'), 'dm01')
+    for e in l:
+        print(e)
 
 
 # ########################################## #
