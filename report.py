@@ -14,6 +14,68 @@ class FastaInstance:
         self.seq_id = int(instance_lst[0])
 
 
+class OnSequenceAnalysis:
+    def __init__(self, sequence_count, sequence_lengths):
+        self.bps_tag = [[[0, 0, []] for _ in range(sequence_lengths[seq_index])] for seq_index in range(sequence_count)]
+        self.bs_info = []
+        self.sFP = 0
+
+
+    def add_motif(self, motif):
+        overlap = False
+        gard = [True for _ in self.bs_info]
+        for i in range(motif.start, motif.end):
+            self.bps_tag[motif.seq_id][i][0] += 1
+            if self.bps_tag[motif.seq_id][i][1]:
+                overlap = True
+                for bs_index in self.bps_tag[motif.seq_id][i][2]:
+                    if gard[bs_index]:
+                        self.bs_info[bs_index][1] += 1
+                        gard[bs_index] = False
+        if not overlap:
+            self.sFP += 1
+            
+
+    def add_motifs(self, motifs):
+        for motif in motifs:
+            self.add_motif(motif)
+
+
+    def add_binding_site(self, binding_site):
+        for i in range(binding_site.start, binding_site.end):
+            self.bps_tag[binding_site.seq_id][i][1] += 1
+            self.bps_tag[binding_site.seq_id][i][2] += [len(self.bs_info)]
+        self.bs_info += [[binding_site, 0]]
+
+
+    def add_binding_sites(self, binding_sites):
+        for bs in binding_sites:
+            self.add_binding_site(bs)
+
+
+    def extract_raw_statistics(self):
+        boundle = {'nTP':0, 'nFN':0, 'nFP':0, 'nTN':0, 'sTP':0, 'sFN':0, 'sFP':self.sFP}
+
+        for info in self.bs_info:
+            if info[1]:
+                boundle['sTP'] += 1
+            else:
+                boundle['sFN'] += 1
+
+        for sequence in self.bps_tag:
+            for bs_info in sequence:
+                if bs_info[0] and bs_info[1]:
+                    boundle['nTP'] += 1
+                elif bs_info[0] and not bs_info[1]:
+                    boundle['nFP'] += 1
+                elif not bs_info[0] and bs_info[1]:
+                    boundle['nFN'] += 1
+                else:
+                    boundle['nTN'] += 1
+        
+        return boundle
+
+
 def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename='figure.png'):
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
 
@@ -127,5 +189,22 @@ def test_count_overlap():
     print(count_overlap(m, b))
 
 
+def test_analysis():
+    analysis = OnSequenceAnalysis(3, [15, 15, 15])
+
+    analysis.add_binding_site(FastaInstance('0,-13,nnnnn,5'))
+    analysis.add_binding_site(FastaInstance('1,-9,nnnnnn,6'))
+    analysis.add_binding_site(FastaInstance('2,-12,nnnn,4'))
+
+    analysis.add_motif(FastaInstance('0,-14,nn,2'))
+    analysis.add_motif(FastaInstance('0,-10,nnn,3'))
+    analysis.add_motif(FastaInstance('0,-4,nnn,3'))
+    analysis.add_motif(FastaInstance('2,-6,nnnn,4'))
+    analysis.add_motif(FastaInstance('1,-8,nnnn,4'))
+    analysis.add_motif(FastaInstance('2,-14,nnn,3'))
+
+    print(analysis.extract_raw_statistics())
+
+
 if __name__ == "__main__":
-    test_count_overlap()
+    test_analysis()
