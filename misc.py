@@ -232,13 +232,6 @@ def edit_distances_matrix(sequences):
     return result
 
 
-def normalize_sites(sites):
-    result = []
-    for site in sites:
-        result += [[int(site[0]), int(site[1]), site[2], int(site[3])]]
-    return result
-
-
 def extract_from_fasta(fasta, dataset):
     read = False
     binding_sites = []
@@ -249,10 +242,10 @@ def extract_from_fasta(fasta, dataset):
             if '>' in line:
                 if 'instances' in line:
                     continue
-                return normalize_sites(binding_sites)
+                return binding_sites
             else:
-                binding_sites += [line.split(',')]
-    return normalize_sites(binding_sites)
+                binding_sites += [line]
+    return binding_sites
 
 
 # ########################################## #
