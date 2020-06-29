@@ -6,7 +6,7 @@ from functools import reduce
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain
 from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
-from report import motif_chain_report
+from report import motif_chain_report, FastaInstance, OnSequenceAnalysis
 
 import sys
 
@@ -105,14 +105,80 @@ def sequences_distance_matrix(location):
             matrix.write(edit_distances_matrix(sequences))
 
 
+def analysis_raw_statistics(dataset_name, results_location):
+
+    sequences = read_fasta('data/%s.fasta'%(dataset_name))
+
+    if dataset_name[-1] in 'rgm':
+        dataset_name = dataset_name[:-1]
+
+    binding_sites = [FastaInstance(instance_str) for instance_str in extract_from_fasta(open(BINDING_SITE_LOCATION, 'r'), dataset_name)]
+    FSM = {'start':0, 'pattern':1, 'instances':2}
+
+    overal_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+    chain_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+    pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+
+    with open('%s.fasta'%results_location, 'r') as results, open('%s.analysis'%results_location, 'w') as analysis:
+        mode = FSM['start']
+        current_chain = 0
+        current_pattern = ''
+        for line in results:
+            if mode == FSM['start']:
+                if 'chain' in line:
+                    current_chain += 1
+                    analysis.write('>%d-chain\n'%current_chain)
+                elif 'pattern' in line:
+                    mode = FSM['pattern']
+                elif 'instances' in line:
+                    mode = FSM['instances']
+            elif mode == FSM['pattern']:
+                current_pattern = line[:-1]
+                mode = FSM['start']
+            elif mode == FSM['instances']:
+                if 'chain' in line: # print pattern analysis and chain analysis
+
+                    # printing pattern statistics - and reset the analysis object
+                    analysis.write('>pattern\n%s\n>pattern statistics\n%s\n'%(current_pattern, str(pattern_analysis.extract_raw_statistics())))
+                    pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+
+                    # printing chain statistics - use the predefined object and recreate it for next use
+                    analysis.write('>%d-chain statistics\n%s\n'%(current_chain, str(chain_analysis.extract_raw_statistics())))
+                    chain_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+
+                    current_pattern = ''
+                    current_chain += 1
+                    mode = FSM['start']
+                    analysis.write('>%d-chain\n'%current_chain)
+                elif 'pattern' in line: # print only pattern analysis
+
+                    # printing pattern statistics - and reset the analysis object
+                    analysis.write('>pattern\n%s\n>pattern statistics\n%s\n'%(current_pattern, str(pattern_analysis.extract_raw_statistics())))
+                    pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+
+                    mode = FSM['pattern']
+                    current_pattern = ''
+                else:
+                    instance = FastaInstance(line)
+                    pattern_analysis.add_motif(instance)
+                    overal_analysis.add_motif(instance)
+                    chain_analysis.add_motif(instance)
+
+        # print last instances pattern and chain and overall
+        analysis.write('>pattern\n%s\n>pattern statistics\n%s\n'%(current_pattern, str(pattern_analysis.extract_raw_statistics())))
+        analysis.write('>%d-chain statistics\n%s\n'%(current_chain, str(chain_analysis.extract_raw_statistics())))
+        analysis.write('>overall statistics\n%s\n'%(str(overal_analysis.extract_raw_statistics())))
+
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 
-        'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=']
+        'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'dm01r', 'gap':3, 
@@ -146,6 +212,8 @@ if __name__ == "__main__":
             args_dict.update({'frame_size':int(a)})
         elif o in ['-G', '--gkhood']:
             args_dict.update({'gkhood_index':int(a)})
+        elif o in ['-p', '--path']:
+            args_dict.update({'path':a})
 
     if command == 'SLD':
         single_level_dataset(
@@ -166,5 +234,7 @@ if __name__ == "__main__":
             args_dict['mask'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
+    elif command == 'ARS':
+        analysis_raw_statistics(args_dict['sequences'], args_dict['path'])
     else:
         print('[ERROR] command %s is not supported'%command)
