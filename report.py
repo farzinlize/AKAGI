@@ -15,10 +15,16 @@ class FastaInstance:
 
 
 class OnSequenceAnalysis:
-    def __init__(self, sequence_count, sequence_lengths):
+    def __init__(self, sequence_count, sequence_lengths, binding_sites=[], motifs=[]):
         self.bps_tag = [[[0, 0, []] for _ in range(sequence_lengths[seq_index])] for seq_index in range(sequence_count)]
         self.bs_info = []
         self.sFP = 0
+
+        if binding_sites:
+            self.add_binding_sites(binding_sites)
+        
+        if motifs:
+            self.add_motifs(motifs)
 
 
     def add_motif(self, motif):
