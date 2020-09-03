@@ -7,6 +7,7 @@ from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain
 from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis
+from alignment import alignment_matrix
 
 import sys
 
@@ -171,6 +172,28 @@ def analysis_raw_statistics(dataset_name, results_location):
 
 
 
+def alignment_fasta(fasta_location):
+    with open('%s.fasta'%fasta_location, 'r') as fasta, open('%s.align'%fasta_location, 'w') as align:
+        read = False
+        instances = []
+        for line in fasta:
+            if read:
+                if '>' in line:
+                    if instances:
+                        alignments = alignment_matrix(instances)
+                        for alignment in alignments:
+                            align.write(alignment+'\n')
+                    read = False
+                    instances = []
+                    align.write(line)
+                else:
+                    instances += [FastaInstance(line).substring]
+            else:
+                if 'instances' in line:
+                    read = True
+                align.write(line)
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
@@ -236,5 +259,7 @@ if __name__ == "__main__":
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
         analysis_raw_statistics(args_dict['sequences'], args_dict['path'])
+    elif command == 'ALG':
+        alignment_fasta(args_dict['path'])
     else:
         print('[ERROR] command %s is not supported'%command)
