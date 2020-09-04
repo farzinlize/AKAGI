@@ -82,6 +82,36 @@ class OnSequenceAnalysis:
         return boundle
 
 
+'''
+    (a)lign (P)osition (W)aighted (M)atrix
+'''
+class aPWM:
+    def __init__(self, motifs=[]):
+        self.motif_set = motifs
+        if motifs:
+            self.length = len(motifs[0])
+        else:
+            self.length = -1
+
+    def score(self):
+        position_scores = []
+        for position in range(self.length):
+            counts = {'A':0, 'T':0, 'C':0, 'G':0, '-':0}
+            for motif in self.motif_set:
+                counts[motif[position]] += 1
+            
+            score = max(counts.values())
+            if score == counts['-']: score = 0
+
+            position_scores += [score/len(self.motif_set)]
+        return (reduce(lambda a,b: a+b, position_scores)) / self.length
+
+    def add_motif(self, motif):
+        if self.length == -1:
+            self.length = len(motif)
+        self.motif_set += [motif]
+        
+
 def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename='figure.png'):
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
 
@@ -212,5 +242,15 @@ def test_analysis():
     print(analysis.extract_raw_statistics())
 
 
+def test_apwm():
+    test = aPWM()
+    test.add_motif('AATTTCGGG')
+    test.add_motif('AATTTCGGG')
+    test.add_motif('AATTTCGGG')
+    test.add_motif('AATTTCGGG')
+    test.add_motif('AATTTCGGG')
+    print(test.score())
+
+
 if __name__ == "__main__":
-    test_analysis()
+    test_apwm()
