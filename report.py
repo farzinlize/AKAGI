@@ -3,6 +3,9 @@ from matplotlib import pyplot
 from misc import Queue
 import numpy
 
+# ########################################## #
+#                 class part                 #
+# ########################################## #
 
 class FastaInstance:
     def __init__(self, instance_str):
@@ -111,6 +114,39 @@ class aPWM:
             self.length = len(motif)
         self.motif_set += [motif]
         
+
+class Ranking:
+    def __init__(self):
+        self.rank = []
+
+
+    class Entry:
+        def __init__(self, score, pattern_boundle):
+            self.score = score
+            self.boundle = pattern_boundle
+
+
+    def add_entry(self, score, pattern_boundle):
+        start = 0
+        end = len(self.rank) - 1
+        while start <= end:
+            mid = (start+end)//2
+            if self.rank[mid].score == score:
+                self.rank = self.rank[:mid] + [self.Entry(score, pattern_boundle)] + self.rank[mid:]
+                pass
+            elif self.rank[mid].score < score:
+                start = mid + 1
+            else:
+                end = mid - 1
+        self.rank = self.rank[:start] + [self.Entry(score, pattern_boundle)] + self.rank[start:]
+            
+
+# ########################################## #
+#                 functions                  #
+# ########################################## #
+
+
+
 
 def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename='figure.png'):
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))

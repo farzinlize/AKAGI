@@ -6,7 +6,7 @@ from functools import reduce
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain
 from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
-from report import motif_chain_report, FastaInstance, OnSequenceAnalysis
+from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking
 from alignment import alignment_matrix
 
 import sys
@@ -108,6 +108,29 @@ def sequences_distance_matrix(location):
 
 def analysis_raw_statistics(dataset_name, results_location):
 
+    # inner function for pattern analysis and ranking purposes
+    def analysis_ranking_pattern():
+        nonlocal pattern_analysis, alignment_set, pwm_ranking, current_pattern, analysis, sequences, binding_sites
+
+        # pattern statisics extraction, score and ranking (*START*)
+        pattern_statistics = pattern_analysis.extract_raw_statistics()
+
+        # align all pattern instances for scoring
+        align_matrix = alignment_matrix(alignment_set)
+        alignment_set = []
+
+        # measure score and ranking
+        pwm_score = aPWM(align_matrix).score()
+        pwm_ranking.add_entry(pwm_score, (current_pattern, pattern_statistics))
+
+        # printing pattern statistics - and reset the analysis object
+        analysis.write('>pattern\n%s\n>pattern statistics\n%s\n>pattern scores\n(aligned) PWM score -> %f\n'%(
+            current_pattern, str(pattern_statistics), pwm_score))
+
+        pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+        # pattern statisics extraction, score and ranking (*END*)
+
+
     sequences = read_fasta('data/%s.fasta'%(dataset_name))
 
     if dataset_name[-1] in 'rgm':
@@ -116,9 +139,17 @@ def analysis_raw_statistics(dataset_name, results_location):
     binding_sites = [FastaInstance(instance_str) for instance_str in extract_from_fasta(open(BINDING_SITE_LOCATION, 'r'), dataset_name)]
     FSM = {'start':0, 'pattern':1, 'instances':2}
 
+    # raw statistics -> result evaluation and validation using actual binding sites as answers
     overal_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
     chain_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
     pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+
+    # score metric -> ranking motif for filtering before evaluation
+    pwm = aPWM()
+
+    # ranking and alignment objects
+    pwm_ranking = Ranking()
+    alignment_set = []
 
     with open('%s.fasta'%results_location, 'r') as results, open('%s.analysis'%results_location, 'w') as analysis:
         mode = FSM['start']
@@ -139,9 +170,8 @@ def analysis_raw_statistics(dataset_name, results_location):
             elif mode == FSM['instances']:
                 if 'chain' in line: # print pattern analysis and chain analysis
 
-                    # printing pattern statistics - and reset the analysis object
-                    analysis.write('>pattern\n%s\n>pattern statistics\n%s\n'%(current_pattern, str(pattern_analysis.extract_raw_statistics())))
-                    pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+                    # pattern statisics extraction, score and ranking (*CALLING*)
+                    analysis_ranking_pattern()
 
                     # printing chain statistics - use the predefined object and recreate it for next use
                     analysis.write('>%d-chain statistics\n%s\n'%(current_chain, str(chain_analysis.extract_raw_statistics())))
@@ -153,9 +183,8 @@ def analysis_raw_statistics(dataset_name, results_location):
                     analysis.write('>%d-chain\n'%current_chain)
                 elif 'pattern' in line: # print only pattern analysis
 
-                    # printing pattern statistics - and reset the analysis object
-                    analysis.write('>pattern\n%s\n>pattern statistics\n%s\n'%(current_pattern, str(pattern_analysis.extract_raw_statistics())))
-                    pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+                    # pattern statisics extraction, score and ranking (*CALLING*)
+                    analysis_ranking_pattern()
 
                     mode = FSM['pattern']
                     current_pattern = ''
@@ -165,8 +194,12 @@ def analysis_raw_statistics(dataset_name, results_location):
                     overal_analysis.add_motif(instance)
                     chain_analysis.add_motif(instance)
 
-        # print last instances pattern and chain and overall
-        analysis.write('>pattern\n%s\n>pattern statistics\n%s\n'%(current_pattern, str(pattern_analysis.extract_raw_statistics())))
+                    alignment_set += [instance.substring]
+
+        # pattern last instances pattern statisics extraction, score and ranking (*CALLING*) 
+        analysis_ranking_pattern()
+
+        # print last chain and overall
         analysis.write('>%d-chain statistics\n%s\n'%(current_chain, str(chain_analysis.extract_raw_statistics())))
         analysis.write('>overall statistics\n%s\n'%(str(overal_analysis.extract_raw_statistics())))
 
