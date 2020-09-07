@@ -248,6 +248,32 @@ def extract_from_fasta(fasta, dataset):
     return binding_sites
 
 
+'''
+    generate a 3-dimentional list to access motifs that occures at a specific location
+        dimentions are described below:
+            1. sequence_id -> there is a list for any sequence
+            2. position -> there is a list of motifs for any position on a specific sequence
+            3. motif -> refrence for motifs that occures at a pecific location (position) and a specific sequence
+'''
+class OnSequenceDistribution:
+
+    class Entry:
+        def __init__(self, motif, end_margin):
+            self.motif = motif
+            self.end_margin = end_margin
+
+    def __init__(self, motifs, sequences):
+        self.struct = self.generate_list(motifs, sequences)
+
+    def generate_list(self, motifs, sequences):
+        struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
+        for motif in motifs:
+            for index, seq_id in enumerate(motif.found_list[0]):
+                for position in motif.found_list[1][index]:
+                    struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
+        return struct
+
+
 # ########################################## #
 #            heap array encoding             #
 # ########################################## #
@@ -339,10 +365,30 @@ def f(lst):
     return lst
 
 
+def outer_f(a, b, c):
+    def inner_f(h):
+        nonlocal lst
+        print('a', a)
+        # print('inner:',lst)
+        if h:
+            # print('here')
+            lst = []
+        else:
+            lst = [100000]
+
+    y = 10
+    lst = [5, 6]
+    print(lst)
+    inner_f(1)
+    print(lst)
+    inner_f(0)
+    print(lst)
+
+
+
 def workbench_tests():
-    l = extract_from_fasta(open('./data/answers.fasta', 'r'), 'dm01')
-    for e in l:
-        print(e)
+    seq = ['TACAATTTTATATGTATATTTTTATTTTATTTTTTTTAAAT', 'TACATTTACTATATGTATTTATTTATTTCTTTAGAT', 'TACAACTTTTATGTTTATTTCATTTTAAAGATTTTTAAAAT', 'AACAATTTATTTATATTTAAATTTATTTTAATTTGTTTCAAT']
+    print(edit_distances_matrix(seq))
 
 
 # ########################################## #
@@ -351,4 +397,4 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    workbench_tests()
+    outer_f(5, 6, 2)

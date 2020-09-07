@@ -1,6 +1,6 @@
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location, ExtraPosition
+from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location, ExtraPosition, OnSequenceDistribution
 from time import time as currentTime
 from report import location_histogram, motif_chain_report
 import sys
@@ -78,25 +78,6 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 #          chaining motifs section           #
 # ########################################## #
 
-'''
-    generate a 3-dimentional list to access motifs that occures at a specific location
-        dimentions are described below:
-            1. sequence_id -> there is a list for any sequence
-            2. position -> there is a list of motifs for any position on a specific sequence
-            3. motif -> refrence for motifs that occures at a pecific location (position) and a specific sequence
-'''
-def on_sequence_found_structure(motifs, sequences):
-
-    struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
-
-    for motif in motifs:
-        for index, seq_id in enumerate(motif.found_list[0]):
-            for position in motif.found_list[1][index]:
-                struct[seq_id][position.start_position] += [(motif, position.end_margin)]
-
-    return struct
-
-
 def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, report=False, report_directory=''):
 
     if report and sequence_mask == None:
@@ -106,7 +87,7 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
     if q == -1:
         q = len(sequences)
 
-    on_sequence = on_sequence_found_structure(motifs, sequences)
+    on_sequence = OnSequenceDistribution(motifs, sequences)
     queue = Queue(items=[motif.make_chain() for motif in motifs])
 
     if report:
@@ -141,8 +122,8 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
                     next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):
                         continue
-                    for next_condidate in on_sequence[seq_id][next_position]:
-                        next_tree.add_frame(next_condidate[0].label, seq_id, ExtraPosition(next_position, next_condidate[1], chain=position.get_chain()))
+                    for next_condidate in on_sequence.struct[seq_id][next_position]:
+                        next_tree.add_frame(next_condidate.motif.label, seq_id, ExtraPosition(next_position, next_condidate.end_margin, chain=position.get_chain()))
         for next_motif in next_tree.extract_motifs(q, 0):
             link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
             queue.insert(next_motif)
