@@ -1,6 +1,6 @@
 from functools import reduce
 from matplotlib import pyplot
-from misc import Queue
+from misc import Queue, OnSequenceDistribution, make_location
 import numpy
 
 # ########################################## #
@@ -145,6 +145,50 @@ class Ranking:
 #                 functions                  #
 # ########################################## #
 
+
+def colored_neighbours_analysis(chains, sequences, frame_size, figures_location):
+
+    bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
+
+    for chain_index, chain in enumerate(chains):
+
+        # coloring motifs
+        color = 0
+        current_color_set = []
+        colors_collection = []
+        current_frame = frame_size
+        chain_on_sequence = OnSequenceDistribution(chain, sequences)
+        for seq_id in range(len(sequences)):
+            for position in range(len(sequences[seq_id])):
+                if current_frame == 0:
+                    color += 1
+                    current_frame = frame_size
+                    colors_collection += [current_color_set[:]]
+                    current_color_set = []
+                for motif in chain_on_sequence.struct[seq_id][int(position)]:
+                    if motif.motif.set_color(color):
+                        current_color_set += [motif.motif]
+                current_frame -= 1
+                
+        
+        colors_collection += [current_color_set[:]]
+        
+        # colored chain report (generate each color motif distribution)
+        make_location(figures_location+'chain(%d)/'%chain_index)
+
+        for color, color_set in enumerate(colors_collection):
+            histogram_lists = [[] for _ in range(len(sequences))]
+            for motif in color_set:
+                for index, seq_id in enumerate(motif.found_list[0]):
+                    for position in motif.found_list[1][index]:
+                        histogram_lists[seq_id] += [position.start_position]
+
+            # saving figures
+            for seq_id in range(len(sequences)):
+                pyplot.hist(histogram_lists[seq_id], bins, label='color(%d)-seq(%d)'%(color, seq_id))
+                pyplot.legend(loc='upper right')
+                pyplot.savefig(figures_location+'chain(%d)/'%(chain_index)+'color(%d)-seq(%d).png'%(color, seq_id))
+                pyplot.clf()
 
 
 
