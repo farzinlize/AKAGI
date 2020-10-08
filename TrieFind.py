@@ -182,6 +182,12 @@ class TrieNode:
 
         return result
 
+    def set_color(self, color):
+        if hasattr(self, 'color'):
+            return False
+        self.color = color
+        return True
+
 
 def binery_special_add(found_list, seq_id, position):
     start = 0
