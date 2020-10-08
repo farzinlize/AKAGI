@@ -6,7 +6,7 @@ from functools import reduce
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain
 from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
-from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking
+from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
 
 import sys
@@ -30,7 +30,7 @@ def single_level_dataset(kmin, kmax, level, dmax):
     print(strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
 
-def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overlap, h_report, s_mask):
+def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overlap, report, s_mask=None, color_frame=-1):
     print('operation MFC: finding motif using chain algorithm (tree:%s)\n\
         arguments -> f=%d, q=%d, d=%d, gap=%d, overlap=%d, dataset=%s'%(
             DATASET_TREES[gkhood_index][0], 
@@ -59,22 +59,23 @@ def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overl
     print('\nnumber of motifs->%d | execute time->%s'%(len(motifs), strftime("%H:%M:%S", gmtime(currentTime() - last_time))))
 
     last_time = currentTime()
-    report = motif_chain(
+    chains = motif_chain(
         motifs, 
         sequences,
         q=q, 
         gap=gap,
         overlap=overlap, 
         sequence_mask=s_mask, 
-        report=h_report, 
+        report=report, 
         report_directory=HISTOGRAM_LOCATION%(dataset_name, frame_size, d, q, gap, overlap))
-    print('chaining done in %s', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
-
-    if report != None:
-        print('number of chained-motif at each level: ', report)
+    print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
     make_location('%s%s'%(RESULT_LOCATION, dataset_name))
-    motif_chain_report(motifs, '%s%s/f%d-d%d-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, frame_size, d, q, gap, overlap), sequences)
+
+    if report[1]:
+        colored_neighbours_analysis(chains, sequences, color_frame, '%s%s-colored/'%(RESULT_LOCATION, dataset_name))
+    else:
+        motif_chain_report(motifs, '%s%s/f%d-d%d-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, frame_size, d, q, gap, overlap), sequences)
 
 
 def sequences_distance_matrix(location):
@@ -204,7 +205,6 @@ def analysis_raw_statistics(dataset_name, results_location):
         analysis.write('>overall statistics\n%s\n'%(str(overal_analysis.extract_raw_statistics())))
 
 
-
 def alignment_fasta(fasta_location):
     with open('%s.fasta'%fasta_location, 'r') as fasta, open('%s.align'%fasta_location, 'w') as align:
         read = False
@@ -227,17 +227,18 @@ def alignment_fasta(fasta_location):
                 align.write(line)
 
 
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:'
-    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:'
+    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=']
 
     # default values
-    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'dm01r', 'gap':3, 
+    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':-1, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False}
 
     command = sys.argv[1]
@@ -270,6 +271,8 @@ if __name__ == "__main__":
             args_dict.update({'gkhood_index':int(a)})
         elif o in ['-p', '--path']:
             args_dict.update({'path':a})
+        elif o in ['-c', '--color-frame']:
+            args_dict.update({'color-frame':int(a)})
 
     if command == 'SLD':
         single_level_dataset(
@@ -286,13 +289,24 @@ if __name__ == "__main__":
             args_dict['dmax'], 
             args_dict['gap'], 
             args_dict['overlap'], 
-            args_dict['histogram_report'], 
-            args_dict['mask'])
+            report=(args_dict['histogram_report'], False),
+            mask=args_dict['mask'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
         analysis_raw_statistics(args_dict['sequences'], args_dict['path'])
     elif command == 'ALG':
         alignment_fasta(args_dict['path'])
+    elif command == 'CNM':
+        motif_finding_chain(
+            args_dict['sequences'], 
+            args_dict['gkhood_index'], 
+            args_dict['frame_size'], 
+            args_dict['quorum'], 
+            args_dict['dmax'], 
+            args_dict['gap'], 
+            args_dict['overlap'], 
+            report=(False, True),
+            color_frame=args_dict['color-frame'])
     else:
         print('[ERROR] command %s is not supported'%command)

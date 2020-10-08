@@ -78,9 +78,9 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 #          chaining motifs section           #
 # ########################################## #
 
-def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, report=False, report_directory=''):
+def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
 
-    if report and sequence_mask == None:
+    if report[0] and sequence_mask == None:
         sequence_mask = [1 for _ in range(len(sequences))]
 
     # set defualt value of q
@@ -90,25 +90,31 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
     on_sequence = OnSequenceDistribution(motifs, sequences)
     queue = Queue(items=[motif.make_chain() for motif in motifs])
 
-    if report:
+    if report[0] or report[1]:
         # reporting variables
         current_level = 0
         level_count = [0]
         current_level_list = []
+    if report[0]:
         make_location(report_directory)
+    if report[1]:
+        chains = []
 
     while not queue.isEmpty():
         link = queue.pop()
         next_tree = TrieNode()
 
-        if report:
+        if report[0] or report[1]:
             # updating report variables
             if current_level == link.chain_level:
                 level_count[current_level] += 1
                 current_level_list += [link]
             elif link.chain_level > current_level:
+                if report[0]:
                 # plot each chain level locations
-                location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%((current_level+1), level_count[current_level]))
+                    location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%((current_level+1), level_count[current_level]))
+                if report[1]:
+                    chains += [current_level_list[:]]
 
                 level_count += [0 for _ in range(link.chain_level-current_level)]
                 current_level = link.chain_level
@@ -129,12 +135,13 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
             queue.insert(next_motif)
         link.chained_done()
 
-    if report:
+    if report[0]:
         # plot last chain level locations
         location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%((current_level+1), level_count[current_level]))
 
+    if report[1]:
         # return reporting variable
-        return level_count
+        return chains + [current_level_list[:]]
 
 
 # ########################################## #
