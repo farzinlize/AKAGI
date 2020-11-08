@@ -117,6 +117,18 @@ class TrieNode:
         return motifs
 
 
+    def find_max_q(self, q_old=-1):
+        my_q = -1
+        if hasattr(self, 'found_list'):
+            my_q = len(self.found_list[0])
+
+        childs_max_q = []
+        for child in self.childs:
+            childs_max_q += child.find_max_q(q_old)
+
+        return max(childs_max_q + [my_q, q_old])
+
+
     # ########################################## #
     #              chain section                 #
     # ########################################## #
