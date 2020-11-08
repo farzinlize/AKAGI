@@ -74,6 +74,33 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
     return motifs_tree
 
 
+def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences):
+    motifs_tree = TrieNode()
+    
+    for seq_id in range(len(sequences)):
+        lframe_start = [0 for _ in range(len(ldmax))]
+        lframe_end = [frame_size for frame_size in lframe_size]
+
+        while lframe_end:
+
+            for frame, index in [(sequences[seq_id][lframe_start[i]:lframe_end[i]], i) for i in range(len(lframe_end))]:
+                dneighbours = gkhood_trees[index].dneighbours(frame, ldmax[index])
+                motifs_tree.add_frame(frame, seq_id, ExtraPosition(lframe_start[index], 0))
+                for each in dneighbours:
+                    motifs_tree.add_frame(each[0], seq_id, ExtraPosition(lframe_start[index], lframe_size[index]-len(each[0])))
+            
+            for i in range(len(lframe_start)):
+                lframe_start[i] += 1
+                lframe_end[i] += 1
+
+            for end_index in range(len(lframe_end)):
+                if lframe_end[end_index] >= len(sequences[seq_id]):
+                    lframe_end = lframe_end[:end_index] + lframe_end[end_index+1:]
+                    lframe_start = lframe_start[:end_index] + lframe_start[end_index+1:]
+    
+    return motifs_tree
+
+
 # ########################################## #
 #          chaining motifs section           #
 # ########################################## #
