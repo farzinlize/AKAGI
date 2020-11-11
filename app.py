@@ -11,11 +11,16 @@ from alignment import alignment_matrix
 
 import sys
 
-# Global Variables
-DATASET_TREES = [('gkhood5_8', 'dataset')]
-HISTOGRAM_LOCATION = './results/figures/%s-f%d-d%d-q%d-g%d-o%d/'
-RESULT_LOCATION = './results/'
-BINDING_SITE_LOCATION = './data/answers.fasta'
+
+# importing constants
+
+from constants import DATASET_TREES
+from constants import HISTOGRAM_LOCATION
+from constants import RESULT_LOCATION
+from constants import BINDING_SITE_LOCATION
+
+from constants import ARG_UNSET
+from constants import FIND_MAX
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
@@ -30,23 +35,26 @@ def single_level_dataset(kmin, kmax, level, dmax):
     print(strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
 
-def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overlap, report, s_mask=None, color_frame=-1):
+def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overlap, report, s_mask=None, color_frame=ARG_UNSET):
     print('operation MFC: finding motif using chain algorithm (tree:%s)\n\
-        arguments -> f=%d, q=%d, d=%d, gap=%d, overlap=%d, dataset=%s'%(
+        arguments -> f=%d, q=%d, d=%d, gap=%d, overlap=%d, dataset=%s\n\
+        operation mode: %s; coloring_frame=%d'%(
             DATASET_TREES[gkhood_index][0], 
             frame_size, 
             q, 
             d, 
             gap, 
             overlap, 
-            dataset_name))
+            dataset_name,
+            str(report[1]),
+            color_frame))
 
-    sequences = read_fasta('data/%s.fasta'%(dataset_name))
+    sequences = read_fasta('%s.fasta'%(dataset_name))
 
-    if q == -1:
+    if q == ARG_UNSET:
         q = len(sequences)
 
-    assert q <= len(sequences)
+    assert q <= len(sequences) or q == FIND_MAX
 
     if s_mask != None:
         assert len(sequences) == len(s_mask)
@@ -55,6 +63,12 @@ def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overl
 
     last_time = currentTime()
     motif_tree = find_motif_all_neighbours(tree, d, frame_size, sequences)
+
+    # nearly like SSMART objective function 
+    if q == FIND_MAX:
+        q = motif_tree.find_max_q()
+        print('[find_max_q] q = %d'%q)
+
     motifs = motif_tree.extract_motifs(q, 0)
     print('\nnumber of motifs->%d | execute time->%s'%(len(motifs), strftime("%H:%M:%S", gmtime(currentTime() - last_time))))
 
@@ -233,13 +247,13 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:Qu'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
-        'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=']
+        'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'multi-layer']
 
     # default values
-    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'dm01r', 'gap':3, 'color-frame':2,
-        'overlap':2, 'mask':None, 'quorum':-1, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False}
+    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
+        'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 'multi-layer':False}
 
     command = sys.argv[1]
 
@@ -273,6 +287,11 @@ if __name__ == "__main__":
             args_dict.update({'path':a})
         elif o in ['-c', '--color-frame']:
             args_dict.update({'color-frame':int(a)})
+        elif o in ['-Q', '--find-max-q']:
+            args_dict.update({'quorum':FIND_MAX})
+        elif o in ['-u', '--multi-layer']:
+            args_dict.update({'multi-layer':True})
+
 
     if command == 'SLD':
         single_level_dataset(
@@ -290,7 +309,7 @@ if __name__ == "__main__":
             args_dict['gap'], 
             args_dict['overlap'], 
             report=(args_dict['histogram_report'], False),
-            mask=args_dict['mask'])
+            s_mask=args_dict['mask'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
