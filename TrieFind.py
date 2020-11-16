@@ -124,7 +124,7 @@ class TrieNode:
 
         childs_max_q = []
         for child in self.childs:
-            childs_max_q += child.find_max_q(q_old)
+            childs_max_q += [child.find_max_q(q_old)]
 
         return max(childs_max_q + [my_q, q_old])
 
@@ -239,16 +239,20 @@ def binery_add(lst, item):
 
 # testing binery search-add
 def test_main():
-    lst = []
-    lst = binery_add(lst, 5)
-    lst = binery_add(lst, 8)
-    lst = binery_add(lst, 2)
-    lst = binery_add(lst, 3)
-    lst = binery_add(lst, 10)
-    lst = binery_add(lst, 3)
-    print(lst)
+    t = TrieNode()
+    t.add_frame('AAT', 0, 0)
+    t.add_frame('ATT', 0, 0)
+    t.add_frame('ATT', 1, 0)
+    t.add_frame('ATT', 2, 1)
+    t.add_frame('GGG', 1, 0)
+    t.add_frame('GGG', 2, 0)
+    t.add_frame('GGG', 0, 0)
+
+    q = t.find_max_q()
+    print(t.extract_motifs(q))
 
 
 ##########################################
 # main function call
-# test_main()
+if __name__ == "__main__":
+    test_main()
