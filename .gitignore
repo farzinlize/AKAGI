@@ -9,3 +9,5 @@ __pycache__/*
 *.tar.gz
 *.exe
 /hpc scripts/*
+/hpc outputs/*
+/peaks/*
