@@ -1,26 +1,20 @@
+# python libraries 
 from time import time as currentTime
 from time import strftime, gmtime
 from getopt import getopt
 from functools import reduce
+import sys
 
+# project imports
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain
 from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
 
-import sys
-
-
 # importing constants
+from constants import DATASET_TREES, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX
 
-from constants import DATASET_TREES
-from constants import HISTOGRAM_LOCATION
-from constants import RESULT_LOCATION
-from constants import BINDING_SITE_LOCATION
-
-from constants import ARG_UNSET
-from constants import FIND_MAX
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
