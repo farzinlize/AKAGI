@@ -1,3 +1,6 @@
+# pyright: reportUnboundVariable=false
+# ignoring false unbound reports
+
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood, GKHoodTree
 from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location, ExtraPosition, OnSequenceDistribution
@@ -84,7 +87,13 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
         while lframe_end:
 
             for frame, index in [(sequences[seq_id][lframe_start[i]:lframe_end[i]], i) for i in range(len(lframe_end))]:
-                dneighbours = gkhood_trees[index].dneighbours(frame, ldmax[index])
+                try:
+                    dneighbours = gkhood_trees[index].dneighbours(frame, ldmax[index])
+                except:
+                    print('[findmotif] dneighbours extraction failed')
+                    print('[+info] index=%d frame=%s dmax=%d'%(index, frame, ldmax[index]))
+                    raise Exception('HALT')
+
                 motifs_tree.add_frame(frame, seq_id, ExtraPosition(lframe_start[index], 0))
                 for each in dneighbours:
                     motifs_tree.add_frame(each[0], seq_id, ExtraPosition(lframe_start[index], lframe_size[index]-len(each[0])))
