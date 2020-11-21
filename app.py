@@ -7,13 +7,13 @@ import sys
 
 # project imports
 from GKmerhood import GKmerhood, GKHoodTree
-from findmotif import find_motif_all_neighbours, motif_chain
+from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_window_find_motif
 from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
 
 # importing constants
-from constants import DATASET_TREES, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX
+from constants import DATASET_TREES, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -29,19 +29,21 @@ def single_level_dataset(kmin, kmax, level, dmax):
     print(strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
 
-def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overlap, report, s_mask=None, color_frame=ARG_UNSET):
-    print('operation MFC: finding motif using chain algorithm (tree:%s)\n\
-        arguments -> f=%d, q=%d, d=%d, gap=%d, overlap=%d, dataset=%s\n\
-        operation mode: %s; coloring_frame=%d'%(
-            DATASET_TREES[gkhood_index][0], 
-            frame_size, 
+def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overlap, report, s_mask=None, color_frame=ARG_UNSET, multilayer=None, megalexa=None):
+    print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
+        arguments -> f(s)=%s, q=%d, d(s)=%s, gap=%d, overlap=%d, dataset=%s\n\
+        operation mode: %s; coloring_frame=%d; multi-layer=%s; megalexa=%d'%(
+            str(gkhood_index), 
+            str(frame_size), 
             q, 
-            d, 
+            str(d), 
             gap, 
             overlap, 
             dataset_name,
             str(report[1]),
-            color_frame))
+            color_frame,
+            str(multilayer),
+            megalexa))
 
     sequences = read_fasta('%s.fasta'%(dataset_name))
 
@@ -53,10 +55,18 @@ def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overl
     if s_mask != None:
         assert len(sequences) == len(s_mask)
 
-    tree = GKHoodTree(DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
+    if multilayer:
+        assert isinstance(gkhood_index, list) and isinstance(d, list) and isinstance(frame_size, list)
 
-    last_time = currentTime()
-    motif_tree = find_motif_all_neighbours(tree, d, frame_size, sequences)
+        trees = [GKHoodTree(DATASET_TREES[index][0], DATASET_TREES[index][1]) for index in gkhood_index]
+        last_time = currentTime()
+        motif_tree = multiple_layer_window_find_motif(trees, d, frame_size, sequences)
+    else:
+        assert isinstance(gkhood_index, int) and isinstance(d, int) and isinstance(frame_size, int)
+
+        tree = GKHoodTree(DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
+        last_time = currentTime()
+        motif_tree = find_motif_all_neighbours(tree, d, frame_size, sequences)
 
     # nearly like SSMART objective function 
     if q == FIND_MAX:
@@ -65,6 +75,17 @@ def motif_finding_chain(dataset_name, gkhood_index, frame_size, q, d, gap, overl
 
     motifs = motif_tree.extract_motifs(q, 0)
     print('\nnumber of motifs->%d | execute time->%s'%(len(motifs), strftime("%H:%M:%S", gmtime(currentTime() - last_time))))
+
+    while len(motifs) < megalexa:
+        q = q - 1
+        print('[mega size] not enough (q--==%d)'%q)
+
+        if q == 0:
+            print('[mega size] FAILED - exit with %d motifs'%(len(motifs)))
+            break
+
+        # adding new motifs with less frequency 
+        motifs += motif_tree.extract_motifs(q, 0)
 
     last_time = currentTime()
     chains = motif_chain(
@@ -241,13 +262,16 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:Qu'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
-        'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'multi-layer']
+        'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'multi-layer', 'feature', 'megalexa']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
-        'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 'multi-layer':False}
+        'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
+        'multi-layer':False, 'megalexa':0}
+
+    feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 'megalexa':500, 'quorum':FIND_MAX}
 
     command = sys.argv[1]
 
@@ -260,7 +284,8 @@ if __name__ == "__main__":
         elif o in ['-l', '--level']:
             args_dict.update({'level':int(a)})
         elif o in ['-d', '--distance']:
-            args_dict.update({'dmax':int(a)})
+            try:args_dict.update({'dmax':int(a)})
+            except:args_dict.update({'dmax':[int(o) for o in a.split(DELIMETER)]})
         elif o in ['-s', '--sequences']:
             args_dict.update({'sequences':a})
         elif o in ['-g', '--gap']:
@@ -273,10 +298,12 @@ if __name__ == "__main__":
             args_dict.update({'histogram_report':True})
         elif o in ['-q', '--quorum']:
             args_dict.update({'quorum':int(a)})
-        elif o in ['-f', '--frame']:
-            args_dict.update({'frame_size':int(a)})
-        elif o in ['-G', '--gkhood']:
-            args_dict.update({'gkhood_index':int(a)})
+        elif o in ['-f', '--frame']: 
+            try:args_dict.update({'frame_size':int(a)})
+            except:args_dict.update({'frame_size':[int(o) for o in a.split(DELIMETER)]})
+        elif o in ['-G', '--gkhood']: 
+            try:args_dict.update({'gkhood_index':int(a)})
+            except:args_dict.update({'gkhood_index':[int(o) for o in a.split(DELIMETER)]})
         elif o in ['-p', '--path']:
             args_dict.update({'path':a})
         elif o in ['-c', '--color-frame']:
@@ -285,6 +312,10 @@ if __name__ == "__main__":
             args_dict.update({'quorum':FIND_MAX})
         elif o in ['-u', '--multi-layer']:
             args_dict.update({'multi-layer':True})
+        elif o in ['-F']:
+            args_dict.update(feature_update)
+        elif o in ['-x', '--megalexa']:
+            args_dict.update({'megalexa':int(a)})
 
 
     if command == 'SLD':
@@ -303,7 +334,9 @@ if __name__ == "__main__":
             args_dict['gap'], 
             args_dict['overlap'], 
             report=(args_dict['histogram_report'], False),
-            s_mask=args_dict['mask'])
+            s_mask=args_dict['mask'],
+            multilayer=args_dict['multi-layer'],
+            megalexa=args_dict['megalexa'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
