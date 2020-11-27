@@ -77,8 +77,8 @@ class FileHandler:
             self.current_file.write(each[0].kmer + '\t' + str(each[1]) + '\n')
             self.position += 1
 
-        # progressing commend
-        print('size ->', self.position - position)
+        # progressing commend - BAD IDEA - never do this again
+        # print('size ->', self.position - position)
 
         if self.position >= self.max_size:
             self.next_file()
