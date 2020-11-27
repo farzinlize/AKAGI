@@ -397,4 +397,5 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    outer_f(5, 6, 2)
+    test_main_3()
+    # outer_f(5, 6, 2)
