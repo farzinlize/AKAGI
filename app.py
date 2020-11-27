@@ -125,7 +125,7 @@ def motif_finding_chain(dataset_name,
         report_directory=HISTOGRAM_LOCATION%(dataset_name, str(frame_size), str(d), q, gap, overlap))
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
-    make_location('%s%s'%(RESULT_LOCATION, dataset_name))
+    make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
 
     if report[1]:
         colored_neighbours_analysis(chains, sequences, color_frame, '%s%s-colored/'%(RESULT_LOCATION, dataset_name))
