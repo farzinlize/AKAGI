@@ -122,7 +122,7 @@ def motif_finding_chain(dataset_name,
         overlap=overlap, 
         sequence_mask=s_mask, 
         report=report, 
-        report_directory=HISTOGRAM_LOCATION%(dataset_name, frame_size, d, q, gap, overlap))
+        report_directory=HISTOGRAM_LOCATION%(dataset_name, str(frame_size), str(d), q, gap, overlap))
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
     make_location('%s%s'%(RESULT_LOCATION, dataset_name))
@@ -130,7 +130,7 @@ def motif_finding_chain(dataset_name,
     if report[1]:
         colored_neighbours_analysis(chains, sequences, color_frame, '%s%s-colored/'%(RESULT_LOCATION, dataset_name))
     else:
-        motif_chain_report(motifs, '%s%s%s/f%d-d%d-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, additional_name, frame_size, d, q, gap, overlap), sequences)
+        motif_chain_report(motifs, '%s%s%s/f%s-d%s-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, additional_name, str(frame_size), str(d), q, gap, overlap), sequences)
 
 
 def sequences_distance_matrix(location):

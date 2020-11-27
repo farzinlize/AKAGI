@@ -217,7 +217,7 @@ class GKHoodTree:
             # read part
             for _ in range(dn_length):
                 line_data = host.readline().split()
-                if int(line_data[1]) > dmax:
+                if len(line_data) == 0 or int(line_data[1]) > dmax:
                     break
                 dneghbours += [(line_data[0], int(line_data[1]))]
         
