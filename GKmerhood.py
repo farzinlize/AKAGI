@@ -104,10 +104,30 @@ class GKmerhood:
         number_of_files = handler.close()
         self.generate_dataset_metadata(sgkhood_tree_filename, first_code, dmax, number_of_files, single_level=level)
 
+
+    def special_dataset_generate(self, dmax, first_level, last_level):
+        handler = FileHandler(directory_name='cache%s'%(str(first_level)+str(last_level)))
+        first_code = (4**(first_level) - 1)//3 + 1
+        last_code = (4**(last_level+1) - 1)//3
+        gkhood_tree_filename = 'gkhood'+str(first_level)+str(last_level)
+        with open(gkhood_tree_filename+'.tree', 'w+') as tree:
+            for code in range(first_code, last_code+1):
+                node = self.trie.find(heap_decode(code, self.alphabet))
+                if node == None:
+                    print('ERROR: node couldnt be found, code -> ' + code)
+                    continue
+                dneighbourhood = node.dneighbours(dmax)
+                file_index, position = handler.put(dneighbourhood)
+                tree.write(str(file_index) + '\t' + str(position) + '\n')
+
+        number_of_files = handler.close()
+        self.generate_dataset_metadata(gkhood_tree_filename, first_code, dmax, number_of_files, fl=(first_level, last_level))
+
+
     '''
         generating metadata json file to store dataset information described in code
     '''
-    def generate_dataset_metadata(self, tree_name, bias, dmax, number_of_files, single_level=None):
+    def generate_dataset_metadata(self, tree_name, bias, dmax, number_of_files, single_level=None, fl=None):
         with open(tree_name+'.metadata', 'w+') as meta:
 
             metadata_dict = { 
@@ -121,6 +141,9 @@ class GKmerhood:
 
             if single_level != None:
                 metadata_dict.update({'level':single_level})
+
+            if fl != None:
+                metadata_dict.update({'first-level':fl[0], 'last-level':fl[1]})
 
             meta.write(json.dumps(metadata_dict))
 
@@ -177,6 +200,12 @@ class GKHoodTree:
 
         # from dataset
         line = heap_encode(kmer, self.dictionary) - self.metadata['bias']
+
+        # last line problem TODO
+        if line == len(self.tree)-1:
+            # dn_length = len(self.tree) - self.tree[line][1]
+            pass
+
         dn_length = self.tree[line+1][1] - self.tree[line][1]
         dneghbours = []
         with open(self.directory + self.tree[line][0] + '.data', 'r') as host:
