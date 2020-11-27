@@ -32,7 +32,7 @@ After successfully generating a G-Kmer-hood, a breath first search with limited 
 ## TrieFind (class)
 
 A customized trie structure is bind to each kmer-hood graph for accessing nodes using their **k**-mer with **k** step. Because of being a complete tree, it is responsible for generating all possible nodes within graph dimension. This class also is being used for saving kmers as a list. In other words, a G-Kmer-hood is a list of all possible kmers within specific range of lengths, therefore, a tree holding its information must be complete.
-In this project different set of function were used for **a)** saving a list of kmers or **b)** creating and finding nodes in G-Kmer-hood. In both modes each node belongs to a specific level and have a label that indicates a path from root to itself. Children of this node have the same label plus a letter which indicates path branches. 
+In this project different set of function were used for **a)** saving a list of kmers or **b)** creating and finding nodes in G-Kmer-hood. In both modes each node belongs to a specific level and have a label that indicates a path from root to itself. Children of this node have the same label plus a letter which indicates path branches. There are also **c)** chaining and **d)** report section for further goals.
 
 ### (a) Set Trie
 
@@ -55,5 +55,10 @@ It is desired to find kmer's d-neighbourhood in files just like finding it in me
 **What about missing kmers in graph itself?** A graph with specific dimensions includes kmers with specific range of kmers. The technique discussed above will put every kmers with same size after each other, therefore, omitting smaller kmers doesn't make any gap.
 
 Using the technique above, we will have a unique continuous integer code for our kmers in graph
+
+## Chaining motifs
+
+Early expriments of motif finding with small length shows significant 
+
 
 > Written with [StackEdit](https://stackedit.io/).
