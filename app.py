@@ -104,14 +104,15 @@ def motif_finding_chain(dataset_name,
 
     while len(motifs) < megalexa:
         q = q - 1
-        print('[mega size] not enough (q--==%d)'%q)
+        print('[lexicon] not enough (q--==%d)'%q)
 
         if q == 0:
-            print('[mega size] FAILED - exit with %d motifs'%(len(motifs)))
+            print('[lexicon] FAILED - exit with %d motifs'%(len(motifs)))
             break
 
         # adding new motifs with less frequency 
         motifs += motif_tree.extract_motifs(q, 0)
+    print('[lexicon] lexicon size = %d'%len(motifs))
 
     last_time = currentTime()
     chains = motif_chain(
