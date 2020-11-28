@@ -79,8 +79,10 @@ class GKmerhood:
                 file_index, position = handler.put(dneighbourhood)
                 tree.write(str(file_index) + '\t' + str(position) + '\n')
 
-        number_of_files = handler.close()
-        self.generate_dataset_metadata(gkhood_tree_name, first_code, dmax, number_of_files)
+            number_of_files_minus, last_position = handler.close()
+            tree.write(str(number_of_files_minus) + '\t' + str(last_position) + '\n')
+
+        self.generate_dataset_metadata(gkhood_tree_name, first_code, dmax, number_of_files_minus+1)
 
 
     '''
@@ -101,8 +103,10 @@ class GKmerhood:
                 file_index, position = handler.put(dneighbourhood)
                 tree.write(str(file_index) + '\t' + str(position) + '\n')
 
-        number_of_files = handler.close()
-        self.generate_dataset_metadata(sgkhood_tree_filename, first_code, dmax, number_of_files, single_level=level)
+            number_of_files_minus, last_position = handler.close()
+            tree.write(str(number_of_files_minus) + '\t' + str(last_position) + '\n')
+
+        self.generate_dataset_metadata(sgkhood_tree_filename, first_code, dmax, number_of_files_minus+1)
 
 
     def special_dataset_generate(self, dmax, first_level, last_level):
@@ -120,8 +124,10 @@ class GKmerhood:
                 file_index, position = handler.put(dneighbourhood)
                 tree.write(str(file_index) + '\t' + str(position) + '\n')
 
-        number_of_files = handler.close()
-        self.generate_dataset_metadata(gkhood_tree_filename, first_code, dmax, number_of_files, fl=(first_level, last_level))
+            number_of_files_minus, last_position = handler.close()
+            tree.write(str(number_of_files_minus) + '\t' + str(last_position) + '\n')
+
+        self.generate_dataset_metadata(gkhood_tree_filename, first_code, dmax, number_of_files_minus+1, fl=(first_level, last_level))
 
 
     '''
@@ -200,6 +206,9 @@ class GKHoodTree:
 
         # from dataset
         line = heap_encode(kmer, self.dictionary) - self.metadata['bias']
+
+        if line < 0:
+            raise Exception('[GKHoodTree] kmer %s dose not exist in this dataset'%kmer)
 
         # last line problem TODO
         if line == len(self.tree)-1:

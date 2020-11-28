@@ -87,7 +87,7 @@ class FileHandler:
 
     def close(self):
         self.current_file.close()
-        return self.file_index+1
+        return self.file_index, self.position
 
 
     def reopen(self):
