@@ -1,4 +1,5 @@
 from Nodmer import Nodmer
+from misc import binery_add
 
 '''
     Trie node object -> two purposed object for <searching> and <saving> kmers
@@ -216,21 +217,6 @@ def binery_special_add(found_list, seq_id, position):
     found_list[0] = found_list[0][:start] + [seq_id] + found_list[0][start:]
     found_list[1] = found_list[1][:start] + [[position]] + found_list[1][start:]
     return found_list
-
-
-# add an item to a sorted list using binery search
-def binery_add(lst, item):
-    start = 0
-    end = len(lst)-1
-    while start <= end:
-        mid = (start+end)//2
-        if lst[mid] == item:
-            return lst
-        elif lst[mid] < item:
-            start = mid + 1
-        else:
-            end = mid - 1
-    return lst[:start] + [item] + lst[start:]
 
 
 # ########################################## #
