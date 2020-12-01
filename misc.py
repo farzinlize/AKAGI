@@ -136,6 +136,21 @@ class ExtraPosition:
 # ########################################## #
 
 
+# add an item to a sorted list using binery search
+def binery_add(lst, item):
+    start = 0
+    end = len(lst)-1
+    while start <= end:
+        mid = (start+end)//2
+        if lst[mid] == item:
+            return lst
+        elif lst[mid] < item:
+            start = mid + 1
+        else:
+            end = mid - 1
+    return lst[:start] + [item] + lst[start:]
+
+
 '''
     calculate edit-distance between two kmer
         [WARNING] take a lot of time due to calling 4 recursive at each level
