@@ -1,4 +1,6 @@
-import os, platform
+import os, platform, random, string
+
+from constants import PATH_LENGTH
 
 # ########################################## #
 #                 class part                 #
@@ -134,6 +136,10 @@ class ExtraPosition:
 # ########################################## #
 #                 functions                  #
 # ########################################## #
+
+
+def get_random_path(length=PATH_LENGTH):
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
 
 # add an item to a sorted list using binery search
