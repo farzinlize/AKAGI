@@ -1,5 +1,7 @@
+from FoundMap import FileMap, FoundMap, MemoryMap, get_foundmap
 from Nodmer import Nodmer
 from misc import binery_add
+from constants import FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 '''
     Trie node object -> two purposed object for <searching> and <saving> kmers
@@ -80,14 +82,20 @@ class TrieNode:
         each element with same index in both list are related described below:
             any element in second list such as found_list[1][i] is a list of position that
             this node of tree occures in sequence number of found_list[0][i]
+
+        [UPDATE]: expriment shows that saving all data in memory results in RAM overflow!
+            a class named FoundMap implemented to save such data in memory and disk instead 
+            of found_list which is now removed from TrieFind class
     '''
     def add_frame(self, kmer, seq_id, position):
 
         if len(kmer) == 0:
             # end of the path
-            if not hasattr(self, 'found_list'):
-                self.found_list = [[], []]
-            self.found_list = binery_special_add(self.found_list, seq_id, position)
+            if not hasattr(self, 'foundmap'):
+                self.foundmap = get_foundmap()
+
+            self.foundmap.add_location(seq_id, position)
+            # self.found_list = binery_special_add(self.found_list, seq_id, position)
             return
         
         # searching for proper path
@@ -107,8 +115,8 @@ class TrieNode:
     '''
     def extract_motifs(self, q, result_kmer=1):
         motifs = []
-        if hasattr(self, 'found_list'):
-            if len(self.found_list[0]) >= q:
+        if hasattr(self, 'foundmap'):
+            if self.foundmap.get_q() >= q:
                 if result_kmer:
                     motifs += [self.label]
                 else:
@@ -120,8 +128,8 @@ class TrieNode:
 
     def find_max_q(self, q_old=-1):
         my_q = -1
-        if hasattr(self, 'found_list'):
-            my_q = len(self.found_list[0])
+        if hasattr(self, 'foundmap'):
+            my_q = self.foundmap.get_q()
 
         childs_max_q = []
         for child in self.childs:
@@ -146,9 +154,9 @@ class TrieNode:
         [WARNING] only nodes with found_list attribute could be chained (or could be a motif)
     '''
     def make_chain(self, chain_level=0, up_chain=None):
-        if not hasattr(self, 'found_list'):
+        if not hasattr(self, 'foundmap'):
             raise Exception('should be a motif')
-        self.end_chain_positions = self.found_list
+        self.end_chain_positions = self.foundmap
         self.close_chain = False
         self.chain_level = chain_level
         self.next_chains = []
@@ -175,13 +183,14 @@ class TrieNode:
 
     
     def chain_locations_str(self):
-        return str(self.found_list)
+        return str(self.foundmap)
 
     
     def instances_str(self, sequences):
         result = '>pattern\n%s\n>instances\n'%(self.chain_sequence())
-        for index, seq_id in enumerate(self.found_list[0]):
-            for position in self.found_list[1][index]:
+        positions = self.foundmap.get_positions()
+        for index, seq_id in enumerate(self.foundmap.get_sequences()):
+            for position in positions[index]:
                 end_index = int(position) + self.level
                 start_index = position.start_position
                 if len(position.chain) != 0:
@@ -200,23 +209,6 @@ class TrieNode:
             return False
         self.color = color
         return True
-
-
-def binery_special_add(found_list, seq_id, position):
-    start = 0
-    end = len(found_list[0]) - 1
-    while start <= end:
-        mid = (start+end)//2
-        if found_list[0][mid] == seq_id:
-            found_list[1][mid] = binery_add(found_list[1][mid], position)
-            return found_list
-        elif found_list[0][mid] < seq_id:
-            start = mid + 1
-        else:
-            end = mid - 1
-    found_list[0] = found_list[0][:start] + [seq_id] + found_list[0][start:]
-    found_list[1] = found_list[1][:start] + [[position]] + found_list[1][start:]
-    return found_list
 
 
 # ########################################## #

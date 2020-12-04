@@ -1,3 +1,4 @@
+from TrieFind import TrieNode
 from functools import reduce
 from matplotlib import pyplot
 from misc import Queue, OnSequenceDistribution, make_location
@@ -179,8 +180,9 @@ def colored_neighbours_analysis(chains, sequences, frame_size, figures_location)
         for color, color_set in enumerate(colors_collection):
             histogram_lists = [[] for _ in range(len(sequences))]
             for motif in color_set:
-                for index, seq_id in enumerate(motif.found_list[0]):
-                    for position in motif.found_list[1][index]:
+                positions = motif.foundmap.get_positions()
+                for index, seq_id in enumerate(motif.foundmap.get_sequences()):
+                    for position in positions[index]:
                         histogram_lists[seq_id] += [position.start_position]
 
             # saving figures
@@ -198,8 +200,9 @@ def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename
     histogram_lists = [[] for _ in range(len(sequences))]
 
     for motif in motifs:
-        for index, seq_id in enumerate(motif.found_list[0]):
-            for position in motif.found_list[1][index]:
+        positions = motif.foundmap.get_positions()
+        for index, seq_id in enumerate(motif.foundmap.get_sequences()):
+            for position in positions[index]:
                 histogram_lists[seq_id] += [position.start_position]
 
     alpha = 1 / (reduce((lambda x,y:int(x)+int(y)), sequence_mask))
@@ -227,7 +230,7 @@ def motif_chain_report(motifs, filename, sequences):
     report_locations.write('> 1-chained\n')
     fasta_result.write('>1-chained\n')
     while not queue.isEmpty():
-        link = queue.pop()
+        link: TrieNode = queue.pop()
         if current_level < link.chain_level:
             current_level = link.chain_level
             report_kmer.write('> %d-chained\n'%(current_level+1))

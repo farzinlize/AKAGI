@@ -154,8 +154,9 @@ class OnSequenceDistribution:
     def generate_list(self, motifs, sequences):
         struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
         for motif in motifs:
-            for index, seq_id in enumerate(motif.found_list[0]):
-                for position in motif.found_list[1][index]:
+            positions = motif.foundmap.get_positions()
+            for index, seq_id in enumerate(motif.foundmap.get_sequences()):
+                for position in positions[index]:
                     struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
         return struct
 

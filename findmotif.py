@@ -137,7 +137,7 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
         chains = []
 
     while not queue.isEmpty():
-        link = queue.pop()
+        link: TrieNode = queue.pop()
         next_tree = TrieNode()
 
         if report[0] or report[1]:
@@ -158,8 +158,9 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
             else:
                 raise Exception('queue error: a node with lower chain level found in queue')
 
-        for index, seq_id in enumerate(link.end_chain_positions[0]):
-            for position in link.end_chain_positions[1][index]:
+        positions = link.foundmap.get_positions()
+        for index, seq_id in enumerate(link.end_chain_positions.get_sequences()):
+            for position in positions[index]:
                 for sliding in [i for i in range(-overlap, gap+1)]:
                     next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):

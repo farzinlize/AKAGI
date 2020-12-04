@@ -19,3 +19,9 @@ DEL = b'\x00'
 END = b'\xFF'
 INT_SIZE = 2
 BYTE_READ_INT_MODE = 'big'
+
+FOUNDMAP_DISK = 'disk'
+FOUNDMAP_MEMO = 'memory'
+
+# default found-map mode
+FOUNDMAP_MODE = FOUNDMAP_MEMO

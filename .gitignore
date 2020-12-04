@@ -10,3 +10,4 @@ __pycache__/*
 *.exe
 /hpc scripts/*
 /hpc outputs/*
+/js/*
