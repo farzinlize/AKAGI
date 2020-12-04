@@ -38,11 +38,15 @@ class MemoryMap(FoundMap):
 
 
     def get_q(self):
-        return len(self.found_list)
+        return len(self.found_list[0])
 
     
     def get_sequences(self):
         return self.found_list[0]
+
+    
+    def get_positions(self):
+        return self.found_list[1]
 
 
 class FileMap(FoundMap):
