@@ -12,3 +12,10 @@ DELIMETER = '-'
 DNA_ALPHABET = 'ATCG'
 BATCH_SIZE = 10
 PATH_LENGTH = 10
+
+# bytes streaming constants
+STR = b'\xFF'
+DEL = b'\x00'
+END = b'\xFF'
+INT_SIZE = 2
+BYTE_READ_INT_MODE = 'big'
