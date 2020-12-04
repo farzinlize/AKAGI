@@ -244,7 +244,7 @@ def motif_chain_report(motifs, filename, sequences):
     fasta_result.close()
 
 
-def count_overlap(m, b):
+def count_overlap(m: FastaInstance, b: FastaInstance):
     if m.start < b.start:
         if b.start < m.end:
             if m.end <= b.end:
