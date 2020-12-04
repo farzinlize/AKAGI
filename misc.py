@@ -1,6 +1,7 @@
 import os, platform, random, string
 
-from constants import PATH_LENGTH
+from constants import PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE
+
 
 # ########################################## #
 #                 class part                 #
@@ -133,10 +134,35 @@ class ExtraPosition:
         return self.start_position + self.end_margin
 
 
+'''
+    generate a 3-dimentional list to access motifs that occures at a specific location
+        dimentions are described below:
+            1. sequence_id -> there is a list for any sequence
+            2. position -> there is a list of motifs for any position on a specific sequence
+            3. motif -> refrence for motifs that occures at a pecific location (position) and a specific sequence
+'''
+class OnSequenceDistribution:
+
+    class Entry:
+        def __init__(self, motif, end_margin):
+            self.motif = motif
+            self.end_margin = end_margin
+
+    def __init__(self, motifs, sequences):
+        self.struct = self.generate_list(motifs, sequences)
+
+    def generate_list(self, motifs, sequences):
+        struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
+        for motif in motifs:
+            for index, seq_id in enumerate(motif.found_list[0]):
+                for position in motif.found_list[1][index]:
+                    struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
+        return struct
+
+
 # ########################################## #
 #                 functions                  #
 # ########################################## #
-
 
 def get_random_path(length=PATH_LENGTH):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
@@ -269,30 +295,16 @@ def extract_from_fasta(fasta, dataset):
     return binding_sites
 
 
-'''
-    generate a 3-dimentional list to access motifs that occures at a specific location
-        dimentions are described below:
-            1. sequence_id -> there is a list for any sequence
-            2. position -> there is a list of motifs for any position on a specific sequence
-            3. motif -> refrence for motifs that occures at a pecific location (position) and a specific sequence
-'''
-class OnSequenceDistribution:
+# ########################################## #
+#            byte read functions             #
+# ########################################## #
 
-    class Entry:
-        def __init__(self, motif, end_margin):
-            self.motif = motif
-            self.end_margin = end_margin
+def bytes_to_int(b :bytes):
+    return int.from_bytes(b, 'big')
 
-    def __init__(self, motifs, sequences):
-        self.struct = self.generate_list(motifs, sequences)
 
-    def generate_list(self, motifs, sequences):
-        struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
-        for motif in motifs:
-            for index, seq_id in enumerate(motif.found_list[0]):
-                for position in motif.found_list[1][index]:
-                    struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
-        return struct
+def int_to_bytes(i :int, int_size=INT_SIZE):
+    return i.to_bytes(int_size, 'big')
 
 
 # ########################################## #
