@@ -158,9 +158,9 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
             else:
                 raise Exception('queue error: a node with lower chain level found in queue')
 
-        positions = link.foundmap.get_positions()
-        for index, seq_id in enumerate(link.end_chain_positions.get_sequences()):
-            for position in positions[index]:
+        boundle = link.end_chain_positions.get_list()
+        for index, seq_id in enumerate(boundle[0]):
+            for position in boundle[1][index]:
                 for sliding in [i for i in range(-overlap, gap+1)]:
                     next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):

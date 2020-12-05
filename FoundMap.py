@@ -25,6 +25,7 @@ class FoundMap:
     def get_q(self):pass
     def get_sequences(self):pass
     def get_positions(self):pass
+    def get_list(self):pass
 
 
 class MemoryMap(FoundMap):
@@ -47,6 +48,10 @@ class MemoryMap(FoundMap):
     
     def get_positions(self):
         return self.found_list[1]
+
+
+    def get_list(self):
+        return self.found_list
 
 
 class FileMap(FoundMap):
@@ -183,6 +188,16 @@ class FileMap(FoundMap):
             map = self.FileHandler(self.path)
 
         return map.sequences
+
+    
+    def get_list(self):
+        
+        if self.batch:
+            map = self.dump(return_map=True)
+        else:
+            map = self.FileHandler(self.path)
+        
+        return [map.sequences, map.positions]
 
 
 def binery_special_add(found_list, seq_id, position):

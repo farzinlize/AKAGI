@@ -1,7 +1,5 @@
-from FoundMap import FileMap, FoundMap, MemoryMap, get_foundmap
+from FoundMap import get_foundmap
 from Nodmer import Nodmer
-from misc import binery_add
-from constants import FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 '''
     Trie node object -> two purposed object for <searching> and <saving> kmers
@@ -188,9 +186,9 @@ class TrieNode:
     
     def instances_str(self, sequences):
         result = '>pattern\n%s\n>instances\n'%(self.chain_sequence())
-        positions = self.foundmap.get_positions()
-        for index, seq_id in enumerate(self.foundmap.get_sequences()):
-            for position in positions[index]:
+        boundle = self.foundmap.get_list()
+        for index, seq_id in enumerate(boundle[0]):
+            for position in boundle[1][index]:
                 end_index = int(position) + self.level
                 start_index = position.start_position
                 if len(position.chain) != 0:

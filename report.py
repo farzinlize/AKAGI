@@ -180,9 +180,9 @@ def colored_neighbours_analysis(chains, sequences, frame_size, figures_location)
         for color, color_set in enumerate(colors_collection):
             histogram_lists = [[] for _ in range(len(sequences))]
             for motif in color_set:
-                positions = motif.foundmap.get_positions()
-                for index, seq_id in enumerate(motif.foundmap.get_sequences()):
-                    for position in positions[index]:
+                boundle = motif.foundmap.get_list()
+                for index, seq_id in enumerate(boundle[0]):
+                    for position in boundle[1][index]:
                         histogram_lists[seq_id] += [position.start_position]
 
             # saving figures
@@ -200,9 +200,9 @@ def location_histogram(motifs, sequences, sequence_mask, save=True, savefilename
     histogram_lists = [[] for _ in range(len(sequences))]
 
     for motif in motifs:
-        positions = motif.foundmap.get_positions()
-        for index, seq_id in enumerate(motif.foundmap.get_sequences()):
-            for position in positions[index]:
+        boundle = motif.foundmap.get_list()
+        for index, seq_id in enumerate(boundle[0]):
+            for position in boundle[1][index]:
                 histogram_lists[seq_id] += [position.start_position]
 
     alpha = 1 / (reduce((lambda x,y:int(x)+int(y)), sequence_mask))
