@@ -1,6 +1,6 @@
 from misc import ExtraPosition, get_random_path, binery_add, bytes_to_int, int_to_bytes
 import os
-from constants import BATCH_SIZE, END, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import BATCH_SIZE, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
@@ -63,18 +63,18 @@ class FileMap(FoundMap):
             with open(path, 'rb') as mapfile:
 
                 assert mapfile.read(1) == STR
-                for _ in range(mapfile.read(INT_SIZE)):
+                for _ in range(bytes_to_int(mapfile.read(INT_SIZE))):
 
                     self.sequences += [bytes_to_int(mapfile.read(INT_SIZE))]
                     assert mapfile.read(1) == DEL
 
                     positions = []
-                    for _ in range(mapfile.read(INT_SIZE)):
-                        position = mapfile.read(INT_SIZE)
-                        margin = mapfile.read(INT_SIZE)
+                    for _ in range(bytes_to_int(mapfile.read(INT_SIZE))):
+                        position = bytes_to_int(mapfile.read(INT_SIZE))
+                        margin = bytes_to_int(mapfile.read(INT_SIZE))
                         positions += [ExtraPosition(position, margin)]
 
-                    self.positions += positions[:]
+                    self.positions += [positions[:]]
                 
                 assert mapfile.read(1) == END
 
@@ -97,6 +97,8 @@ class FileMap(FoundMap):
                     for position in self.positions[index]:
                         mapfile.write(int_to_bytes(position.start_position))
                         mapfile.write(int_to_bytes(position.end_margin))
+
+                mapfile.write(END)
         
             return len(self.sequences)
 
@@ -123,9 +125,12 @@ class FileMap(FoundMap):
 
         # assign a path if dosen't exist
         if not hasattr(self, 'path'):
-            self.path = get_random_path()+'.byte'
+            self.path = get_random_path()+FOUNDMAP_NAMETAG
             while os.path.isfile(self.path):
-                self.path = get_random_path()+'.byte'
+                self.path = get_random_path()+FOUNDMAP_NAMETAG
+            
+            with open(self.path, 'wb') as newfile:
+                newfile.write(STR);newfile.write(int_to_bytes(0));newfile.write(END)
 
         map = self.FileHandler(self.path)
         for seq_id, position in self.batch:
@@ -162,11 +167,21 @@ class FileMap(FoundMap):
     def get_positions(self):
 
         if self.batch:
-            map = self.dump()
+            map = self.dump(return_map=True)
         else:
             map = self.FileHandler(self.path)
 
         return [map.positions[i] for i in range(len(map.positions))]
+
+
+    def get_sequences(self):
+
+        if self.batch:
+            map = self.dump(return_map=True)
+        else:
+            map = self.FileHandler(self.path)
+
+        return map.sequences
 
 
 def binery_special_add(found_list, seq_id, position):
@@ -186,6 +201,27 @@ def binery_special_add(found_list, seq_id, position):
     return found_list
 
 
+def clear_disk():
+    garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
+    for garbage in garbages:
+        os.remove(os.path.join(garbage))
+
+
 if __name__ == "__main__":
-    map = FoundMap()
-    print(map)
+    # clear_cache()
+    map = FileMap()
+
+    map.add_location(0, ExtraPosition(5, 0))
+    map.add_location(0, ExtraPosition(7, 0))
+    map.add_location(1, ExtraPosition(0, 0))
+    map.add_location(0, ExtraPosition(9, 1))
+    map.add_location(3, ExtraPosition(8, 0))
+    print('DONE OBERVE')
+
+    positions = map.get_positions()
+    print(map.get_sequences())
+    for index, seq_id in enumerate(map.get_sequences()):
+        for position in positions[index]:
+            print('seq-%d|index-%d|position-%d|extra-%d'%(seq_id, index, position.start_position, position.end_margin   ))
+
+    print(map.get_q())
