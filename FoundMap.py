@@ -207,8 +207,7 @@ def clear_disk():
         os.remove(os.path.join(garbage))
 
 
-if __name__ == "__main__":
-    # clear_cache()
+def test_main():
     map = FileMap()
 
     map.add_location(0, ExtraPosition(5, 0))
@@ -225,3 +224,7 @@ if __name__ == "__main__":
             print('seq-%d|index-%d|position-%d|extra-%d'%(seq_id, index, position.start_position, position.end_margin   ))
 
     print(map.get_q())
+
+
+if __name__ == "__main__":
+    clear_disk()
