@@ -136,6 +136,7 @@ class FileMap(FoundMap):
         for seq_id, position in self.batch:
             map.update(seq_id, position)
         self.q = map.save()
+        self.batch = []
 
         if return_map:
             return map
