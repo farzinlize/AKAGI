@@ -264,7 +264,7 @@ def count_overlap(m: FastaInstance, b: FastaInstance):
 
 
 # ########################################## #
-#           main fucntion section            #
+#           main function section            #
 # ########################################## #
 
 def test_reduce():

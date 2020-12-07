@@ -119,7 +119,7 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
     if report[0] and sequence_mask == None:
         sequence_mask = [1 for _ in range(len(sequences))]
 
-    # set defualt value of q
+    # set default value of q
     if q == -1:
         q = len(sequences)
 
@@ -158,9 +158,9 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
             else:
                 raise Exception('queue error: a node with lower chain level found in queue')
 
-        boundle = link.end_chain_positions.get_list()
-        for index, seq_id in enumerate(boundle[0]):
-            for position in boundle[1][index]:
+        bundle = link.end_chain_positions.get_list()
+        for index, seq_id in enumerate(bundle[0]):
+            for position in bundle[1][index]:
                 for sliding in [i for i in range(-overlap, gap+1)]:
                     next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):
@@ -207,7 +207,7 @@ def sequence_dataset_files(filename, sequences, frame_size):
 
 
 # ########################################## #
-#           main fucntion section            #
+#           main function section            #
 # ########################################## #
 
 def main_chain():
@@ -299,7 +299,7 @@ def test_main():
 
 
 # ########################################## #
-#           main fucntion call               #
+#           main function call               #
 # ########################################## #
 
 # main function call

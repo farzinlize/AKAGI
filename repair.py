@@ -14,7 +14,7 @@ def repair():
         for code in range(real_first_code, last_remaining_code+1):
             node = gkhood.trie.find(heap_decode(code, gkhood.alphabet))
             if node == None:
-                print('ERROR: node couldnt be found, code -> ' + code)
+                print("ERROR: node couldn't be found, code -> " + code)
                 continue
             dneighbourhood = node.dneighbours(dmax)
             file_index, position = handler.put(dneighbourhood)
@@ -26,7 +26,7 @@ def repair():
         for code in range(dataset_last_code, real_last_code+1):
             node = gkhood.trie.find(heap_decode(code, gkhood.alphabet))
             if node == None:
-                print('ERROR: node couldnt be found, code -> ' + code)
+                print("ERROR: node couldn't be found, code -> " + code)
                 continue
             dneighbourhood = node.dneighbours(dmax)
             file_index, position = handler.put(dneighbourhood)
@@ -35,19 +35,19 @@ def repair():
 
 # merge tree (tested)
 def merge_tree():
-    orginal_tree = open('gkhood5_8.tree', 'r')
+    original_tree = open('gkhood5_8.tree', 'r')
     head = open('head_repair.tree', 'r')
     tail = open('tail_repair.tree', 'r')
 
     merged = open('gkhood5_8_REPAIRED.tree', 'w+')
     for line in head:
         merged.write('R'+line)
-    for line in orginal_tree:
+    for line in original_tree:
         merged.write(line)
     for line in tail:
         merged.write('R'+line)
 
-    orginal_tree.close()
+    original_tree.close()
     head.close()
     tail.close()
     merged.close()
@@ -74,7 +74,7 @@ def test_main():
 
 
 # ########################################## #
-#           main fucntion call               #
+#           main function call               #
 # ########################################## #
 
 # main function call

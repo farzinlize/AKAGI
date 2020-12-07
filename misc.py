@@ -41,22 +41,22 @@ class FileHandler:
 
         self.prefix = filename_prefix
 
-        # file address spliter is different in windows and linux
+        # file address splitter is different in windows and linux
         operating_system = platform.system()
         if operating_system == 'Windows':
-            spliter = '\\'
+            splitter = '\\'
         else:   # operating_system == 'Linux'
-            spliter = '/'
+            splitter = '/'
 
         if directory_name == None:
-            self.directory = os.getcwd() + spliter + 'dataset' + spliter
+            self.directory = os.getcwd() + splitter + 'dataset' + splitter
         else:
-            self.directory = os.getcwd() + spliter + directory_name + spliter
+            self.directory = os.getcwd() + splitter + directory_name + splitter
 
         try:
             os.mkdir(self.directory, 0o755)
         except:
-            print('[WARNING] directory already excist')
+            print('[WARNING] directory already exist')
 
         self.current_file = open(self.directory + self.prefix + '0.data', 'w')
         self.file_index = 0
@@ -135,11 +135,11 @@ class ExtraPosition:
 
 
 '''
-    generate a 3-dimentional list to access motifs that occures at a specific location
-        dimentions are described below:
+    generate a 3-dimensional list to access motifs that occurs at a specific location
+        dimensions are described below:
             1. sequence_id -> there is a list for any sequence
             2. position -> there is a list of motifs for any position on a specific sequence
-            3. motif -> refrence for motifs that occures at a pecific location (position) and a specific sequence
+            3. motif -> reference for motifs that occurs at a specific location (position) and a specific sequence
 '''
 class OnSequenceDistribution:
 
@@ -154,9 +154,9 @@ class OnSequenceDistribution:
     def generate_list(self, motifs, sequences):
         struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
         for motif in motifs:
-            boundle = motif.foundmap.get_list()
-            for index, seq_id in enumerate(boundle[0]):
-                for position in boundle[1][index]:
+            bundle = motif.foundmap.get_list()
+            for index, seq_id in enumerate(bundle[0]):
+                for position in bundle[1][index]:
                     struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
         return struct
 
@@ -169,8 +169,8 @@ def get_random_path(length=PATH_LENGTH):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
 
-# add an item to a sorted list using binery search
-def binery_add(lst, item):
+# add an item to a sorted list using binary search
+def binary_add(lst, item):
     start = 0
     end = len(lst)-1
     while start <= end:
@@ -335,7 +335,7 @@ def heap_decode(code, alphabet):
 
 
 # ########################################## #
-#           main fucntion section            #
+#           main function section            #
 # ########################################## #
 
 # testing edistance function
@@ -426,7 +426,7 @@ def workbench_tests():
 
 
 # ########################################## #
-#           main fucntion call               #
+#           main function call               #
 # ########################################## #
 
 # main function call

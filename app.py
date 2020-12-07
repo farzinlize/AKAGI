@@ -169,7 +169,7 @@ def analysis_raw_statistics(dataset_name, results_location):
     def analysis_ranking_pattern():
         nonlocal pattern_analysis, alignment_set, pwm_ranking, current_pattern, analysis, sequences, binding_sites
 
-        # pattern statisics extraction, score and ranking (*START*)
+        # pattern statistics extraction, score and ranking (*START*)
         pattern_statistics = pattern_analysis.extract_raw_statistics()
 
         # align all pattern instances for scoring
@@ -185,7 +185,7 @@ def analysis_raw_statistics(dataset_name, results_location):
             current_pattern, str(pattern_statistics), pwm_score))
 
         pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
-        # pattern statisics extraction, score and ranking (*END*)
+        # pattern statistics extraction, score and ranking (*END*)
 
 
     sequences = read_fasta('data/%s.fasta'%(dataset_name))
@@ -197,7 +197,7 @@ def analysis_raw_statistics(dataset_name, results_location):
     FSM = {'start':0, 'pattern':1, 'instances':2}
 
     # raw statistics -> result evaluation and validation using actual binding sites as answers
-    overal_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
+    overall_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
     chain_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
     pattern_analysis = OnSequenceAnalysis(len(sequences), [len(seq) for seq in sequences], binding_sites=binding_sites)
 
@@ -227,7 +227,7 @@ def analysis_raw_statistics(dataset_name, results_location):
             elif mode == FSM['instances']:
                 if 'chain' in line: # print pattern analysis and chain analysis
 
-                    # pattern statisics extraction, score and ranking (*CALLING*)
+                    # pattern statistics extraction, score and ranking (*CALLING*)
                     analysis_ranking_pattern()
 
                     # printing chain statistics - use the predefined object and recreate it for next use
@@ -240,7 +240,7 @@ def analysis_raw_statistics(dataset_name, results_location):
                     analysis.write('>%d-chain\n'%current_chain)
                 elif 'pattern' in line: # print only pattern analysis
 
-                    # pattern statisics extraction, score and ranking (*CALLING*)
+                    # pattern statistics extraction, score and ranking (*CALLING*)
                     analysis_ranking_pattern()
 
                     mode = FSM['pattern']
@@ -248,17 +248,17 @@ def analysis_raw_statistics(dataset_name, results_location):
                 else:
                     instance = FastaInstance(line)
                     pattern_analysis.add_motif(instance)
-                    overal_analysis.add_motif(instance)
+                    overall_analysis.add_motif(instance)
                     chain_analysis.add_motif(instance)
 
                     alignment_set += [instance.substring]
 
-        # pattern last instances pattern statisics extraction, score and ranking (*CALLING*) 
+        # pattern last instances pattern statistics extraction, score and ranking (*CALLING*) 
         analysis_ranking_pattern()
 
         # print last chain and overall
         analysis.write('>%d-chain statistics\n%s\n'%(current_chain, str(chain_analysis.extract_raw_statistics())))
-        analysis.write('>overall statistics\n%s\n'%(str(overal_analysis.extract_raw_statistics())))
+        analysis.write('>overall statistics\n%s\n'%(str(overall_analysis.extract_raw_statistics())))
 
 
 def alignment_fasta(fasta_location):

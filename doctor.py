@@ -12,7 +12,7 @@ def test_gkhood_dataset_k(gkhood_index, k):
         try:
             tree.dneighbours(kmer, 0)
         except:
-            print("[DCOTOR-ERROR] kmer (%s:%d) couldn't resolve in tree (%s)"%(kmer, len(kmer), DATASET_TREES[gkhood_index][0]))
+            print("[DOCTOR-ERROR] kmer (%s:%d) couldn't resolve in tree (%s)"%(kmer, len(kmer), DATASET_TREES[gkhood_index][0]))
             errors += 1
 
     print("[DOCTOR] number of errors: %d"%errors)

@@ -58,7 +58,7 @@ Using the technique above, we will have a unique continuous integer code for our
 
 ## Chaining motifs
 
-Early expriments of motif finding with small length shows significant 
+Early experiments of motif finding with small length shows significant 
 
 
 > Written with [StackEdit](https://stackedit.io/).

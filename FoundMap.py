@@ -1,16 +1,13 @@
-from misc import ExtraPosition, get_random_path, binery_add, bytes_to_int, int_to_bytes
+from misc import ExtraPosition, get_random_path, binary_add, bytes_to_int, int_to_bytes
 import os
 from constants import BATCH_SIZE, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
 def get_foundmap():
-    if FOUNDMAP_MODE == FOUNDMAP_DISK:
-        return FileMap()
-    elif FOUNDMAP_MODE == FOUNDMAP_MEMO:
-        return MemoryMap()
-    else:
-        raise Exception('[FoundMap] FOUNDMAP_MODE variable unrecognized')
+    if FOUNDMAP_MODE == FOUNDMAP_DISK:return FileMap()
+    elif FOUNDMAP_MODE == FOUNDMAP_MEMO:return MemoryMap()
+    else:raise Exception('[FoundMap] FOUNDMAP_MODE variable unrecognized')
 
 
 '''
@@ -21,11 +18,11 @@ def get_foundmap():
 class FoundMap:
 
     # abstract functions
-    def add_location(self, seq_id, position):pass
-    def get_q(self):pass
-    def get_sequences(self):pass
-    def get_positions(self):pass
-    def get_list(self):pass
+    def add_location(self, seq_id, position):raise NotImplementedError
+    def get_q(self):raise NotImplementedError
+    def get_sequences(self):raise NotImplementedError
+    def get_positions(self):raise NotImplementedError
+    def get_list(self):raise NotImplementedError
 
 
 class MemoryMap(FoundMap):
@@ -33,31 +30,32 @@ class MemoryMap(FoundMap):
     def __init__(self, found_list=[[],[]]):
         self.found_list = found_list
 
-
     def add_location(self, seq_id, position):
-        self.found_list = binery_special_add(self.found_list, seq_id, position)
+        self.found_list = binary_special_add(self.found_list, seq_id, position)
 
-
-    def get_q(self):
-        return len(self.found_list[0])
-
-    
-    def get_sequences(self):
-        return self.found_list[0]
-
-    
-    def get_positions(self):
-        return self.found_list[1]
-
-
-    def get_list(self):
-        return self.found_list
+    def get_q(self):return len(self.found_list[0])
+    def get_sequences(self):return self.found_list[0]
+    def get_positions(self):return self.found_list[1]
+    def get_list(self):return self.found_list
 
 
 class FileMap(FoundMap):
 
     class FileHandler:
 
+        '''
+            Provides memory-disk transform using byte stream files for saving on disk
+            functions:
+                init -> new born object loads data from its file (if exists)
+                update -> updating data in memory using batch (temporary data saved on memory)
+                save -> transform data into byte stream and save it on file
+
+            [PROTOCOL] byte stream portocol descried here:
+                int value -> fixed integer size at constants module (INT_SIZE)
+                vectors -> size of vectors are restored at the begining of each
+                special bytes -> special bytes are consider to prevent file errors defined at constants 
+                    module (STR `start`, END `end`, DEL `delimitter`)
+        '''
         def __init__(self, path):
 
             self.path = path
@@ -67,37 +65,56 @@ class FileMap(FoundMap):
 
             with open(path, 'rb') as mapfile:
 
+                # check header byte signature
                 assert mapfile.read(1) == STR
+
+                # reading sequence vector
                 for _ in range(bytes_to_int(mapfile.read(INT_SIZE))):
-
                     self.sequences += [bytes_to_int(mapfile.read(INT_SIZE))]
-                    assert mapfile.read(1) == DEL
+                    
+                assert mapfile.read(1) == DEL
 
-                    positions = []
+                # reading 2D-position vector
+                positions = []
+                for _ in range(len(self.sequences)):
                     for _ in range(bytes_to_int(mapfile.read(INT_SIZE))):
                         position = bytes_to_int(mapfile.read(INT_SIZE))
                         margin = bytes_to_int(mapfile.read(INT_SIZE))
                         positions += [ExtraPosition(position, margin)]
-
                     self.positions += [positions[:]]
                 
                 assert mapfile.read(1) == END
 
 
-        def update(self, seq_id, position):
-            self.sequences, self.positions = binery_special_add([self.sequences, self.positions], seq_id, position)
+        def update(self, seq_id, position, virgin):
+
+            # batch-stream
+            if virgin:
+                if len(self.sequences) == 0 or self.sequences[-1] != seq_id:
+                    self.sequences += [seq_id]
+                    self.positions += [[position]]
+                else:
+                    self.positions[-1] += [position]
+                return
+
+            self.sequences, self.positions = binary_special_add([self.sequences, self.positions], seq_id, position)
         
 
         def save(self):
             with open(self.path, 'wb') as mapfile:
 
+                # header byte signature
                 mapfile.write(STR)
+
+                # writing sequence vector
                 mapfile.write(int_to_bytes(len(self.sequences)))
-
-                for index, seq_id in enumerate(self.sequences):
+                for seq_id in self.sequences:
                     mapfile.write(int_to_bytes(seq_id))
-                    mapfile.write(DEL)
+                
+                mapfile.write(DEL)
 
+                # writing 2D-position vector
+                for index in range(len(self.sequences)):
                     mapfile.write(int_to_bytes(len(self.positions[index])))
                     for position in self.positions[index]:
                         mapfile.write(int_to_bytes(position.start_position))
@@ -108,50 +125,69 @@ class FileMap(FoundMap):
             return len(self.sequences)
 
 
-    # FileMap init
-    def __init__(self, batch=[], batch_limit=BATCH_SIZE, q=0):
+    '''
+        FileMap object implements FoundMap interface functions, handeling hybrid memory-disk data
+            memory -> batch is a python list structure containing sequence and 2D-position vectors
+            disk -> for disk interaction a FileHandler object will be initiated, loading disk data
+                in memory. after any necessary update operation on data in memory, the object saves
+                data in disk.
+
+        batch vectors: sequence vector containing sorted sequence id of founded sequences
+            2D-position vector containing `n` array of positions (ExtraPosition class) which are found
+            in a coresponding sequence at the same index
+
+        virginity: FileMap is considered virgin if total data size is below batch limit
+            therefore a virgin FileMap respond is based on only memory-data (no disk interaction)
+            Also, a non-virgin FileMap batch data is invalid and FileMap only saves Q which is 
+            the length of sequence vector
+    '''
+    def __init__(self, batch=[[], []], batch_size=0, batch_limit=BATCH_SIZE, q=0, path=None, virgin=True):
         self.batch = batch
+        self.batch_size = batch_size
         self.batch_limit = batch_limit
         self.q = q
+        self.virgin = virgin
+
+        if path:
+            self.path = path
 
 
-    def add_location_batch(self, seq_id, position):
-        self.batch += [(seq_id, position)]
-
-        # dumping batch to file
-        if len(self.batch) == self.batch_limit:
-            self.dump()
-
-
+    '''
+        dumping temporary data from memory to disk
+        [WARNING] will raise exception if batch is empty
+    '''
     def dump(self, return_map=False):
 
         # there must be an item in batch to dump
-        assert self.batch
+        assert self.batch[0]
 
-        # assign a path if dosen't exist
+        # assign a path if doesn't exist
         if not hasattr(self, 'path'):
             self.path = get_random_path()+FOUNDMAP_NAMETAG
             while os.path.isfile(self.path):
                 self.path = get_random_path()+FOUNDMAP_NAMETAG
             
             with open(self.path, 'wb') as newfile:
-                newfile.write(STR);newfile.write(int_to_bytes(0));newfile.write(END)
+                newfile.write(STR);newfile.write(int_to_bytes(0));newfile.write(DEL);newfile.write(END)
 
         map = self.FileHandler(self.path)
-        for seq_id, position in self.batch:
-            map.update(seq_id, position)
+        for index, seq_id in enumerate(self.batch[0]):
+            for position in self.batch[1][index]:
+                map.update(seq_id, position, self.virgin)
         self.q = map.save()
-        self.batch = []
+        self.batch = [[], []]
 
+        # WARNING: map could be heavy in memory
         if return_map:
             return map
         del map
 
     
-    #TODO
     def __str__(self):
         if hasattr(self, 'path'):
             return "<(FileMap) path '%s'>"%self.path
+        else:
+            return "<(FileMap) virgin - " + str(self.batch) + '>'
 
 
     # ########################################## #
@@ -160,19 +196,32 @@ class FileMap(FoundMap):
 
     # return the q value -> indicating number of seen-sequences
     def get_q(self):
-        if self.batch:
+
+        if self.virgin:
+            return len(self.batch[0])
+
+        if self.batch[0]:
             self.dump()
         return self.q
 
 
     def add_location(self, seq_id, position):
-        self.add_location_batch(seq_id, position)
+        self.batch = binary_special_add(self.batch, seq_id, position)
+        self.batch_size += 1
+
+        # dumping batch to file
+        if self.batch_size == self.batch_limit:
+            self.dump()
+            self.virgin = False
 
 
     # make a 2D array of ExtraPosition objects in foundmap 
     def get_positions(self):
 
-        if self.batch:
+        if self.virgin:
+            return self.batch[1]
+
+        if self.batch[0]:
             map = self.dump(return_map=True)
         else:
             map = self.FileHandler(self.path)
@@ -182,7 +231,10 @@ class FileMap(FoundMap):
 
     def get_sequences(self):
 
-        if self.batch:
+        if self.virgin:
+            return self.batch[0]
+
+        if self.batch[0]:
             map = self.dump(return_map=True)
         else:
             map = self.FileHandler(self.path)
@@ -192,6 +244,9 @@ class FileMap(FoundMap):
     
     def get_list(self):
         
+        if self.virgin:
+            return self.batch
+
         if self.batch:
             map = self.dump(return_map=True)
         else:
@@ -200,13 +255,13 @@ class FileMap(FoundMap):
         return [map.sequences, map.positions]
 
 
-def binery_special_add(found_list, seq_id, position):
+def binary_special_add(found_list, seq_id, position):
     start = 0
     end = len(found_list[0]) - 1
     while start <= end:
         mid = (start+end)//2
         if found_list[0][mid] == seq_id:
-            found_list[1][mid] = binery_add(found_list[1][mid], position)
+            found_list[1][mid] = binary_add(found_list[1][mid], position)
             return found_list
         elif found_list[0][mid] < seq_id:
             start = mid + 1
@@ -219,28 +274,42 @@ def binery_special_add(found_list, seq_id, position):
 
 def clear_disk():
     garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
+    print('[CLEAN] %d number of temp file are found and ... '%len(garbages), end='')
     for garbage in garbages:
         os.remove(os.path.join(garbage))
+    print('cleared')
 
 
 def test_main():
     map = FileMap()
 
     map.add_location(0, ExtraPosition(5, 0))
+    map.add_location(0, ExtraPosition(6, 0))
     map.add_location(0, ExtraPosition(7, 0))
+    map.add_location(0, ExtraPosition(8, 0))
+    map.add_location(0, ExtraPosition(9, 0))
+    map.add_location(0, ExtraPosition(10, 0))
+    map.add_location(0, ExtraPosition(51, 0))
+    map.add_location(0, ExtraPosition(15, 0))
+    map.add_location(0, ExtraPosition(15, 1))
+    map.add_location(0, ExtraPosition(13, 0))
+    map.add_location(0, ExtraPosition(14, 0))
+    map.add_location(0, ExtraPosition(16, 0))
     map.add_location(1, ExtraPosition(0, 0))
     map.add_location(0, ExtraPosition(9, 1))
     map.add_location(3, ExtraPosition(8, 0))
-    print('DONE OBERVE')
+    print('DONE OBSERVE')
 
-    positions = map.get_positions()
+    bundle = map.get_list()
     print(map.get_sequences())
-    for index, seq_id in enumerate(map.get_sequences()):
-        for position in positions[index]:
+    for index, seq_id in enumerate(bundle[0]):
+        for position in bundle[1][index]:
             print('seq-%d|index-%d|position-%d|extra-%d'%(seq_id, index, position.start_position, position.end_margin   ))
 
     print(map.get_q())
+    print('virginity : %s'%str(map.virgin))
 
 
 if __name__ == "__main__":
     clear_disk()
+    test_main()

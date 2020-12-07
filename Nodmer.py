@@ -20,12 +20,12 @@ class Nodmer:
 
 
     '''
-        adding neighbours using binery search-add algorithm
+        adding neighbours using binary search-add algorithm
             neighbours list is sorted and each new neighbour will be added at right place
     '''
     def add_neighbour(self, other):
 
-        # binery search on sorted neighbourhood list
+        # binary search on sorted neighbourhood list
         start = 0
         end = len(self.neighbours)-1
         while start <= end:
@@ -42,7 +42,7 @@ class Nodmer:
                     decision_is_made = True
                     break
 
-            # if one of the kmers was a suffix of another one, the kmer with longer string will be puted first
+            # if one of the kmers was a suffix of another one, the kmer with longer string will be putted first
             if not decision_is_made:
                 if len(neighbour.kmer) == len(other.kmer):
                     return # found - already a neighbour
@@ -56,7 +56,7 @@ class Nodmer:
         other.add_neighbour(self)
 
 
-    # inefficient neighbour managment (no order - linear search needed)
+    # inefficient neighbour management (no order - linear search needed)
     def add_neighbour_inefficient(self, other):
         self.neighbours += [other]
         other.neighbours += [self]

@@ -7,7 +7,7 @@ import os, platform, json
     Graph object -> hold all information of nodes and graph properties
         dimensions: kmin and kmax indicate minimum and maximum size of kmers that are presented in graph
         alphabet: a set of possible letters for kmers in graph (it could be any iterable like string)
-        trie tree: a search tree, binded to graph for finding nodes with specific kmer
+        trie tree: a search tree, bonded to graph for finding nodes with specific kmer
 '''
 class GKmerhood:
     def __init__(self, k_min, k_max, alphabet='ATCG'):
@@ -33,7 +33,7 @@ class GKmerhood:
 
     '''
         initializing process for generating graph nodes, within its dimensions
-            all works are done by trie, binded to graph
+            all works are done by trie, bonded to graph
     '''
     def initial_trie_nodes(self):
         self.trie = TrieNode()
@@ -43,7 +43,7 @@ class GKmerhood:
     '''
         initializing process for establishing neighbours (generating edges)
             each node will generate a set of neighbour-kmers at a edit-distance of one
-            for each neighbour-kmer, coresponding node (vaeiable->nodebour) will be found by trie
+            for each neighbour-kmer, coresponding node (variable->nodebour) will be found by trie
             and will be added as a neighbour as an edge
     '''
     def initial_neighbourhood(self):
@@ -73,7 +73,7 @@ class GKmerhood:
             for code in range(first_code, last_code+1):
                 node = self.trie.find(heap_decode(code, self.alphabet))
                 if node == None:
-                    print('ERROR: node couldnt be found, code -> ' + code)
+                    print("ERROR: node couldn't be found, code -> " + code)
                     continue
                 dneighbourhood = node.dneighbours(dmax)
                 file_index, position = handler.put(dneighbourhood)
@@ -97,7 +97,7 @@ class GKmerhood:
             for code in range(first_code, last_code+1):
                 node = self.trie.find(heap_decode(code, self.alphabet))
                 if node == None:
-                    print('ERROR: node couldnt be found, code -> ' + code)
+                    print("ERROR: node couldn't be found, code -> " + code)
                     continue
                 dneighbourhood = node.dneighbours(dmax)
                 file_index, position = handler.put(dneighbourhood)
@@ -118,7 +118,7 @@ class GKmerhood:
             for code in range(first_code, last_code+1):
                 node = self.trie.find(heap_decode(code, self.alphabet))
                 if node == None:
-                    print('ERROR: node couldnt be found, code -> ' + code)
+                    print("ERROR: node couldn't be found, code -> " + code)
                     continue
                 dneighbourhood = node.dneighbours(dmax)
                 file_index, position = handler.put(dneighbourhood)
@@ -167,16 +167,16 @@ class GKHoodTree:
             self.gkhood = gkhood
 
         else:
-            # file address spliter is different in windows and linux
+            # file address splitter is different in windows and linux
             operating_system = platform.system()
             if operating_system == 'Windows':
-                spliter = '\\'
+                splitter = '\\'
             else:   # operating_system == 'Linux'
-                spliter = '/'
+                splitter = '/'
 
             self.read_metadata(filename)
             self.read_tree(filename)
-            self.directory = os.getcwd() + spliter + directory_name + spliter
+            self.directory = os.getcwd() + splitter + directory_name + splitter
             self.dictionary = alphabet_to_dictionary(self.metadata['alphabet'])
     
 
@@ -216,7 +216,7 @@ class GKHoodTree:
             pass
 
         dn_length = self.tree[line+1][1] - self.tree[line][1]
-        dneghbours = []
+        dneighbours = []
         with open(self.directory + self.tree[line][0] + '.data', 'r') as host:
 
             # skip lines
@@ -228,9 +228,9 @@ class GKHoodTree:
                 line_data = host.readline().split()
                 if len(line_data) == 0 or int(line_data[1]) > dmax:
                     break
-                dneghbours += [(line_data[0], int(line_data[1]))]
+                dneighbours += [(line_data[0], int(line_data[1]))]
         
-        return dneghbours
+        return dneighbours
 
 
     def get_position(self, kmer):
@@ -244,7 +244,7 @@ class GKHoodTree:
         
 
 # ########################################## #
-#           main fucntion section            #
+#           main function section            #
 # ########################################## #
 
 
@@ -256,7 +256,7 @@ def main():
     gkhood.generate_dataset(4)
 
 
-# generating metadata seperatly
+# generating metadata separately
 def metadata_main():
     print('METADATA - main')
     print("generating GKmerHood (it will take a while)")
@@ -316,7 +316,7 @@ def test_main_2():
         print(node.kmer, ' - neighbours count:', len(node.neighbours))
 
 
-# test main function for tseting gkhood implementation
+# test main function for testing gkhood implementation
 def test_main():
     gkhood = GKmerhood(5, 8)
 
@@ -334,7 +334,7 @@ def test_main():
 
 
 # ########################################## #
-#           main fucntion call               #
+#           main function call               #
 # ########################################## #
 
 # main function call
