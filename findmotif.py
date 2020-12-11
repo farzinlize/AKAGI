@@ -158,19 +158,22 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
             else:
                 raise Exception('queue error: a node with lower chain level found in queue')
 
-        bundle = link.end_chain_positions.get_list()
+        bundle = link.foundmap.get_list()
         for index, seq_id in enumerate(bundle[0]):
+            position: ExtraPosition
             for position in bundle[1][index]:
                 for sliding in [i for i in range(-overlap, gap+1)]:
                     next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):
                         continue
+
+                    next_condidate: OnSequenceDistribution.Entry
                     for next_condidate in on_sequence.struct[seq_id][next_position]:
                         next_tree.add_frame(next_condidate.motif.label, seq_id, ExtraPosition(next_position, next_condidate.end_margin, chain=position.get_chain()))
+        next_motif: TrieNode
         for next_motif in next_tree.extract_motifs(q, 0):
             link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
             queue.insert(next_motif)
-        link.chained_done()
 
     if report[0]:
         # plot last chain level locations

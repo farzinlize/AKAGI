@@ -13,7 +13,7 @@ from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, 
 from alignment import alignment_matrix
 
 # importing constants
-from constants import DATASET_TREES, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
+from constants import CHANGE, DATASET_TREES, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -70,6 +70,8 @@ def motif_finding_chain(dataset_name,
             color_frame,
             str(multilayer),
             megalexa))
+
+    print('[FOUNDMAP] foundmap mode: %s'%FOUNDMAP_MODE)
 
     sequences = read_fasta('%s.fasta'%(dataset_name))
 
@@ -289,10 +291,10 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
-        'multi-layer', 'feature', 'megalexa', 'separated=']
+        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
@@ -348,6 +350,10 @@ if __name__ == "__main__":
             args_dict.update({'megalexa':int(a)})
         elif o in ['-t', '--separated']:
             args_dict.update({'additional_name':a})
+        elif o in ['-C', '--change']:
+            nameValue = a.split('=')
+            CHANGE(nameValue[0], nameValue[1])
+            print('fo', FOUNDMAP_MODE)
 
 
     if command == 'SLD':

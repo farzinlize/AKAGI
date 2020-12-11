@@ -15,8 +15,8 @@ from Nodmer import Nodmer
             seen-list -> a list containing sequence IDs that coresponding kmer had been seen
 '''
 class TrieNode:
-    def __init__(self, lable='', level=0):
-        self.label = lable
+    def __init__(self, label='', level=0):
+        self.label = label
         self.childs = []
         self.level = level
 
@@ -76,12 +76,12 @@ class TrieNode:
         found_list is an abstract structure that is constructed by lists
         a found_list has two list:
             found_list[0] -> seq_ids
-            found_list[1] -> position of occurence on each sequence
+            found_list[1] -> position of occurrence on each sequence
         each element with same index in both list are related described below:
             any element in second list such as found_list[1][i] is a list of position that
-            this node of tree occures in sequence number of found_list[0][i]
+            this node of tree occurs in sequence number of found_list[0][i]
 
-        [UPDATE]: expriment shows that saving all data in memory results in RAM overflow!
+        [UPDATE]: experiment shows that saving all data in memory results in RAM overflow!
             a class named FoundMap implemented to save such data in memory and disk instead 
             of found_list which is now removed from TrieFind class
     '''
@@ -93,7 +93,7 @@ class TrieNode:
                 self.foundmap = get_foundmap()
 
             self.foundmap.add_location(seq_id, position)
-            # self.found_list = binery_special_add(self.found_list, seq_id, position)
+            # self.found_list = binary_special_add(self.found_list, seq_id, position)
             return
         
         # searching for proper path
@@ -109,7 +109,7 @@ class TrieNode:
 
     '''
         extracting motifs, nodes that are present in q number of sequences
-            result_kmer -> indicates output type: 0 for object and 1 for kmer only
+            result_kmer -> indicates output type: 0 for object and 1 for kmer (string-fromat) only
     '''
     def extract_motifs(self, q, result_kmer=1):
         motifs = []
@@ -141,10 +141,10 @@ class TrieNode:
     # ########################################## #
 
     '''
-        add chain arrtibutes to motif nodes:
+        add chain attributes to motif nodes:
             end_chain_position: a structured list just like found_list that indicates
                 where could a chain continue
-            close_chain: any links is assumed open untill it is chained to all possible condidates
+            close_chain: any links is assumed open until it is chained to all possible candidates
                 unless there isn't any. after that the chain is closed.
             chain_level: level of the link in chain
             next_chains: a list of links that are chained down from this node
@@ -154,8 +154,6 @@ class TrieNode:
     def make_chain(self, chain_level=0, up_chain=None):
         if not hasattr(self, 'foundmap'):
             raise Exception('should be a motif')
-        self.end_chain_positions = self.foundmap
-        self.close_chain = False
         self.chain_level = chain_level
         self.next_chains = []
         self.up_chain = up_chain
@@ -164,10 +162,6 @@ class TrieNode:
 
     def add_chain(self, other):
         self.next_chains += [other]
-
-    
-    def chained_done(self):
-        self.close_chain = True
 
 
     # ########################################## #
@@ -186,9 +180,9 @@ class TrieNode:
     
     def instances_str(self, sequences):
         result = '>pattern\n%s\n>instances\n'%(self.chain_sequence())
-        boundle = self.foundmap.get_list()
-        for index, seq_id in enumerate(boundle[0]):
-            for position in boundle[1][index]:
+        bundle = self.foundmap.get_list()
+        for index, seq_id in enumerate(bundle[0]):
+            for position in bundle[1][index]:
                 end_index = int(position) + self.level
                 start_index = position.start_position
                 if len(position.chain) != 0:
@@ -210,10 +204,10 @@ class TrieNode:
 
 
 # ########################################## #
-#           main fucntion section            #
+#           main function section            #
 # ########################################## #
 
-# testing binery search-add
+# testing binary search-add
 def test_main():
     t = TrieNode()
     t.add_frame('AAT', 0, 0)
