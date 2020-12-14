@@ -8,12 +8,12 @@ import sys
 # project imports
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_window_find_motif
-from misc import read_fasta, make_location, edit_distances_matrix, extract_from_fasta
+from misc import change_global_constant_py, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
 
 # importing constants
-from constants import CHANGE, DATASET_TREES, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
+from constants import DATASET_TREES, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -306,54 +306,42 @@ if __name__ == "__main__":
 
     command = sys.argv[1]
 
-    opts, args = getopt(sys.argv[2:], shortopt, longopts)
+    opts, _ = getopt(sys.argv[2:], shortopt, longopts)
     for o, a in opts:
-        if o in ['-m', '--kmin']:
-            args_dict.update({'kmin':int(a)})
-        elif o in ['-M', '--kmax']:
-            args_dict.update({'kmax':int(a)})
+        if o in ['-m', '--kmin']:args_dict.update({'kmin':int(a)})
+        elif o in ['-M', '--kmax']:args_dict.update({'kmax':int(a)})
         elif o in ['-l', '--level']:
             try: args_dict.update({'level':int(a)})
             except: args_dict.update({'level':[int(o) for o in a.split(DELIMETER)]})
         elif o in ['-d', '--distance']:
             try:args_dict.update({'dmax':int(a)})
             except:args_dict.update({'dmax':[int(o) for o in a.split(DELIMETER)]})
-        elif o in ['-s', '--sequences']:
-            args_dict.update({'sequences':a})
-        elif o in ['-g', '--gap']:
-            args_dict.update({'gap':int(a)})
-        elif o in ['-O', '--overlap']:
-            args_dict.update({'overlap':int(a)})
-        elif o == '--mask':
-            args_dict.update({'mask':a})
-        elif o in ['-h', '--histogram']:
-            args_dict.update({'histogram_report':True})
-        elif o in ['-q', '--quorum']:
-            args_dict.update({'quorum':int(a)})
+        elif o in ['-s', '--sequences']:args_dict.update({'sequences':a})
+        elif o in ['-g', '--gap']:args_dict.update({'gap':int(a)})
+        elif o in ['-O', '--overlap']:args_dict.update({'overlap':int(a)})
+        elif o == '--mask':args_dict.update({'mask':a})
+        elif o in ['-h', '--histogram']:args_dict.update({'histogram_report':True})
+        elif o in ['-q', '--quorum']:args_dict.update({'quorum':int(a)})
         elif o in ['-f', '--frame']: 
             try:args_dict.update({'frame_size':int(a)})
             except:args_dict.update({'frame_size':[int(o) for o in a.split(DELIMETER)]})
         elif o in ['-G', '--gkhood']: 
             try:args_dict.update({'gkhood_index':int(a)})
             except:args_dict.update({'gkhood_index':[int(o) for o in a.split(DELIMETER)]})
-        elif o in ['-p', '--path']:
-            args_dict.update({'path':a})
-        elif o in ['-c', '--color-frame']:
-            args_dict.update({'color-frame':int(a)})
-        elif o in ['-Q', '--find-max-q']:
-            args_dict.update({'quorum':FIND_MAX})
-        elif o in ['-u', '--multi-layer']:
-            args_dict.update({'multi-layer':True})
-        elif o in ['-F']:
-            args_dict.update(feature_update)
-        elif o in ['-x', '--megalexa']:
-            args_dict.update({'megalexa':int(a)})
-        elif o in ['-t', '--separated']:
-            args_dict.update({'additional_name':a})
+        elif o in ['-p', '--path']:args_dict.update({'path':a})
+        elif o in ['-c', '--color-frame']:args_dict.update({'color-frame':int(a)})
+        elif o in ['-Q', '--find-max-q']:args_dict.update({'quorum':FIND_MAX})
+        elif o in ['-u', '--multi-layer']:args_dict.update({'multi-layer':True})
+        elif o in ['-F']:args_dict.update(feature_update)
+        elif o in ['-x', '--megalexa']:args_dict.update({'megalexa':int(a)})
+        elif o in ['-t', '--separated']:args_dict.update({'additional_name':a})
+        
+        # only available with NOP command
         elif o in ['-C', '--change']:
-            nameValue = a.split('=')
-            CHANGE(nameValue[0], nameValue[1])
-            print('fo', FOUNDMAP_MODE)
+            assert command == 'NOP'
+            variable_name, new_value = a.split('=')
+            # print(variable_name, new_value)
+            change_global_constant_py(variable_name, new_value)
 
 
     if command == 'SLD':
@@ -402,5 +390,7 @@ if __name__ == "__main__":
             args_dict['level'][1],
             args_dict['dmax']
         )
+    elif command == 'NOP':
+        pass
     else:
         print('[ERROR] command %s is not supported'%command)

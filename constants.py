@@ -27,11 +27,3 @@ FOUNDMAP_NAMETAG = '.byte'
 # default found-map mode
 FOUNDMAP_MODE = FOUNDMAP_MEMO
 
-
-def CHANGE(name, value):
-    global FOUNDMAP_MODE
-
-    if name == 'FOUNDMAP_MODE':
-        print('FUCK', value)
-        FOUNDMAP_MODE = value    
-

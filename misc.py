@@ -1,6 +1,6 @@
 import os, platform, random, string
 
-from constants import PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE
+from constants import FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE
 
 
 # ########################################## #
@@ -296,6 +296,31 @@ def extract_from_fasta(fasta, dataset):
     return binding_sites
 
 
+def change_global_constant_py(variable_name: str, new_value: str):
+    with open('constants.py', 'r') as f:
+        content = f.readlines()
+    
+    with open('constants.py', 'w') as f:
+        for line in content:
+            list_line = line.split('=')
+
+            if len(list_line) == 1:
+                f.write(line)
+                continue
+
+            if len(list_line) > 2:
+                raise Exception('[CHANGE][ERROR] constant file line contains more than one assignment chr "="')
+            
+            f.write(list_line[0] + '=')
+
+            if "".join(list_line[0].split()) == variable_name:
+                f.write(' ' + new_value + '\n')
+            else:
+                f.write(list_line[1])
+
+
+
+
 # ########################################## #
 #            byte read functions             #
 # ########################################## #
@@ -431,5 +456,6 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    test_main_3()
+    change_global_constant_py('FOUNDMAP_DISK', "'fuck'")
+    # test_main_3()
     # outer_f(5, 6, 2)
