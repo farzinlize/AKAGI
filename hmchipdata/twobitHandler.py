@@ -1,3 +1,4 @@
+from misc import make_location
 from twobitreader import download as twobitdownloader
 import sys
 
@@ -5,6 +6,7 @@ from constants import TWOBIT_LOCATION
 
 
 def download_2bit(name):
+    make_location(TWOBIT_LOCATION)
     twobitdownloader.save_genome(name, TWOBIT_LOCATION)
 
 
