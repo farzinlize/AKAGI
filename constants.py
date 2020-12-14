@@ -4,6 +4,7 @@ DATASET_TREES = [('gkhood5_8', 'dataset'), ('gkhood56', 'cache56'), ('gkhood78',
 HISTOGRAM_LOCATION = './results/figures/%s-f%s-d%s-q%d-g%d-o%d/'
 RESULT_LOCATION = './results/'
 BINDING_SITE_LOCATION = './data/answers.fasta'
+TWOBIT_LOCATION = './hmchipdata/2bits/'
 
 ARG_UNSET = -1
 FIND_MAX = -2
