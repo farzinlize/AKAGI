@@ -54,7 +54,8 @@ def motif_finding_chain(dataset_name,
                         color_frame=ARG_UNSET, 
                         multilayer=None, 
                         megalexa=None, 
-                        additional_name=''):
+                        additional_name='',
+                        chaining_disable=False):
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
         arguments -> f(s)=%s, q=%d, d(s)=%s, gap=%d, overlap=%d, dataset=%s\n\
@@ -115,6 +116,10 @@ def motif_finding_chain(dataset_name,
         # adding new motifs with less frequency 
         motifs += motif_tree.extract_motifs(q, 0)
     print('[lexicon] lexicon size = %d'%len(motifs))
+
+    if chaining_disable:
+        print('[CHAINING] chaining is disable - end of process')
+        return
 
     last_time = currentTime()
     chains = motif_chain(
@@ -294,12 +299,12 @@ if __name__ == "__main__":
     shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
-        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'reference=']
+        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'reference=', 'disable-chaining']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
-        'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18'}
+        'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -332,10 +337,11 @@ if __name__ == "__main__":
         elif o in ['-c', '--color-frame']:args_dict.update({'color-frame':int(a)})
         elif o in ['-Q', '--find-max-q']:args_dict.update({'quorum':FIND_MAX})
         elif o in ['-u', '--multi-layer']:args_dict.update({'multi-layer':True})
-        elif o in ['-F']:args_dict.update(feature_update)
+        elif o == '-F':args_dict.update(feature_update)
         elif o in ['-x', '--megalexa']:args_dict.update({'megalexa':int(a)})
         elif o in ['-t', '--separated']:args_dict.update({'additional_name':a})
         elif o in ['-r', '--reference']:args_dict.update({'reference':a})
+        elif o == '--disable-chaining':args_dict.update({'disable_chaining':True})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -364,7 +370,8 @@ if __name__ == "__main__":
             s_mask=args_dict['mask'],
             multilayer=args_dict['multi-layer'],
             megalexa=args_dict['megalexa'],
-            additional_name=args_dict['additional_name'])
+            additional_name=args_dict['additional_name'],
+            chaining_disable=args_dict['disable_chaining'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
