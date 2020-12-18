@@ -14,6 +14,6 @@ __pycache__/*
 /js/*
 *.byte
 .vscode/*
-/hmchipdata/2bits/*
+/2bits/*
 /hmchipdata/Human_hg18_peakcod/*
 /hmchipdata/HumanRank/*

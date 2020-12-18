@@ -10,7 +10,7 @@ from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_win
 from misc import change_global_constant_py, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
-from hmchipdata.twobitHandler import download_2bit
+from twobitHandler import download_2bit
 
 # importing constants
 from constants import DATASET_TREES, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
@@ -291,15 +291,15 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:n:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
-        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'name=']
+        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'reference=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
-        'multi-layer':False, 'megalexa':0, 'additional_name':'', 'name':'hg18'}
+        'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18'}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -335,6 +335,7 @@ if __name__ == "__main__":
         elif o in ['-F']:args_dict.update(feature_update)
         elif o in ['-x', '--megalexa']:args_dict.update({'megalexa':int(a)})
         elif o in ['-t', '--separated']:args_dict.update({'additional_name':a})
+        elif o in ['-r', '--reference']:args_dict.update({'reference':a})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -391,7 +392,7 @@ if __name__ == "__main__":
             args_dict['dmax']
         )
     elif command == '2BT':
-        download_2bit(args_dict['name'])
+        download_2bit(args_dict['reference'])
     elif command == 'NOP':
         pass
     else:
