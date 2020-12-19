@@ -157,7 +157,12 @@ class OnSequenceDistribution:
             bundle = motif.foundmap.get_list()
             for index, seq_id in enumerate(bundle[0]):
                 for position in bundle[1][index]:
-                    struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
+                    try:
+                        struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
+                    except IndexError:
+                        print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d'%(
+                            seq_id, position.start_position, len(sequences[index])
+                        ))
         return struct
 
 
