@@ -325,12 +325,13 @@ def change_global_constant_py(variable_name: str, new_value: str):
 #            byte read functions             #
 # ########################################## #
 
-def bytes_to_int(b :bytes):
-    return int.from_bytes(b, 'big')
+# functions consider unsigned integer if not mentioned
+def bytes_to_int(b :bytes, signed=False):
+    return int.from_bytes(b, 'big', signed=signed)
 
 
-def int_to_bytes(i :int, int_size=INT_SIZE):
-    return i.to_bytes(int_size, 'big')
+def int_to_bytes(i :int, int_size=INT_SIZE, signed=False):
+    return i.to_bytes(int_size, 'big', signed=signed)
 
 
 # ########################################## #
@@ -456,6 +457,7 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    change_global_constant_py('FOUNDMAP_DISK', "'fuck'")
+    print(bytes_to_int(int_to_bytes(-1, signed=True), signed=True))
+    # change_global_constant_py('FOUNDMAP_DISK', "'fuck'")
     # test_main_3()
     # outer_f(5, 6, 2)
