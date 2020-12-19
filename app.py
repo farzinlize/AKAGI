@@ -114,11 +114,13 @@ def motif_finding_chain(dataset_name,
             break
 
         # adding new motifs with less frequency 
-        motifs += motif_tree.extract_motifs(q, 0)
+        # ONLY add new motifs with same q-value
+        motifs += motif_tree.extract_motifs(q, 0, greaterthan=False)
+
     print('[lexicon] lexicon size = %d'%len(motifs))
 
     if chaining_disable:
-        print('[CHAINING] chaining is disable - end of process')
+        print('[CHAINING] chaining is disabled - end of process')
         return
 
     last_time = currentTime()
