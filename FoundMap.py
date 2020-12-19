@@ -249,7 +249,7 @@ class FileMap(FoundMap):
         if self.virgin:
             return self.batch
 
-        if self.batch:
+        if self.batch[0]:
             map = self.dump(return_map=True)
         else:
             map = self.FileHandler(self.path)

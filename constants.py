@@ -11,7 +11,7 @@ FIND_MAX = -2
 
 DELIMETER = '-'
 DNA_ALPHABET = 'ATCG'
-BATCH_SIZE = 1
+BATCH_SIZE = 100
 PATH_LENGTH = 10
 
 # bytes streaming constants
