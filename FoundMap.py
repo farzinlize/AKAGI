@@ -27,8 +27,7 @@ class FoundMap:
 
 class MemoryMap(FoundMap):
 
-    def __init__(self, found_list=[[],[]]):
-        self.found_list = found_list
+    def __init__(self):self.found_list = [[],[]]
 
     def add_location(self, seq_id, position):
         self.found_list = binary_special_add(self.found_list, seq_id, position)
@@ -37,6 +36,9 @@ class MemoryMap(FoundMap):
     def get_sequences(self):return self.found_list[0]
     def get_positions(self):return self.found_list[1]
     def get_list(self):return self.found_list
+
+    def __str__(self) -> str:
+        return str(self.found_list)
 
 
 class FileMap(FoundMap):
@@ -79,7 +81,7 @@ class FileMap(FoundMap):
                 for _ in range(len(self.sequences)):
                     for _ in range(bytes_to_int(mapfile.read(INT_SIZE))):
                         position = bytes_to_int(mapfile.read(INT_SIZE))
-                        margin = bytes_to_int(mapfile.read(INT_SIZE))
+                        margin = bytes_to_int(mapfile.read(INT_SIZE), signed=True)
                         positions += [ExtraPosition(position, margin)]
                     self.positions += [positions[:]]
                 
@@ -118,7 +120,7 @@ class FileMap(FoundMap):
                     mapfile.write(int_to_bytes(len(self.positions[index])))
                     for position in self.positions[index]:
                         mapfile.write(int_to_bytes(position.start_position))
-                        mapfile.write(int_to_bytes(position.end_margin))
+                        mapfile.write(int_to_bytes(position.end_margin, signed=True))
 
                 mapfile.write(END)
         
@@ -138,11 +140,11 @@ class FileMap(FoundMap):
 
         virginity: FileMap is considered virgin if total data size is below batch limit
             therefore a virgin FileMap respond is based on only memory-data (no disk interaction)
-            Also, a non-virgin FileMap batch data is invalid and FileMap only saves Q which is 
+            Also, a non-virgin FileMap batch data is invalid and FileMap only saves Q in memory which is 
             the length of sequence vector
     '''
-    def __init__(self, batch=[[], []], batch_size=0, batch_limit=BATCH_SIZE, q=0, path=None, virgin=True):
-        self.batch = batch
+    def __init__(self, batch_size=0, batch_limit=BATCH_SIZE, q=0, path=None, virgin=True):
+        self.batch = [[],[]]
         self.batch_size = batch_size
         self.batch_limit = batch_limit
         self.q = q
@@ -312,4 +314,4 @@ def test_main():
 
 if __name__ == "__main__":
     clear_disk()
-    test_main()
+    # test_main()
