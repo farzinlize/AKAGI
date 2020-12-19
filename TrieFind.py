@@ -110,15 +110,18 @@ class TrieNode:
     '''
         extracting motifs, nodes that are present in q number of sequences
             result_kmer -> indicates output type: 0 for object and 1 for kmer (string-fromat) only
+
+        greaterthan
+            True   (on): include all motifs with q-value greater than input q variable
+            False (off): only include motifs with q-value equal to input variable
     '''
-    def extract_motifs(self, q, result_kmer=1):
+    def extract_motifs(self, q, result_kmer=1, greaterthan=True):
         motifs = []
         if hasattr(self, 'foundmap'):
             if self.foundmap.get_q() >= q:
-                if result_kmer:
-                    motifs += [self.label]
-                else:
-                    motifs += [self]
+                if greaterthan or self.foundmap.get_q() == q:
+                    if result_kmer  :motifs += [self.label]
+                    else            :motifs += [self]
         for child in self.childs:
             motifs += child.extract_motifs(q, result_kmer)
         return motifs
