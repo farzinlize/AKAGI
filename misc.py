@@ -213,12 +213,94 @@ def alphabet_to_dictionary(alphabet):
 # extract sequences from a fasta file
 def read_fasta(filename):
     sequences = []
-    fasta = open(filename, 'r')
-    for line in fasta:
-        if line[0] == '>':
-            continue
-        sequences += [line[:-1]]
+    with open(filename, 'r') as fasta:
+        for line in fasta:
+            if line[0] == '>':
+                continue
+            sequences += [line[:-1]]
     return sequences
+
+
+def read_peak_fasta(filename):
+
+    def bucket_sort(lst, second, ranks):
+        buckets = [None for _ in range(len(lst))]
+        second_buckets = [None for _ in range(len(lst))]
+        for index, item in enumerate(lst):
+            try:
+                if buckets[ranks[index]] != None:
+                    print('[error] rank position occupied (ignoring afterward policy) | ranks[index]=%d'%(
+                        ranks[index]))
+                    continue
+
+                buckets[ranks[index]] = item
+                second_buckets[ranks[index]] = second[index]
+
+            except IndexError:
+                print('[WARNING] rank out of range (ignoring entity) | ranks[index]=%d, size(limit)=%d'%(
+                    ranks[index], len(lst)))
+
+        # error detection
+        errors = 0
+        index = 0
+        while index < len(buckets):
+
+            # error found
+            if buckets[index] == None:
+                errors += 1
+
+                # error handle
+                buckets = buckets[:index] + buckets[index+1:]
+                second_buckets = second_buckets[:index] + second_buckets[index+1:]
+
+            # no need to increase index if deletion happend
+            else:
+                index += 1
+                
+        print('[SORT] number of errors in ranking data: %d (sequences with unknown rank are deleted)'%errors)
+        return buckets, second_buckets
+
+
+    sequences = []
+    ranks_ids = []
+    ranking_bundles = []
+    virgin = True
+
+    with open(filename, 'r') as fasta:
+        read_sequence = False
+        rank_info = {}
+        for line in fasta:
+
+            # fasta command
+            if line[0] == '>':
+                assert read_sequence == False
+
+                if virgin:
+                    virgin = False
+                elif line.startswith('> scores'):
+                    continue
+                else:
+                    assert rank_info
+                    ranking_bundles += [rank_info]
+
+                ranks_ids += [(int(line.split('=')[1])-1)]
+                rank_info = {}
+                read_sequence = True
+
+            # data
+            else:
+                if read_sequence:
+                    sequences += [line[:-1]]
+                    read_sequence = False
+                else:
+                    title, score = line.split(',')
+                    rank_info.update({title:float(score)})
+
+        assert rank_info
+        ranking_bundles += [rank_info]
+
+    assert len(sequences) == len(ranking_bundles) and len(ranks_ids) == len(sequences)
+    return bucket_sort(sequences, ranking_bundles, ranks_ids)
 
 
 def make_location(location):
@@ -462,7 +544,9 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    print(bytes_to_int(int_to_bytes(-1, signed=True), signed=True))
+    seq, rank = read_peak_fasta('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.fasta')
+    # print(rank)
+    # print(bytes_to_int(int_to_bytes(-1, signed=True), signed=True))
     # change_global_constant_py('FOUNDMAP_DISK', "'fuck'")
     # test_main_3()
     # outer_f(5, 6, 2)
