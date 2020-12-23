@@ -33,9 +33,9 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
         # progress value
         DSE_sum = 0
         A2T_sum = 0
-        progress_time = currentTime()
+        # progress_time = currentTime()
         progress = 0
-        print('processing sequence: ', seq_id)
+        # print('processing sequence: ', seq_id)
 
         frame_start = 0
         frame_end = frame_size
@@ -64,12 +64,12 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 
             progress += 1
             if progress == PROGRESS_THRESHOLD:
-                print('progress checkout: ', currentTime() - progress_time, 'seconds')
-                print('> DSE average: ', DSE_sum/progress, '\tA2T average: ', A2T_sum/progress)
+                # print('progress checkout: ', currentTime() - progress_time, 'seconds')
+                # print('> DSE average: ', DSE_sum/progress, '\tA2T average: ', A2T_sum/progress)
                 DSE_sum = 0
                 A2T_sum = 0
                 progress = 0
-                progress_time = currentTime()
+                # progress_time = currentTime()
 
     # previous version return value
     # return motifs_tree.extract_motifs(q, result_kmer)
