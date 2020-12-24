@@ -25,6 +25,18 @@ FOUNDMAP_DISK = 'disk'
 FOUNDMAP_MEMO = 'memory'
 FOUNDMAP_NAMETAG = '.byte'
 
+QUEUE_NAMETAG = '.by2e'
+
 # default found-map mode
 FOUNDMAP_MODE = FOUNDMAP_MEMO
 
+SECRET_FILE_ADDRESS = 'secret.json'
+
+FOUNDMAP_MAIL_SUBJECT = '[AKAGI][REPORT][AUTO-MAIL] Memory usage problem of observation phase'
+FOUNDMAP_MAIL_HEADER = \
+'''
+############################################
+Automatic report-mail from AKAGI
+-> check attachments for additional files <-
+############################################
+'''
