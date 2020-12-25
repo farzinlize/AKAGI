@@ -32,11 +32,14 @@ FOUNDMAP_MODE = FOUNDMAP_MEMO
 
 SECRET_FILE_ADDRESS = 'secret.json'
 
-FOUNDMAP_MAIL_SUBJECT = '[AKAGI][REPORT][AUTO-MAIL] Memory usage problem of observation phase'
+FOUNDMAP_MAIL_SUBJECT = '[AKAGI][REPORT][AUTO-MAIL]'
 FOUNDMAP_MAIL_HEADER = \
 '''
-############################################
+##################
 Automatic report-mail from AKAGI
 -> check attachments for additional files <-
-############################################
+##################
 '''
+
+EMAIL_ACCOUNT = 'fantastic.farzin@gmail.com'
+MAIL_TO = ['farzinlize@live.com', 'fmohammadi@ce.sharif.edu']

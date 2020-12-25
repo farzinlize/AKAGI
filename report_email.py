@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 from getopt import getopt
 import sys
 
-from constants import DELIMETER, FOUNDMAP_MAIL_HEADER, FOUNDMAP_MAIL_SUBJECT, SECRET_FILE_ADDRESS
+from constants import DELIMETER, EMAIL_ACCOUNT, FOUNDMAP_MAIL_HEADER, FOUNDMAP_MAIL_SUBJECT, MAIL_TO, SECRET_FILE_ADDRESS
 
 
 def secret_password():
@@ -16,12 +16,12 @@ def secret_password():
 
 def send_files_mail(texts, attachments):
 
-    gmail_user = 'fantastic.farzin@gmail.com'
+    gmail_user = EMAIL_ACCOUNT
     gmail_password = secret_password()
 
     # Create Email 
     mail_from = gmail_user
-    mail_to = ['farzinlize@live.com', 'fmohammadi@ce.sharif.edu']
+    mail_to = MAIL_TO
 
     message = MIMEMultipart()
     message['Subject'] = FOUNDMAP_MAIL_SUBJECT
