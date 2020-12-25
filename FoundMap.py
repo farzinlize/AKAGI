@@ -275,11 +275,13 @@ def binary_special_add(found_list, seq_id, position):
 
 
 def clear_disk():
+    garbage_size = 0
     garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
     print('[CLEAN] %d number of temp file are found and ... '%len(garbages), end='')
     for garbage in garbages:
+        garbage_size += os.stat(garbage).st_size
         os.remove(os.path.join(garbage))
-    print('cleared')
+    print('cleared\ngarbage size = %d'%garbage_size)
 
 
 def test_main():
@@ -313,5 +315,7 @@ def test_main():
 
 
 if __name__ == "__main__":
+    # garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
+    # print('size = %d'%)
     clear_disk()
     # test_main()
