@@ -7,7 +7,7 @@ import sys
 # project imports
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_window_find_motif
-from misc import change_global_constant_py, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
+from misc import change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
@@ -127,6 +127,7 @@ def motif_finding_chain(dataset_name,
     chains = motif_chain(
         motifs, 
         sequences,
+        read_bundle('%s.bundle'%(dataset_name)),
         q=q, 
         gap=gap,
         overlap=overlap, 
