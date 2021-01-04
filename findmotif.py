@@ -1,9 +1,10 @@
 # pyright: reportUnboundVariable=false
 # ignoring false unbound reports
 
+from pool import RankingPool, objective_function_pvalue
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import heap_encode, alphabet_to_dictionary, read_fasta, Queue, make_location, ExtraPosition, OnSequenceDistribution
+from misc import heap_encode, alphabet_to_dictionary, read_bundle, read_fasta, Queue, make_location, ExtraPosition, OnSequenceDistribution
 from time import time as currentTime
 from report import location_histogram, motif_chain_report
 import sys
@@ -114,7 +115,7 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
 #          chaining motifs section           #
 # ########################################## #
 
-def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
+def motif_chain(motifs, sequences, bundles, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
 
     if report[0] and sequence_mask == None:
         sequence_mask = [1 for _ in range(len(sequences))]
@@ -125,6 +126,7 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
 
     on_sequence = OnSequenceDistribution(motifs, sequences)
     queue = Queue(items=[motif.make_chain() for motif in motifs])
+    pool = RankingPool(bundles, objective_function_pvalue)
 
     if report[0] or report[1]:
         # reporting variables
@@ -174,6 +176,10 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
         for next_motif in next_tree.extract_motifs(q, 0):
             link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
             queue.insert(next_motif)
+        pool.add(link)
+        # TODO clear next tree method (deleting foundmap temporary file)
+
+    pool.all_ranks_report('name.o', sequences)
 
     if report[0]:
         # plot last chain level locations
@@ -182,6 +188,7 @@ def motif_chain(motifs, sequences, q=-1, gap=0, overlap=0, sequence_mask=None, r
     if report[1]:
         # return reporting variable
         return chains + [current_level_list[:]]
+
 
 
 # ########################################## #

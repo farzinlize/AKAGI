@@ -260,7 +260,6 @@ def read_bundle(filename):
                 key, value = line.split(',')
                 dictionary.update({key: TYPES_OF[key](value)})
     return bundles
-                    
 
 
 def read_peak_fasta(filename):

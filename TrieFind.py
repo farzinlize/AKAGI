@@ -206,6 +206,12 @@ class TrieNode:
         return True
 
 
+    def to_byte(self):
+        pass
+
+
+
+
 # ########################################## #
 #           main function section            #
 # ########################################## #

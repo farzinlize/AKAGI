@@ -25,7 +25,13 @@ class RankingPool:
         score = self.scoreing(pattern, self.bundles)
         self.pool = binary_add(self.pool, RankingPool.Entity(score, pattern))
 
-
+    
+    def all_ranks_report(self, report_filename, sequences):
+        with open(report_filename, 'w') as report:
+            item:RankingPool.Entity
+            for index, item in enumerate(self.pool):
+                report.write('index:%d|score:%f\n%s\n'%(index, item.score, item.data.instances_str(sequences)))
+            
 
 def objective_function_pvalue(pattern: TrieNode, sequences_bundles):
     foundlist_seq_vector = pattern.foundmap.get_list()[0]

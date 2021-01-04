@@ -40,6 +40,7 @@ def annotation_to_sequences_directory(directory, destination, reference, chipxpr
 
 
 def annotation_to_sequences(cod, reference, fasta:str = ''):
+    print('[peakseq] making fasta file from cod-annotation peaks (cod=%s)'%cod)
 
     if fasta == '':
         fasta = cod[:-4] + '.fasta'
@@ -89,7 +90,7 @@ if __name__ == "__main__":
     args_dict = {'fasta':'', 'reference':'./2bits/hg18.2bit', 'mode':'one', 'directory':'./hmchipdata/Human_hg18_peakcod/',
                     'cod':'./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.cod'}
 
-    opts, args = getopt(sys.argv[2:], shortopt, longopts)
+    opts, args = getopt(sys.argv[1:], shortopt, longopts)
     for o, a in opts:
         if o in ['-f', '--fasta']:
             args_dict.update({'output':a})
