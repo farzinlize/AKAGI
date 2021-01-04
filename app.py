@@ -123,11 +123,13 @@ def motif_finding_chain(dataset_name,
         print('[CHAINING] chaining is disabled - end of process')
         return
 
+    bundle_name = dataset_name.split('/')[-1]
+
     last_time = currentTime()
     chains = motif_chain(
         motifs, 
         sequences,
-        read_bundle('%s.bundle'%(dataset_name)),
+        read_bundle('/hmchipdata/Human_hg18_peakcod/%s.bundle'%(bundle_name)),
         q=q, 
         gap=gap,
         overlap=overlap, 
