@@ -1,6 +1,6 @@
 import os, platform, random, string
 
-from constants import FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE
+from constants import FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, QUEUE_NAMETAG, RANK, TYPES_OF
 
 
 # ########################################## #
@@ -8,26 +8,41 @@ from constants import FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE
 # ########################################## #
 
 '''
-    Queue structure implementation (FIFO)
+    Queue structure implementation (FIFO) in memory
         First in (insert), first out (pop)
 '''
 class Queue:
-    def __init__(self, items=[]):
-        self.queue = items
-
-
+    def __init__(self, items=[]):self.queue = items
+    def insert(self, item):self.queue = [item] + self.queue
+    def isEmpty(self):return len(self.queue) == 0
     def pop(self):
         item = self.queue[-1]
         self.queue = self.queue[:-1]
         return item
 
 
-    def insert(self, item):
-        self.queue = [item] + self.queue
+class QueueDisk:
+    def __init__(self, items=[]):
+        if items:
+            self.files = self.insert_all(items)
+        else:
+            self.files = []
 
-    
-    def isEmpty(self):
-        return len(self.queue) == 0
+
+    def insert_all(self, items):pass
+
+    def pop(self):
+        assert self.files
+
+    def insert(self, item):
+        if self.files:
+            with open(self.files[-1], 'a') as queue:
+                pass
+        else:
+            pass
+
+
+    def isEmpty(self):bool(self.files)
 
 
 '''
@@ -156,6 +171,7 @@ class OnSequenceDistribution:
         for motif in motifs:
             bundle = motif.foundmap.get_list()
             for index, seq_id in enumerate(bundle[0]):
+                position: ExtraPosition
                 for position in bundle[1][index]:
                     try:
                         struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
@@ -170,6 +186,15 @@ class OnSequenceDistribution:
 #                 functions                  #
 # ########################################## #
 
+# generate a free path with random name and defined extension (like .byte)
+def get_random_free_path(extension, length=PATH_LENGTH):
+    random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
+    while os.path.isfile(random_name+extension):
+        random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
+    return random_name + extension
+
+
+# deprecated - useing `get_random_free_path` instead
 def get_random_path(length=PATH_LENGTH):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
@@ -219,6 +244,23 @@ def read_fasta(filename):
                 continue
             sequences += [line[:-1]]
     return sequences
+
+
+def read_bundle(filename):
+    bundles = []
+    with open(filename, 'r') as bundle:
+        dictionary = {}
+        for line in bundle:
+            if line[0] == '>':
+                if dictionary:
+                    bundles += [dictionary]
+                rank = int(line.split('=')[1])
+                dictionary = {RANK:TYPES_OF[RANK](rank)}
+            else:
+                key, value = line.split(',')
+                dictionary.update({key: TYPES_OF[key](value)})
+    return bundles
+                    
 
 
 def read_peak_fasta(filename):
@@ -544,7 +586,8 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    seq, rank = read_peak_fasta('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.fasta')
+    b = read_bundle('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.bundle')
+    # seq, rank = read_peak_fasta('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.fasta')
     # print(rank)
     # print(bytes_to_int(int_to_bytes(-1, signed=True), signed=True))
     # change_global_constant_py('FOUNDMAP_DISK', "'fuck'")
