@@ -43,3 +43,20 @@ Automatic report-mail from AKAGI
 
 EMAIL_ACCOUNT = 'fantastic.farzin@gmail.com'
 MAIL_TO = ['farzinlize@live.com', 'fmohammadi@ce.sharif.edu']
+
+# encode column indexes
+ENCODE_RANK = 0
+ENCODE_CHR = 1
+ENCODE_START = 2
+ENCODE_END = 3
+ENCODE_LEN = 5
+ENCODE_FRD = 6
+ENCODE_SUMMIT = 9
+ENCODE_P = 14
+
+# peak bundle
+RANK = 'rank'
+FDR_SCORE = 'FDR'
+P_VALUE = 'maxlog2FC'
+SUMMIT = 'summit'
+TYPES_OF = {RANK:int, FDR_SCORE:float, P_VALUE:float, SUMMIT:int}
