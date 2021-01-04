@@ -129,7 +129,7 @@ def motif_finding_chain(dataset_name,
     chains = motif_chain(
         motifs, 
         sequences,
-        read_bundle('/hmchipdata/Human_hg18_peakcod/%s.bundle'%(bundle_name)),
+        read_bundle('%s.bundle'%(dataset_name)),
         q=q, 
         gap=gap,
         overlap=overlap, 
