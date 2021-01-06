@@ -5,8 +5,9 @@ from email.mime.text import MIMEText
 from getopt import getopt
 import sys
 
-from constants import DELIMETER, EMAIL_ACCOUNT, FOUNDMAP_MAIL_HEADER, FOUNDMAP_MAIL_SUBJECT, MAIL_TO, SECRET_FILE_ADDRESS
+from constants import DELIMETER, EMAIL_ACCOUNT, MAIL_HEADER, MAIL_SUBJECT, MAIL_TO, SECRET_FILE_ADDRESS
 
+TYPES = {'T':MIMEText, 'I':MIMEImage}
 
 def secret_password():
     with open(SECRET_FILE_ADDRESS, 'r') as secret:
@@ -14,7 +15,7 @@ def secret_password():
     return password
 
 
-def send_files_mail(texts, attachments):
+def send_files_mail(texts, attachments, types):
 
     gmail_user = EMAIL_ACCOUNT
     gmail_password = secret_password()
@@ -24,17 +25,17 @@ def send_files_mail(texts, attachments):
     mail_to = MAIL_TO
 
     message = MIMEMultipart()
-    message['Subject'] = FOUNDMAP_MAIL_SUBJECT
+    message['Subject'] = MAIL_SUBJECT
 
     message_body = ''
     for text in texts:
         with open(text, 'r') as content:
             message_body += content.read() + '\n###############################\n'
-    message.attach(MIMEText(FOUNDMAP_MAIL_HEADER + '\n' + message_body))
+    message.attach(MIMEText(MAIL_HEADER + '\n' + message_body))
 
-    for filename in attachments:
+    for index, filename in enumerate(attachments):
         with open(filename, 'rb') as attachment:
-            message.attach(MIMEImage(attachment.read()))
+            message.attach(TYPES[types[index]](attachment.read()))
 
     # Sent Email
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
@@ -44,8 +45,8 @@ def send_files_mail(texts, attachments):
 
 
 if __name__ == "__main__":
-    shortopt = 'i:a:'
-    longopts = ['in-body=', 'attachment=']
+    shortopt = 'i:a:t:'
+    longopts = ['in-body=', 'attachment=', 'types=']
 
     # default values
     args_dict = {}
@@ -56,5 +57,7 @@ if __name__ == "__main__":
             args_dict.update({'in-body':a.split(DELIMETER)})
         elif o in ['-a', '--attachment']:
             args_dict.update({'attachments':a.split(DELIMETER)})
+        elif o in ['-t', '--types']:
+            args_dict.update({'types':a.split(DELIMETER)})
 
     send_files_mail(args_dict['in-body'], args_dict['attachments'])
