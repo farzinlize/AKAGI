@@ -1,7 +1,8 @@
 # pyright: reportUnboundVariable=false
 # ignoring false unbound reports
 
-from pool import RankingPool, objective_function_pvalue
+from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL
+from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
 from TrieFind import TrieNode
 from GKmerhood import GKmerhood, GKHoodTree
 from misc import heap_encode, alphabet_to_dictionary, read_bundle, read_fasta, Queue, make_location, ExtraPosition, OnSequenceDistribution
@@ -126,7 +127,8 @@ def motif_chain(motifs, sequences, bundles, q=-1, gap=0, overlap=0, sequence_mas
 
     on_sequence = OnSequenceDistribution(motifs, sequences)
     queue = Queue(items=[motif.make_chain() for motif in motifs])
-    pool = RankingPool(bundles, objective_function_pvalue)
+    pool_ssmart = RankingPool(bundles, objective_function_pvalue)
+    pool_summit = RankingPool(bundles, distance_to_summit_score)
 
     if report[0] or report[1]:
         # reporting variables
@@ -176,10 +178,12 @@ def motif_chain(motifs, sequences, bundles, q=-1, gap=0, overlap=0, sequence_mas
         for next_motif in next_tree.extract_motifs(q, 0):
             link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
             queue.insert(next_motif)
-        pool.add(link)
+        pool_ssmart.add(link)
+        pool_summit.add(link)
         # TODO clear next tree method (deleting foundmap temporary file)
 
-    pool.all_ranks_report('name.o', sequences)
+    pool_ssmart.all_ranks_report(AKAGI_PREDICTION_STATISTICAL, sequences)
+    pool_summit.all_ranks_report(AKAGI_PREDICTION_EXPERIMENTAL, sequences)
 
     if report[0]:
         # plot last chain level locations

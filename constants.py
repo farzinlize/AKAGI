@@ -60,3 +60,6 @@ FDR_SCORE = 'FDR'
 P_VALUE = 'maxlog2FC'
 SUMMIT = 'summit'
 TYPES_OF = {RANK:int, FDR_SCORE:float, P_VALUE:float, SUMMIT:int}
+
+AKAGI_PREDICTION_STATISTICAL = 'akagi_1.fasta'
+AKAGI_PREDICTION_EXPERIMENTAL = 'akagi_2.fasta'

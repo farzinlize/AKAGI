@@ -200,13 +200,16 @@ def get_random_path(length=PATH_LENGTH):
 
 
 # add an item to a sorted list using binary search
-def binary_add(lst, item):
+def binary_add(lst, item, allow_equal=False):
     start = 0
     end = len(lst)-1
     while start <= end:
         mid = (start+end)//2
         if lst[mid] == item:
-            return lst
+            if allow_equal:
+                return lst[:mid] + [item] + lst[mid:]
+            else:
+                return lst
         elif lst[mid] < item:
             start = mid + 1
         else:

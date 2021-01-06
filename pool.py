@@ -1,4 +1,4 @@
-from constants import FDR_SCORE, P_VALUE
+from constants import FDR_SCORE, P_VALUE, SUMMIT
 from misc import ExtraPosition, binary_add
 from TrieFind import TrieNode
 
@@ -23,7 +23,7 @@ class RankingPool:
     
     def add(self, pattern:TrieNode):
         score = self.scoreing(pattern, self.bundles)
-        self.pool = binary_add(self.pool, RankingPool.Entity(score, pattern))
+        self.pool = binary_add(self.pool, RankingPool.Entity(score, pattern), allow_equal=True)
 
     
     def all_ranks_report(self, report_filename, sequences):
@@ -51,6 +51,17 @@ def objective_function_pvalue(pattern: TrieNode, sequences_bundles):
 
 
 def distance_to_summit_score(pattern: TrieNode, sequences_bundles):
-    pass
-
-
+    pattern_foundlist = pattern.foundmap.get_list()
+    sum_distances = 0
+    num_instances = 0
+    for index, seq_id in enumerate(pattern_foundlist[0]):
+        for position in pattern_foundlist[1][index]:
+            end_index = int(position) + pattern.level
+            start_index = position.start_position
+            if len(position.chain) != 0:
+                start_index = position.chain[0]
+            mid_index = (end_index + start_index)//2
+            sum_distances += abs(sequences_bundles[seq_id][SUMMIT] - mid_index)
+            num_instances += 1
+    return sum_distances / num_instances
+    
