@@ -17,6 +17,8 @@ def secret_password():
 
 def send_files_mail(texts, attachments, types):
 
+    assert len(attachments) == len(types)
+
     gmail_user = EMAIL_ACCOUNT
     gmail_password = secret_password()
 
@@ -33,9 +35,9 @@ def send_files_mail(texts, attachments, types):
             message_body += content.read() + '\n###############################\n'
     message.attach(MIMEText(MAIL_HEADER + '\n' + message_body))
 
-    for index, filename in enumerate(attachments):
+    for type_of, filename in [(types[i], attachments[i]) for i in range(len(attachments))]:
         with open(filename, 'rb') as attachment:
-            message.attach(TYPES[types[index]](attachment.read()))
+            message.attach(TYPES[type_of](attachment.read()))
 
     # Sent Email
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
@@ -60,4 +62,4 @@ if __name__ == "__main__":
         elif o in ['-t', '--types']:
             args_dict.update({'types':a.split(DELIMETER)})
 
-    send_files_mail(args_dict['in-body'], args_dict['attachments'])
+    send_files_mail(args_dict['in-body'], args_dict['attachments'], args_dict['types'])
