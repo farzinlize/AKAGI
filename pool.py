@@ -55,6 +55,11 @@ def distance_to_summit_score(pattern: TrieNode, sequences_bundles):
     sum_distances = 0
     num_instances = 0
     for index, seq_id in enumerate(pattern_foundlist[0]):
+
+        if seq_id >= len(sequences_bundles):
+            print('[ERROR] seq_id=%d out of range (len=%d)'%(seq_id, len(sequences_bundles)))
+            continue
+
         for position in pattern_foundlist[1][index]:
             end_index = int(position) + pattern.level
             start_index = position.start_position
