@@ -1,6 +1,7 @@
+from io import BufferedReader
 import os, platform, random, string
 
-from constants import FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, QUEUE_NAMETAG, RANK, TYPES_OF
+from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, QUEUE_NAMETAG, RANK, TYPES_OF
 
 
 # ########################################## #
@@ -20,29 +21,95 @@ class Queue:
         self.queue = self.queue[:-1]
         return item
 
+'''
+    Interface Bytable for QueueDisk entities 
+'''
+class Bytable:
+    def to_byte(self):raise NotImplementedError
+    @staticmethod
+    def byte_to_object(buffer: BufferedReader): raise NotImplementedError
+
+
+# testing purpose only
+class TestByte(Bytable):
+    def __init__(self, number, st):
+        self.number = number
+        self.st = st
+
+    def to_byte(self):
+        return int_to_bytes(self.number) + int_to_bytes(len(self.st)) + bytes(self.st, encoding='ascii')
+
+    @staticmethod
+    def byte_to_object(buffer: BufferedReader):
+        number = bytes_to_int(buffer.read(INT_SIZE))
+        size = bytes_to_int(buffer.read(INT_SIZE))
+        st = str(buffer.read(size), 'ascii')
+        return TestByte(number, st)
+
+
 
 class QueueDisk:
-    def __init__(self, items=[]):
+
+    def __init__(self, item_class:Bytable, items=[]):
+        self.item_class = item_class
+        self.files = []
+        self.counter = 0
+
         if items:
-            self.files = self.insert_all(items)
-        else:
-            self.files = []
+            self.insert_all(items)
 
 
-    def insert_all(self, items):pass
+    def insert_all(self, items: list[Bytable]):
+        if len(self.files) == 0 or self.counter == DISK_QUEUE_LIMIT:
+            self.files += [get_random_free_path(DISK_QUEUE_NAMETAG)]
+            self.counter = 0
+
+        queue = open(self.files[-1], 'ab')
+        for item in items:
+            queue.write(item.to_byte())
+            self.counter += 1
+
+            if self.counter == DISK_QUEUE_LIMIT:
+                self.files += [get_random_free_path(DISK_QUEUE_NAMETAG)]
+                self.counter = 0
+                queue.close()
+                queue = open(self.files[-1], 'ab')
+
+        queue.close()
+
 
     def pop(self):
         assert self.files
 
-    def insert(self, item):
-        if self.files:
-            with open(self.files[-1], 'a') as queue:
-                pass
+        # reading
+        with open(self.files[0], 'rb') as queue_read:
+            popy = self.item_class.byte_to_object(queue_read)
+
+            rest = queue_read.read()
+            
+        if rest:
+            # writing modification
+            with open(self.files[0], 'wb') as queue_write:
+                queue_write.write(rest)
         else:
-            pass
+            os.remove(os.path.join(self.files[0]))
+            self.files = self.files[1:]
+
+        return popy
 
 
-    def isEmpty(self):bool(self.files)
+    def insert(self, item: Bytable):
+        if len(self.files) == 0 or self.counter == DISK_QUEUE_LIMIT:
+            self.files += [get_random_free_path(DISK_QUEUE_NAMETAG)]
+            self.counter = 0
+
+        self.counter += 1
+        with open(self.files[-1], 'ab') as queue:
+            queue.write(item.to_byte())
+
+
+    def isEmpty(self) -> bool:
+        return len(self.files) == 0
 
 
 '''
@@ -113,13 +180,13 @@ class FileHandler:
 
 
 class ExtraPosition:
-    def __init__(self, position, extra, chain=[]):
+    def __init__(self, position, extra):
         self.start_position = position
         self.end_margin = extra
-        self.chain = chain
+        # self.chain = chain
 
-    def get_chain(self):
-        return self.chain + [self.start_position]
+    # def get_chain(self):
+    #     return self.chain + [self.start_position]
 
     def __lt__(self, other):
         return self.start_position < other.start_position
@@ -140,7 +207,7 @@ class ExtraPosition:
         return self.start_position >= other.start_position
 
     def __repr__(self):
-        return '(%d, %d, '%(self.start_position, self.end_margin)+str(self.chain)+')'
+        return '(%d, %d)'%(self.start_position, self.end_margin)
 
     def __str__(self):
         return '(%d, %d)'%(self.start_position, self.end_margin)
@@ -149,37 +216,6 @@ class ExtraPosition:
         return self.start_position + self.end_margin
 
 
-'''
-    generate a 3-dimensional list to access motifs that occurs at a specific location
-        dimensions are described below:
-            1. sequence_id -> there is a list for any sequence
-            2. position -> there is a list of motifs for any position on a specific sequence
-            3. motif -> reference for motifs that occurs at a specific location (position) and a specific sequence
-'''
-class OnSequenceDistribution:
-
-    class Entry:
-        def __init__(self, motif, end_margin):
-            self.motif = motif
-            self.end_margin = end_margin
-
-    def __init__(self, motifs, sequences):
-        self.struct = self.generate_list(motifs, sequences)
-
-    def generate_list(self, motifs, sequences):
-        struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
-        for motif in motifs:
-            bundle = motif.foundmap.get_list()
-            for index, seq_id in enumerate(bundle[0]):
-                position: ExtraPosition
-                for position in bundle[1][index]:
-                    try:
-                        struct[seq_id][position.start_position] += [self.Entry(motif, position.end_margin)]
-                    except IndexError:
-                        print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d'%(
-                            seq_id, position.start_position, len(sequences[index])
-                        ))
-        return struct
 
 
 # ########################################## #
@@ -187,7 +223,7 @@ class OnSequenceDistribution:
 # ########################################## #
 
 # generate a free path with random name and defined extension (like .byte)
-def get_random_free_path(extension, length=PATH_LENGTH):
+def get_random_free_path(extension, length=PATH_LENGTH) -> str:
     random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
     while os.path.isfile(random_name+extension):
         random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
@@ -495,6 +531,25 @@ def heap_decode(code, alphabet):
 #           main function section            #
 # ########################################## #
 
+def test_diskQueue():
+    items = [TestByte(5, 'Bee_salam'), TestByte(55, 'start')]
+
+    queue = QueueDisk(TestByte, items)
+
+    bee = queue.pop()
+    print('bee -> number=%d,string=%s'%(bee.number, bee.st))
+
+    for i in range(100000):
+        random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
+        queue.insert(TestByte(i+1, random_name))
+
+    index = 0
+    while not queue.isEmpty():
+        popy = queue.pop()
+        print('index:%d,number=%d,string=%s'%(index, popy.number, popy.st))
+        index += 1
+
+
 # testing edistance function
 def test_main():
     kmer = 'GTCGCAGTCGCTGCC'
@@ -576,7 +631,6 @@ def outer_f(a, b, c):
     print(lst)
 
 
-
 def workbench_tests():
     seq = ['TACAATTTTATATGTATATTTTTATTTTATTTTTTTTAAAT', 'TACATTTACTATATGTATTTATTTATTTCTTTAGAT', 'TACAACTTTTATGTTTATTTCATTTTAAAGATTTTTAAAAT', 'AACAATTTATTTATATTTAAATTTATTTTAATTTGTTTCAAT']
     print(edit_distances_matrix(seq))
@@ -588,7 +642,8 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    b = read_bundle('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.bundle')
+    test_diskQueue()
+    # b = read_bundle('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.bundle')
     # seq, rank = read_peak_fasta('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.fasta')
     # print(rank)
     # print(bytes_to_int(int_to_bytes(-1, signed=True), signed=True))
