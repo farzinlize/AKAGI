@@ -170,7 +170,7 @@ class ChainNode(Bytable):
         serialization methods for byte/object conversion 
     '''
     def to_byte(self):
-        int_to_bytes(len(self.label)) + bytes(self.label, encoding='ascii') + self.foundmap.to_byte()
+        return int_to_bytes(len(self.label)) + bytes(self.label, encoding='ascii') + self.foundmap.to_byte()
 
 
     @staticmethod

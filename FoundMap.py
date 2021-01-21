@@ -2,7 +2,7 @@ from abc import abstractmethod
 from ast import Str
 from io import BufferedReader
 from typing import List
-from misc import Bytable, ExtraPosition, get_random_path, binary_add, bytes_to_int, int_to_bytes
+from misc import Bytable, ExtraPosition, get_random_free_path, get_random_path, binary_add, bytes_to_int, int_to_bytes
 import os, sys
 from constants import BATCH_SIZE, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
@@ -105,8 +105,8 @@ class FileMap(FoundMap, Bytable):
                 assert mapfile.read(1) == DEL
 
                 # reading 2D-position vector
-                positions = []
                 for _ in range(len(self.sequences)):
+                    positions = []
                     for _ in range(bytes_to_int(mapfile.read(INT_SIZE))):
                         position = bytes_to_int(mapfile.read(INT_SIZE))
                         margin = bytes_to_int(mapfile.read(INT_SIZE), signed=True)
@@ -193,9 +193,7 @@ class FileMap(FoundMap, Bytable):
 
         # assign a path if doesn't exist
         if not hasattr(self, 'path'):
-            self.path = get_random_path()+FOUNDMAP_NAMETAG
-            while os.path.isfile(self.path):
-                self.path = get_random_path()+FOUNDMAP_NAMETAG
+            self.path = get_random_free_path(FOUNDMAP_NAMETAG)
             
             with open(self.path, 'wb') as newfile:
                 newfile.write(STR);newfile.write(int_to_bytes(0));newfile.write(DEL);newfile.write(END)
@@ -351,9 +349,21 @@ def test_main():
     map.add_location(0, ExtraPosition(51, 0))
     map.add_location(1, ExtraPosition(0, 0))
     map.add_location(3, ExtraPosition(8, 0))
+
+    print(map.batch)
+
+    map.dump()
+    map.virgin=False
+
+    print(map.batch)
+
+
     print('DONE OBSERVE')
 
     bundle = map.get_list()
+
+    print(bundle)
+
     print(map.get_sequences())
     for index, seq_id in enumerate(bundle[0]):
         for position in bundle[1][index]:
@@ -364,14 +374,15 @@ def test_main():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        print('clearing FOUNDMAP junk...')
-        clear_disk()
-    elif len(sys.argv) == 2:
-        print('clearing (extention=%s) junk...'%sys.argv[-1])
-        clear_disk(sys.argv[-1])
-    else:
-        print('- NO OPERATION -')
+    test_main()
+    # if len(sys.argv) == 1:
+    #     print('clearing FOUNDMAP junk...')
+    #     clear_disk()
+    # elif len(sys.argv) == 2:
+    #     print('clearing (extention=%s) junk...'%sys.argv[-1])
+    #     clear_disk(sys.argv[-1])
+    # else:
+    #     print('- NO OPERATION -')
     # garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
     # print('size = %d'%)
     # test_main()
