@@ -1,11 +1,12 @@
 # pyright: reportUnboundVariable=false
 # ignoring false unbound reports
 
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL
+from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, EXTRACT_OBJ
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
-from TrieFind import TrieNode
+from TrieFind import ChainNode, TrieNode, WatchNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import heap_encode, alphabet_to_dictionary, read_bundle, read_fasta, Queue, make_location, ExtraPosition, OnSequenceDistribution
+from misc import QueueDisk, heap_encode, alphabet_to_dictionary, read_bundle, read_fasta, Queue, make_location, ExtraPosition
+from onSequence import OnSequenceDistribution
 from time import time as currentTime
 from report import location_histogram, motif_chain_report
 import sys
@@ -29,7 +30,7 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
     # define threshold to report progress
     PROGRESS_THRESHOLD = 100
 
-    motifs_tree = TrieNode()
+    motifs_tree = WatchNode()
     for seq_id in range(len(sequences)):
 
         # progress value
@@ -80,7 +81,7 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 
 
 def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences):
-    motifs_tree = TrieNode()
+    motifs_tree = WatchNode()
     
     for seq_id in range(len(sequences)):
         lframe_start = [0 for _ in range(len(ldmax))]
@@ -116,7 +117,7 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
 #          chaining motifs section           #
 # ########################################## #
 
-def motif_chain(motifs, sequences, bundles, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
+def motif_chain(lexicon: list[WatchNode], sequences, bundles, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
 
     if report[0] and sequence_mask == None:
         sequence_mask = [1 for _ in range(len(sequences))]
@@ -125,8 +126,9 @@ def motif_chain(motifs, sequences, bundles, q=-1, gap=0, overlap=0, sequence_mas
     if q == -1:
         q = len(sequences)
 
-    on_sequence = OnSequenceDistribution(motifs, sequences)
-    queue = Queue(items=[motif.make_chain() for motif in motifs])
+    on_sequence = OnSequenceDistribution(lexicon, sequences)
+    queue = QueueDisk(ChainNode, items=[ChainNode(motif.label, motif.foundmap) for motif in lexicon])
+    # queue = Queue(items=[motif.make_chain() for motif in motifs])
     pool_ssmart = RankingPool(bundles, objective_function_pvalue)
     pool_summit = RankingPool(bundles, distance_to_summit_score)
 
@@ -141,8 +143,8 @@ def motif_chain(motifs, sequences, bundles, q=-1, gap=0, overlap=0, sequence_mas
         chains = []
 
     while not queue.isEmpty():
-        link: TrieNode = queue.pop()
-        next_tree = TrieNode()
+        link: ChainNode = queue.pop()
+        next_tree = WatchNode()
 
         if report[0] or report[1]:
             # updating report variables
@@ -167,20 +169,21 @@ def motif_chain(motifs, sequences, bundles, q=-1, gap=0, overlap=0, sequence_mas
             position: ExtraPosition
             for position in bundle[1][index]:
                 for sliding in [i for i in range(-overlap, gap+1)]:
-                    next_position = int(position) + link.level + sliding # link.level == len(link.label) == kmer-length
+                    next_position = int(position) + len(link.label) + sliding # link.level == len(link.label) == kmer-length
                     if next_position >= len(sequences[seq_id]):
                         continue
 
                     next_condidate: OnSequenceDistribution.Entry
                     for next_condidate in on_sequence.struct[seq_id][next_position]:
-                        next_tree.add_frame(next_condidate.motif.label, seq_id, ExtraPosition(next_position, next_condidate.end_margin, chain=position.get_chain()))
-        next_motif: TrieNode
-        for next_motif in next_tree.extract_motifs(q, 0):
-            link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
-            queue.insert(next_motif)
+                        next_tree.add_frame(next_condidate.label, seq_id, position)
+        next_motif: WatchNode
+        for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
+            next_generation_node = ChainNode(link.label + next_motif.label, next_motif.foundmap)
+            queue.insert(next_generation_node)
+            # link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
         pool_ssmart.add(link)
         pool_summit.add(link)
-        # TODO clear next tree method (deleting foundmap temporary file)
+        next_tree.clear()
 
     pool_ssmart.all_ranks_report(AKAGI_PREDICTION_STATISTICAL, sequences)
     pool_summit.all_ranks_report(AKAGI_PREDICTION_EXPERIMENTAL, sequences)
