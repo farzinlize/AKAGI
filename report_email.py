@@ -8,6 +8,7 @@ import sys
 from constants import DELIMETER, EMAIL_ACCOUNT, MAIL_HEADER, MAIL_SUBJECT, MAIL_TO, SECRET_FILE_ADDRESS
 
 TYPES = {'T':MIMEText, 'I':MIMEImage}
+READ_MODE = {'T': 'r', 'I': 'rb'}
 
 def secret_password():
     with open(SECRET_FILE_ADDRESS, 'r') as secret:
@@ -36,7 +37,7 @@ def send_files_mail(texts, attachments, types):
     message.attach(MIMEText(MAIL_HEADER + '\n' + message_body))
 
     for type_of, filename in [(types[i], attachments[i]) for i in range(len(attachments))]:
-        with open(filename, 'rb') as attachment:
+        with open(filename, READ_MODE[type_of]) as attachment:
             message.attach(TYPES[type_of](attachment.read()))
 
     # Sent Email
