@@ -18,7 +18,7 @@ PATH_LENGTH = 10
 STR = b'\xFF'
 DEL = b'\xDD'
 END = b'\xFF'
-INT_SIZE = 2
+INT_SIZE = 4
 BYTE_READ_INT_MODE = 'big'
 
 FOUNDMAP_DISK = 'disk'
@@ -63,3 +63,10 @@ TYPES_OF = {RANK:int, FDR_SCORE:float, P_VALUE:float, SUMMIT:int}
 
 AKAGI_PREDICTION_STATISTICAL = 'akagi_1.fasta'
 AKAGI_PREDICTION_EXPERIMENTAL = 'akagi_2.fasta'
+
+# each file of DiskQueue contains fixed number of Byteable items
+DISK_QUEUE_LIMIT = 1000
+DISK_QUEUE_NAMETAG = '.dq'
+
+EXTRACT_KMER = 1
+EXTRACT_OBJ = 0

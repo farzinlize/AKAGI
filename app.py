@@ -13,7 +13,7 @@ from alignment import alignment_matrix
 from twobitHandler import download_2bit
 
 # importing constants
-from constants import DATASET_TREES, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
+from constants import DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -102,7 +102,7 @@ def motif_finding_chain(dataset_name,
         q = motif_tree.find_max_q()
         print('[find_max_q] q = %d'%q)
 
-    motifs = motif_tree.extract_motifs(q, 0)
+    motifs = motif_tree.extract_motifs(q, EXTRACT_OBJ)
     print('\nnumber of motifs->%d | execute time->%s'%(len(motifs), strftime("%H:%M:%S", gmtime(currentTime() - last_time))))
 
     while len(motifs) < megalexa:
@@ -115,7 +115,7 @@ def motif_finding_chain(dataset_name,
 
         # adding new motifs with less frequency 
         # ONLY add new motifs with same q-value
-        motifs += motif_tree.extract_motifs(q, 0, greaterthan=False)
+        motifs += motif_tree.extract_motifs(q, EXTRACT_OBJ, greaterthan=False)
 
     print('[lexicon] lexicon size = %d'%len(motifs))
 
