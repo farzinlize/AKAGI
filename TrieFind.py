@@ -1,6 +1,6 @@
 from io import BufferedReader
 from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MODE, INT_SIZE
-from misc import Bytable, int_to_bytes
+from misc import Bytable, bytes_to_int, int_to_bytes
 from FoundMap import FileMap, FoundMap, get_foundmap
 from Nodmer import Nodmer
 
@@ -175,7 +175,7 @@ class ChainNode(Bytable):
 
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
-        label = str(buffer.read(int_to_bytes(buffer.read(INT_SIZE))), 'ascii')
+        label = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), 'ascii')
         foundmap = FileMap.byte_to_object(buffer)
         return ChainNode(label, foundmap)
         
