@@ -1,5 +1,7 @@
 from abc import abstractmethod
+from ast import Str
 from io import BufferedReader
+from typing import List
 from misc import Bytable, ExtraPosition, get_random_path, binary_add, bytes_to_int, int_to_bytes
 import os, sys
 from constants import BATCH_SIZE, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
@@ -24,10 +26,10 @@ class FoundMap(Bytable):
     def get_q(self):raise NotImplementedError
     def get_sequences(self):raise NotImplementedError
     def get_positions(self):raise NotImplementedError
-    def get_list(self) -> list[list]:raise NotImplementedError
+    def get_list(self) -> List[List]:raise NotImplementedError
 
 
-    def instances_to_string_fastalike(self, label, sequences: list[str]):
+    def instances_to_string_fastalike(self, label, sequences: List[str]):
         try:
             result = '>pattern\n%s\n>instances\n'%(label)
             bundle = self.get_list()
@@ -36,8 +38,8 @@ class FoundMap(Bytable):
                 for position in bundle[1][index]:
                     end_index = int(position) + len(label)
                     start_index = position.start_position
-                    if len(position.chain) != 0:
-                        start_index = position.chain[0]
+                    # if len(position.chain) != 0:
+                    #     start_index = position.chain[0]
                 
                     result += '%d,%d,%s,%d\n'%(
                         seq_id, 

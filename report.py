@@ -1,4 +1,5 @@
-from TrieFind import TrieNode
+from numpy.lib.utils import _Deprecate
+from TrieFind import ChainNode, TrieNode
 from functools import reduce
 from matplotlib import pyplot
 from misc import Queue, make_location
@@ -231,14 +232,14 @@ def motif_chain_report(motifs, filename, sequences):
     report_locations.write('> 1-chained\n')
     fasta_result.write('>1-chained\n')
     while not queue.isEmpty():
-        link: TrieNode = queue.pop()
+        link: ChainNode = queue.pop()
         if current_level < link.chain_level:
             current_level = link.chain_level
             report_kmer.write('> %d-chained\n'%(current_level+1))
             report_locations.write('> %d-chained\n'%(current_level+1))
             fasta_result.write('>%d-chained\n'%(current_level+1))
-        report_kmer.write(link.chain_sequence()+'\n')
-        report_locations.write(link.chain_locations_str()+'\n')
+        report_kmer.write(link.label+'\n')
+        report_locations.write(link.label+'\n')
         fasta_result.write(link.instances_str(sequences))
         for child in link.next_chains:
             queue.insert(child)

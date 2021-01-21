@@ -1,6 +1,6 @@
 from constants import FDR_SCORE, P_VALUE, SUMMIT
 from misc import ExtraPosition, binary_add
-from TrieFind import ChainNode, TrieNode
+from TrieFind import ChainNode
 
 class RankingPool:
 

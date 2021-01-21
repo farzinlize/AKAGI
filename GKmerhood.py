@@ -1,4 +1,4 @@
-from TrieFind import TrieNode
+from TrieFind import SearchNode
 from Nodmer import Nodmer
 from misc import FileHandler, heap_decode, heap_encode, alphabet_to_dictionary
 import os, platform, json
@@ -36,7 +36,7 @@ class GKmerhood:
             all works are done by trie, bonded to graph
     '''
     def initial_trie_nodes(self):
-        self.trie = TrieNode()
+        self.trie = SearchNode()
         return self.trie.child_birth(self)
 
     

@@ -52,7 +52,7 @@ class SearchNode(TrieNode):
     def child_birth(self, gkhood):
         if self.level == gkhood.kmax:
             return [self.create_node(gkhood)]
-        self.childs = [TrieNode(self.label + letter, self.level+1) for letter in gkhood.alphabet]
+        self.childs = [SearchNode(self.label + letter, self.level+1) for letter in gkhood.alphabet]
         grandchildsNodmers = []
         for child in self.childs:
             grandchildsNodmers += child.child_birth(gkhood)
@@ -109,7 +109,7 @@ class WatchNode(TrieNode):
                 return child.add_frame(kmer[1:], seq_id, position)
 
         # proper child (path) dose not exist
-        new_child = TrieNode(self.label + kmer[0], self.level+1)
+        new_child = WatchNode(self.label + kmer[0], self.level+1)
         self.childs += [new_child]
         return new_child.add_frame(kmer[1:], seq_id, position)
 

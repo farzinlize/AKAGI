@@ -1,5 +1,6 @@
 from io import BufferedReader
 import os, platform, random, string
+from typing import List
 
 from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, QUEUE_NAMETAG, RANK, TYPES_OF
 
@@ -59,7 +60,7 @@ class QueueDisk:
             self.insert_all(items)
 
 
-    def insert_all(self, items: list[Bytable]):
+    def insert_all(self, items: List[Bytable]):
         if len(self.files) == 0 or self.counter == DISK_QUEUE_LIMIT:
             self.files += [get_random_free_path(DISK_QUEUE_NAMETAG)]
             self.counter = 0

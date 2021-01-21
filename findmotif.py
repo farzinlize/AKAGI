@@ -1,9 +1,10 @@
 # pyright: reportUnboundVariable=false
 # ignoring false unbound reports
 
+from typing import List
 from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, EXTRACT_OBJ
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
-from TrieFind import ChainNode, TrieNode, WatchNode
+from TrieFind import ChainNode, WatchNode
 from GKmerhood import GKmerhood, GKHoodTree
 from misc import QueueDisk, heap_encode, alphabet_to_dictionary, read_bundle, read_fasta, Queue, make_location, ExtraPosition
 from onSequence import OnSequenceDistribution
@@ -117,7 +118,7 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
 #          chaining motifs section           #
 # ########################################## #
 
-def motif_chain(lexicon: list[WatchNode], sequences, bundles, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
+def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
 
     if report[0] and sequence_mask == None:
         sequence_mask = [1 for _ in range(len(sequences))]

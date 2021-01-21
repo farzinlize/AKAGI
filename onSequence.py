@@ -1,3 +1,4 @@
+from typing import List
 from TrieFind import WatchNode
 from misc import ExtraPosition
 
@@ -19,7 +20,7 @@ class OnSequenceDistribution:
     def __init__(self, motifs, sequences):
         self.struct = self.generate_list(motifs, sequences)
 
-    def generate_list(self, motifs: list[WatchNode], sequences):
+    def generate_list(self, motifs: List[WatchNode], sequences):
         struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
         for motif in motifs:
             bundle = motif.foundmap.get_list()
