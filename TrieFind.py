@@ -175,7 +175,7 @@ class ChainNode(Bytable):
 
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
-        label = str(buffer.read(buffer.read(INT_SIZE)), 'ascii')
+        label = str(buffer.read(int_to_bytes(buffer.read(INT_SIZE))), 'ascii')
         foundmap = FileMap.byte_to_object(buffer)
         return ChainNode(label, foundmap)
         
