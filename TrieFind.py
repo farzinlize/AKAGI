@@ -1,4 +1,7 @@
-from FoundMap import get_foundmap
+from io import BufferedReader
+from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MODE, INT_SIZE
+from misc import Bytable, int_to_bytes
+from FoundMap import FileMap, FoundMap, get_foundmap
 from Nodmer import Nodmer
 
 '''
@@ -20,10 +23,12 @@ class TrieNode:
         self.childs = []
         self.level = level
 
+    
+# ########################################## #
+#             searching section              #
+# ########################################## #
 
-    # ########################################## #
-    #             searching section              #
-    # ########################################## #
+class SearchNode(TrieNode):
 
     # root node is in first (zero) level
     def is_root(self):
@@ -67,9 +72,11 @@ class TrieNode:
                 return child.find(kmer[1:])
 
 
-    # ########################################## #
-    #         saving seen kmers section          #
-    # ########################################## #
+# ########################################## #
+#         saving seen kmers section          #
+# ########################################## #
+
+class WatchNode(TrieNode):
 
     '''
         any node with found_list attribute is considered a leaf presenting motif
@@ -82,7 +89,7 @@ class TrieNode:
             this node of tree occurs in sequence number of found_list[0][i]
 
         [UPDATE]: experiment shows that saving all data in memory results in RAM overflow!
-            a class named FoundMap implemented to save such data in memory and disk instead 
+            a class named FoundMap implemented to save such data in both memory and disk instead 
             of found_list which is now removed from TrieFind class
     '''
     def add_frame(self, kmer, seq_id, position):
@@ -115,13 +122,13 @@ class TrieNode:
             True   (on): include all motifs with q-value greater than input q variable
             False (off): only include motifs with q-value equal to input variable
     '''
-    def extract_motifs(self, q, result_kmer=1, greaterthan=True):
+    def extract_motifs(self, q, result_kmer=EXTRACT_KMER, greaterthan=True):
         motifs = []
         if hasattr(self, 'foundmap'):
             if self.foundmap.get_q() >= q:
                 if greaterthan or self.foundmap.get_q() == q:
-                    if result_kmer  :motifs += [self.label]
-                    else            :motifs += [self]
+                    if result_kmer==EXTRACT_KMER  :motifs += [self.label]
+                    elif result_kmer==EXTRACT_OBJ :motifs += [self]
         for child in self.childs:
             motifs += child.extract_motifs(q, result_kmer)
         return motifs
@@ -139,76 +146,42 @@ class TrieNode:
         return max(childs_max_q + [my_q, q_old])
 
 
-    # ########################################## #
-    #              chain section                 #
-    # ########################################## #
-
-    '''
-        add chain attributes to motif nodes:
-            end_chain_position: a structured list just like found_list that indicates
-                where could a chain continue
-            close_chain: any links is assumed open until it is chained to all possible candidates
-                unless there isn't any. after that the chain is closed.
-            chain_level: level of the link in chain
-            next_chains: a list of links that are chained down from this node
-
-        [WARNING] only nodes with found_list attribute could be chained (or could be a motif)
-    '''
-    def make_chain(self, chain_level=0, up_chain=None):
-        if not hasattr(self, 'foundmap'):
-            raise Exception('should be a motif')
-        self.chain_level = chain_level
-        self.next_chains = []
-        self.up_chain = up_chain
-        return self
-
-
-    def add_chain(self, other):
-        self.next_chains += [other]
-
-
-    # ########################################## #
-    #             report section                 #
-    # ########################################## #
-
-    def chain_sequence(self):
-        if self.chain_level == 0:
-            return self.label
-        return self.up_chain.chain_sequence() + '|' + self.label
-
-    
-    def chain_locations_str(self):
-        return str(self.foundmap)
-
-    
     def instances_str(self, sequences):
-        result = '>pattern\n%s\n>instances\n'%(self.chain_sequence())
-        bundle = self.foundmap.get_list()
-        for index, seq_id in enumerate(bundle[0]):
-            for position in bundle[1][index]:
-                end_index = int(position) + self.level
-                start_index = position.start_position
-                if len(position.chain) != 0:
-                    start_index = position.chain[0]
-                
-                result += '%d,%d,%s,%d\n'%(
-                    seq_id, 
-                    (start_index-len(sequences[seq_id])), 
-                    sequences[seq_id][start_index:end_index], 
-                    (end_index-start_index))
-
-        return result
-
-    def set_color(self, color):
-        if hasattr(self, 'color'):
-            return False
-        self.color = color
-        return True
+        return self.foundmap.instances_to_string_fastalike(self.label, sequences)
 
 
+    def clear(self):
+        self.foundmap.clear()
+
+
+# ########################################## #
+#              chain section                 #
+# ########################################## #
+
+class ChainNode(Bytable):
+
+    def __init__(self, label, foundmap: FoundMap):
+        self.chain_level = 0
+        self.foundmap = foundmap
+        self.label = label
+
+
+    '''
+        serialization methods for byte/object conversion 
+    '''
     def to_byte(self):
-        pass
+        int_to_bytes(len(self.label)) + bytes(self.label, encoding='ascii') + self.foundmap.to_byte()
 
+
+    @staticmethod
+    def byte_to_object(buffer: BufferedReader):
+        label = str(buffer.read(buffer.read(INT_SIZE)), 'ascii')
+        foundmap = FileMap.byte_to_object(buffer)
+        return ChainNode(label, foundmap)
+        
+
+    def instances_str(self, sequences):
+        return self.foundmap.instances_to_string_fastalike(self.label, sequences)
 
 
 
