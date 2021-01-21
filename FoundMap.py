@@ -293,7 +293,7 @@ class FileMap(FoundMap, Bytable):
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
         q = buffer.read(INT_SIZE)
-        path = buffer.read(buffer.read(INT_SIZE))
+        path = buffer.read(bytes_to_int(buffer.read(INT_SIZE)))
         return FileMap(virgin=False, path=path, q=q)
 
 
@@ -374,15 +374,15 @@ def test_main():
 
 
 if __name__ == "__main__":
-    test_main()
-    # if len(sys.argv) == 1:
-    #     print('clearing FOUNDMAP junk...')
-    #     clear_disk()
-    # elif len(sys.argv) == 2:
-    #     print('clearing (extention=%s) junk...'%sys.argv[-1])
-    #     clear_disk(sys.argv[-1])
-    # else:
-    #     print('- NO OPERATION -')
+    # test_main()
+    if len(sys.argv) == 1:
+        print('clearing FOUNDMAP junk...')
+        clear_disk()
+    elif len(sys.argv) == 2:
+        print('clearing (extention=%s) junk...'%sys.argv[-1])
+        clear_disk(sys.argv[-1])
+    else:
+        print('- NO OPERATION -')
     # garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
     # print('size = %d'%)
     # test_main()
