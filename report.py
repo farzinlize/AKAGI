@@ -1,7 +1,8 @@
 from TrieFind import TrieNode
 from functools import reduce
 from matplotlib import pyplot
-from misc import Queue, OnSequenceDistribution, make_location
+from misc import Queue, make_location
+from onSequence import OnSequenceDistribution
 import numpy
 
 # ########################################## #
