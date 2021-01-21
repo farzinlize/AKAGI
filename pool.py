@@ -1,6 +1,6 @@
 from constants import FDR_SCORE, P_VALUE, SUMMIT
 from misc import ExtraPosition, binary_add
-from TrieFind import TrieNode
+from TrieFind import ChainNode, TrieNode
 
 class RankingPool:
 
@@ -21,7 +21,7 @@ class RankingPool:
         self.pool = []
 
     
-    def add(self, pattern:TrieNode):
+    def add(self, pattern:ChainNode):
         score = self.scoreing(pattern, self.bundles)
         self.pool = binary_add(self.pool, RankingPool.Entity(score, pattern), allow_equal=True)
 
@@ -33,7 +33,7 @@ class RankingPool:
                 report.write('index:%d|score:%f\n%s\n'%(index, item.score, item.data.instances_str(sequences)))
             
 
-def objective_function_pvalue(pattern: TrieNode, sequences_bundles):
+def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
     foundlist_seq_vector = pattern.foundmap.get_list()[0]
     foundlist_index = 0
     sequence_index = 0
@@ -50,7 +50,7 @@ def objective_function_pvalue(pattern: TrieNode, sequences_bundles):
         - (nsum/(len(sequences_bundles)-len(foundlist_seq_vector)))
 
 
-def distance_to_summit_score(pattern: TrieNode, sequences_bundles):
+def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
     pattern_foundlist = pattern.foundmap.get_list()
     sum_distances = 0
     num_instances = 0
