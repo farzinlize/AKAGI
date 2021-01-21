@@ -1,5 +1,7 @@
-from misc import ExtraPosition, get_random_path, binary_add, bytes_to_int, int_to_bytes
-import os
+from abc import abstractmethod
+from io import BufferedReader
+from misc import Bytable, ExtraPosition, get_random_path, binary_add, bytes_to_int, int_to_bytes
+import os, sys
 from constants import BATCH_SIZE, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
@@ -15,14 +17,38 @@ def get_foundmap():
         MemoryMap: saving data in python list structure (object version of found_list)
         FileMap: saving data in byte-file
 '''
-class FoundMap:
+class FoundMap(Bytable):
 
     # abstract functions
     def add_location(self, seq_id, position):raise NotImplementedError
     def get_q(self):raise NotImplementedError
     def get_sequences(self):raise NotImplementedError
     def get_positions(self):raise NotImplementedError
-    def get_list(self):raise NotImplementedError
+    def get_list(self) -> list[list]:raise NotImplementedError
+
+
+    def instances_to_string_fastalike(self, label, sequences: list[str]):
+        try:
+            result = '>pattern\n%s\n>instances\n'%(label)
+            bundle = self.get_list()
+            for index, seq_id in enumerate(bundle[0]):
+                position: ExtraPosition
+                for position in bundle[1][index]:
+                    end_index = int(position) + len(label)
+                    start_index = position.start_position
+                    if len(position.chain) != 0:
+                        start_index = position.chain[0]
+                
+                    result += '%d,%d,%s,%d\n'%(
+                        seq_id, 
+                        (start_index-len(sequences[seq_id])), 
+                        sequences[seq_id][start_index:end_index], 
+                        (end_index-start_index))
+            return result
+
+        except NotImplementedError:
+            print('[ERROR][FOUNDMAP] not implemented for class:%s'%(str(self.__class__)))
+
 
 
 class MemoryMap(FoundMap):
@@ -41,7 +67,7 @@ class MemoryMap(FoundMap):
         return str(self.found_list)
 
 
-class FileMap(FoundMap):
+class FileMap(FoundMap, Bytable):
 
     class FileHandler:
 
@@ -256,6 +282,27 @@ class FileMap(FoundMap):
         
         return [map.sequences, map.positions]
 
+    def to_byte(self):
+        if self.virgin:
+            self.dump()
+
+        return int_to_bytes(self.q) +\
+               int_to_bytes(len(self.path)) +\
+               bytes(self.path, encoding='ascii')
+
+    @staticmethod
+    def byte_to_object(buffer: BufferedReader):
+        q = buffer.read(INT_SIZE)
+        path = buffer.read(buffer.read(INT_SIZE))
+        return FileMap(virgin=False, path=path, q=q)
+
+
+    def clear(self):
+        os.remove(self.path)
+
+# ########################################## #
+#                 functions                  #
+# ########################################## #
 
 def binary_special_add(found_list, seq_id, position):
     start = 0
@@ -274,9 +321,9 @@ def binary_special_add(found_list, seq_id, position):
     return found_list
 
 
-def clear_disk():
+def clear_disk(extension=FOUNDMAP_NAMETAG):
     garbage_size = 0
-    garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
+    garbages = [f for f in os.listdir() if f.endswith(extension)]
     print('[CLEAN] %d number of temp file are found and ... '%len(garbages), end='')
     for garbage in garbages:
         garbage_size += os.stat(garbage).st_size
@@ -315,7 +362,14 @@ def test_main():
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print('clearing FOUNDMAP junk...')
+        clear_disk()
+    elif len(sys.argv) == 2:
+        print('clearing (extention=%s) junk...'%sys.argv[-1])
+        clear_disk(sys.argv[-1])
+    else:
+        print('- NO OPERATION -')
     # garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
     # print('size = %d'%)
-    clear_disk()
     # test_main()
