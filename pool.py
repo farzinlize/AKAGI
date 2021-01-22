@@ -61,10 +61,10 @@ def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
             continue
 
         for position in pattern_foundlist[1][index]:
-            end_index = int(position) + pattern.level
+            end_index = int(position) + len(pattern.label)
             start_index = position.start_position
-            if len(position.chain) != 0:
-                start_index = position.chain[0]
+            # if len(position.chain) != 0:
+            #     start_index = position.chain[0]
             mid_index = (end_index + start_index)//2
             sum_distances += abs(sequences_bundles[seq_id][SUMMIT] - mid_index)
             num_instances += 1

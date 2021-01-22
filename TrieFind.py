@@ -151,7 +151,10 @@ class WatchNode(TrieNode):
 
 
     def clear(self):
-        self.foundmap.clear()
+        if hasattr(self, 'foundmap'):
+            self.foundmap.clear()
+        for child in self.childs:
+            child.clear()
 
 
 # ########################################## #

@@ -293,12 +293,14 @@ class FileMap(FoundMap, Bytable):
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
         q = buffer.read(INT_SIZE)
-        path = buffer.read(bytes_to_int(buffer.read(INT_SIZE)))
+        path = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), encoding='ascii')
         return FileMap(virgin=False, path=path, q=q)
 
 
     def clear(self):
-        os.remove(self.path)
+        if hasattr(self, 'path'):
+            os.remove(self.path)
+            del self.path
 
 # ########################################## #
 #                 functions                  #
