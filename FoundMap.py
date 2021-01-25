@@ -27,16 +27,17 @@ class FoundMap(Bytable):
     def get_sequences(self):raise NotImplementedError
     def get_positions(self):raise NotImplementedError
     def get_list(self) -> List[List]:raise NotImplementedError
+    def clone(self): raise NotImplementedError
 
 
-    def instances_to_string_fastalike(self, label, sequences: List[str]):
+    def instances_to_string_fastalike(self, label, sequences: List[str], end_margin=0):
         try:
             result = '>pattern\n%s\n>instances\n'%(label)
             bundle = self.get_list()
             for index, seq_id in enumerate(bundle[0]):
                 position: ExtraPosition
                 for position in bundle[1][index]:
-                    end_index = int(position) + len(label)
+                    end_index = int(position) + len(label) + end_margin
                     start_index = position.start_position
                     # if len(position.chain) != 0:
                     #     start_index = position.chain[0]
@@ -55,7 +56,7 @@ class FoundMap(Bytable):
 
 class MemoryMap(FoundMap):
 
-    def __init__(self):self.found_list = [[],[]]
+    def __init__(self, foundlist=[[],[]]):self.found_list = [[],[]]
 
     def add_location(self, seq_id, position):
         self.found_list = binary_special_add(self.found_list, seq_id, position)
@@ -67,6 +68,9 @@ class MemoryMap(FoundMap):
 
     def __str__(self) -> str:
         return str(self.found_list)
+
+    def clone(self):
+        return MemoryMap([self.found_list[0][:]] + [self.found_list[1][:]])
 
 
 class FileMap(FoundMap, Bytable):
@@ -171,8 +175,8 @@ class FileMap(FoundMap, Bytable):
             Also, a non-virgin FileMap batch data is invalid and FileMap only saves Q in memory which is 
             the length of sequence vector
     '''
-    def __init__(self, batch_size=0, batch_limit=BATCH_SIZE, q=0, path=None, virgin=True):
-        self.batch = [[],[]]
+    def __init__(self, initial=[[],[]], batch_size=0, batch_limit=BATCH_SIZE, q=0, path=None, virgin=True):
+        self.batch = initial
         self.batch_size = batch_size
         self.batch_limit = batch_limit
         self.q = q
@@ -282,6 +286,7 @@ class FileMap(FoundMap, Bytable):
         
         return [map.sequences, map.positions]
 
+
     def to_byte(self):
         if self.virgin:
             self.dump()
@@ -301,6 +306,27 @@ class FileMap(FoundMap, Bytable):
         if hasattr(self, 'path'):
             os.remove(self.path)
             del self.path
+
+    
+    def clone(self):
+        if self.virgin:
+            return FileMap(batch_size=self.batch_size, q=self.q, initial=([self.batch[0][:] + self.batch[1][:]]))
+        
+        with open(self.path, 'rb') as original:
+            data = original.read()
+
+        clone_path = get_random_free_path(FOUNDMAP_NAMETAG)
+        with open(clone_path, 'wb') as clone:
+            clone.write(data)
+            
+        return FileMap(initial=([self.batch[0][:] + self.batch[1][:]]), 
+                batch_size=self.batch_size,
+                batch_limit=self.batch_limit,
+                q=self.q,
+                path=clone_path,
+                virgin=False)
+            
+
 
 # ########################################## #
 #                 functions                  #
@@ -376,7 +402,7 @@ def test_main():
 
 
 if __name__ == "__main__":
-    # test_main()
+    test_main()
     if len(sys.argv) == 1:
         print('clearing FOUNDMAP junk...')
         clear_disk()
