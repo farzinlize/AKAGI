@@ -179,8 +179,10 @@ def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
                         next_tree.add_frame(next_condidate.label, seq_id, position)
         next_motif: WatchNode
         for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
-            next_generation_node = ChainNode(link.label + next_motif.label, next_motif.foundmap)
-            queue.insert(next_generation_node)
+            queue.insert(ChainNode(
+                link.label + next_motif.label, 
+                next_motif.foundmap.clone(), 
+                end_margin=len(next_motif.label)))
             # link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
         pool_ssmart.add(link)
         pool_summit.add(link)

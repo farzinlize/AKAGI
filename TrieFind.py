@@ -163,28 +163,33 @@ class WatchNode(TrieNode):
 
 class ChainNode(Bytable):
 
-    def __init__(self, label, foundmap: FoundMap):
+    def __init__(self, label, foundmap: FoundMap, end_margin):
         self.chain_level = 0
         self.foundmap = foundmap
         self.label = label
+        self.end_margin = end_margin
 
 
     '''
         serialization methods for byte/object conversion 
     '''
     def to_byte(self):
-        return int_to_bytes(len(self.label)) + bytes(self.label, encoding='ascii') + self.foundmap.to_byte()
+        return int_to_bytes(self.end_margin) + \
+            int_to_bytes(len(self.label)) + \
+            bytes(self.label, encoding='ascii') + \
+            self.foundmap.to_byte()
 
 
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
+        end_margin = bytes_to_int(buffer.read(INT_SIZE))
         label = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), 'ascii')
         foundmap = FileMap.byte_to_object(buffer)
-        return ChainNode(label, foundmap)
+        return ChainNode(label, foundmap, end_margin)
         
 
     def instances_str(self, sequences):
-        return self.foundmap.instances_to_string_fastalike(self.label, sequences)
+        return self.foundmap.instances_to_string_fastalike(self.label, sequences, end_margin=self.end_margin)
 
 
 
