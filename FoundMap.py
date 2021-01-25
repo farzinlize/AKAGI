@@ -4,7 +4,7 @@ from io import BufferedReader
 from typing import List
 from misc import Bytable, ExtraPosition, get_random_free_path, get_random_path, binary_add, bytes_to_int, int_to_bytes
 import os, sys
-from constants import BATCH_SIZE, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
@@ -404,8 +404,9 @@ def test_main():
 if __name__ == "__main__":
     test_main()
     if len(sys.argv) == 1:
-        print('clearing FOUNDMAP junk...')
-        clear_disk()
+        print('clearing FOUNDMAP/DISKQUEUE junks...')
+        clear_disk(FOUNDMAP_NAMETAG)
+        clear_disk(DISK_QUEUE_NAMETAG)
     elif len(sys.argv) == 2:
         print('clearing (extention=%s) junk...'%sys.argv[-1])
         clear_disk(sys.argv[-1])
