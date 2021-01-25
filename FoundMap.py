@@ -30,14 +30,14 @@ class FoundMap(Bytable):
     def clone(self): raise NotImplementedError
 
 
-    def instances_to_string_fastalike(self, label, sequences: List[str], end_margin=0):
+    def instances_to_string_fastalike(self, label, sequences: List[str]):
         try:
             result = '>pattern\n%s\n>instances\n'%(label)
             bundle = self.get_list()
             for index, seq_id in enumerate(bundle[0]):
                 position: ExtraPosition
                 for position in bundle[1][index]:
-                    end_index = int(position) + len(label) + end_margin
+                    end_index = position.end_position()
                     start_index = position.start_position
                     # if len(position.chain) != 0:
                     #     start_index = position.chain[0]

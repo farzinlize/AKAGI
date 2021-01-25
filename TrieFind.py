@@ -163,11 +163,10 @@ class WatchNode(TrieNode):
 
 class ChainNode(Bytable):
 
-    def __init__(self, label, foundmap: FoundMap, end_margin):
+    def __init__(self, label, foundmap: FoundMap):
         self.chain_level = 0
         self.foundmap = foundmap
         self.label = label
-        self.end_margin = end_margin
 
 
     '''
@@ -189,7 +188,7 @@ class ChainNode(Bytable):
         
 
     def instances_str(self, sequences):
-        return self.foundmap.instances_to_string_fastalike(self.label, sequences, end_margin=self.end_margin)
+        return self.foundmap.instances_to_string_fastalike(self.label, sequences)
 
 
 

@@ -98,9 +98,9 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
                     print('[+info] index=%d frame=%s dmax=%d'%(index, frame, ldmax[index]))
                     raise Exception('HALT')
 
-                motifs_tree.add_frame(frame, seq_id, ExtraPosition(lframe_start[index], 0))
+                motifs_tree.add_frame(frame, seq_id, ExtraPosition(lframe_start[index], len(frame)))
                 for each in dneighbours:
-                    motifs_tree.add_frame(each[0], seq_id, ExtraPosition(lframe_start[index], lframe_size[index]-len(each[0])))
+                    motifs_tree.add_frame(each[0], seq_id, ExtraPosition(lframe_start[index], len(each[0])))
             
             for i in range(len(lframe_start)):
                 lframe_start[i] += 1
@@ -170,19 +170,21 @@ def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
             position: ExtraPosition
             for position in bundle[1][index]:
                 for sliding in [i for i in range(-overlap, gap+1)]:
-                    next_position = int(position) + len(link.label) + sliding # link.level == len(link.label) == kmer-length
+                    next_position = position.end_position() + sliding
                     if next_position >= len(sequences[seq_id]):
                         continue
 
                     next_condidate: OnSequenceDistribution.Entry
                     for next_condidate in on_sequence.struct[seq_id][next_position]:
-                        next_tree.add_frame(next_condidate.label, seq_id, position)
+                        next_tree.add_frame(
+                            next_condidate.label, 
+                            seq_id, 
+                            ExtraPosition(position.start_position, len(next_condidate.label) + sliding))
         next_motif: WatchNode
         for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
             queue.insert(ChainNode(
                 link.label + next_motif.label, 
-                next_motif.foundmap.clone(), 
-                end_margin=len(next_motif.label)))
+                next_motif.foundmap.clone()))
             # link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
         pool_ssmart.add(link)
         pool_summit.add(link)

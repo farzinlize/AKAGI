@@ -181,11 +181,13 @@ class FileHandler:
 
 
 class ExtraPosition:
-    def __init__(self, position, extra):
+    def __init__(self, position, size):
         self.start_position = position
-        self.end_margin = extra
+        self.size = size
         # self.chain = chain
 
+    def end_position(self):
+        return self.start_position + self.size
     # def get_chain(self):
     #     return self.chain + [self.start_position]
 
@@ -208,13 +210,13 @@ class ExtraPosition:
         return self.start_position >= other.start_position
 
     def __repr__(self):
-        return '(%d, %d)'%(self.start_position, self.end_margin)
+        return '(%d, %d)'%(self.start_position, self.size)
 
     def __str__(self):
-        return '(%d, %d)'%(self.start_position, self.end_margin)
+        return '(%d, %d)'%(self.start_position, self.size)
 
     def __int__(self):
-        return self.start_position + self.end_margin
+        return self.start_position + self.size
 
 
 
