@@ -150,9 +150,10 @@ class FileMap(FoundMap, Bytable):
                 # writing 2D-position vector
                 for index in range(len(self.sequences)):
                     mapfile.write(int_to_bytes(len(self.positions[index])))
+                    position: ExtraPosition
                     for position in self.positions[index]:
                         mapfile.write(int_to_bytes(position.start_position))
-                        mapfile.write(int_to_bytes(position.end_margin, signed=True))
+                        mapfile.write(int_to_bytes(position.size, signed=True))
 
                 mapfile.write(END)
         

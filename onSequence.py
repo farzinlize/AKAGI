@@ -12,10 +12,9 @@ from misc import ExtraPosition
 '''
 class OnSequenceDistribution:
 
-    class Entry:
-        def __init__(self, label, end_margin):
-            self.label = label
-            self.end_margin = end_margin
+    # class Entry:
+    #     def __init__(self, label):
+    #         self.label = label
 
     def __init__(self, motifs, sequences):
         self.struct = self.generate_list(motifs, sequences)
@@ -28,7 +27,7 @@ class OnSequenceDistribution:
                 position: ExtraPosition
                 for position in bundle[1][index]:
                     try:
-                        struct[seq_id][position.start_position] += [self.Entry(motif.label, position.end_margin)]
+                        struct[seq_id][position.start_position] += [motif.label]
                     except IndexError:
                         print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d'%(
                             seq_id, position.start_position, len(sequences[index])

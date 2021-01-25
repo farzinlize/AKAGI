@@ -173,18 +173,16 @@ class ChainNode(Bytable):
         serialization methods for byte/object conversion 
     '''
     def to_byte(self):
-        return int_to_bytes(self.end_margin) + \
-            int_to_bytes(len(self.label)) + \
+        return int_to_bytes(len(self.label)) + \
             bytes(self.label, encoding='ascii') + \
             self.foundmap.to_byte()
 
 
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
-        end_margin = bytes_to_int(buffer.read(INT_SIZE))
         label = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), 'ascii')
         foundmap = FileMap.byte_to_object(buffer)
-        return ChainNode(label, foundmap, end_margin)
+        return ChainNode(label, foundmap)
         
 
     def instances_str(self, sequences):

@@ -174,12 +174,11 @@ def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
                     if next_position >= len(sequences[seq_id]):
                         continue
 
-                    next_condidate: OnSequenceDistribution.Entry
                     for next_condidate in on_sequence.struct[seq_id][next_position]:
                         next_tree.add_frame(
-                            next_condidate.label, 
+                            next_condidate, 
                             seq_id, 
-                            ExtraPosition(position.start_position, len(next_condidate.label) + sliding))
+                            ExtraPosition(position.start_position, len(next_condidate) + sliding))
         next_motif: WatchNode
         for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
             queue.insert(ChainNode(
