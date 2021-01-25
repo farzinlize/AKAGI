@@ -403,7 +403,7 @@ def test_main():
 
 
 if __name__ == "__main__":
-    test_main()
+    # test_main()
     if len(sys.argv) == 1:
         print('clearing FOUNDMAP/DISKQUEUE junks...')
         clear_disk(FOUNDMAP_NAMETAG)
