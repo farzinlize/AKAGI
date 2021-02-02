@@ -157,6 +157,13 @@ class WatchNode(TrieNode):
             child.clear()
 
 
+    def bind_costume_foundmap(self, costume_Size):
+        if not hasattr(self, 'foundmap'):
+            self.foundmap = get_foundmap(batch_size=costume_Size)
+        else:
+            print('[ERROR][WATCH] bind costume foundmap failed | already has foundmap')
+            
+
 # ########################################## #
 #              chain section                 #
 # ########################################## #

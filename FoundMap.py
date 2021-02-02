@@ -8,8 +8,8 @@ from constants import BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR
 
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
-def get_foundmap():
-    if FOUNDMAP_MODE == FOUNDMAP_DISK:return FileMap()
+def get_foundmap(batch_size=BATCH_SIZE):
+    if FOUNDMAP_MODE == FOUNDMAP_DISK:return FileMap(batch_size=batch_size)
     elif FOUNDMAP_MODE == FOUNDMAP_MEMO:return MemoryMap()
     else:raise Exception('[FoundMap] FOUNDMAP_MODE variable unrecognized')
 
