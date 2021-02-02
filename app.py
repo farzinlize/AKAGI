@@ -124,12 +124,15 @@ def motif_finding_chain(dataset_name,
         return
 
     bundle_name = dataset_name.split('/')[-1]
+    bundles = read_bundle('%s.bundle'%(dataset_name))
+
+    assert len(bundles) == len(sequences)
 
     last_time = currentTime()
     chains = motif_chain(
         motifs, 
         sequences,
-        read_bundle('%s.bundle'%(dataset_name)),
+        bundles,
         q=q, 
         gap=gap,
         overlap=overlap, 
