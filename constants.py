@@ -11,7 +11,7 @@ FIND_MAX = -2
 
 DELIMETER = '-'
 DNA_ALPHABET = 'ATCG'
-BATCH_SIZE = 100
+BATCH_SIZE = 512
 PATH_LENGTH = 10
 
 # bytes streaming constants
@@ -25,10 +25,13 @@ FOUNDMAP_DISK = 'disk'
 FOUNDMAP_MEMO = 'memory'
 FOUNDMAP_NAMETAG = '.byte'
 
+QUEUE_DISK = 'qdisk'
+QUEUE_MEMO = 'qmemory'
 QUEUE_NAMETAG = '.by2e'
 
-# default found-map mode
-FOUNDMAP_MODE = FOUNDMAP_MEMO
+# default found-map/queue mode
+FOUNDMAP_MODE = FOUNDMAP_DISK
+QUEUE_MODE = QUEUE_DISK
 
 SECRET_FILE_ADDRESS = 'secret.json'
 
@@ -70,3 +73,16 @@ DISK_QUEUE_NAMETAG = '.dq'
 
 EXTRACT_KMER = 1
 EXTRACT_OBJ = 0
+
+# chaining report
+CONSOLE = '\r'
+REMOTE = '\n'
+CHAINING_REPORT_PEND = REMOTE
+
+CHAINING_REPORT_EACH = True
+
+POOL_LIMITED = True
+POOL_LIMIT = 100
+
+CHAIN_REPORT_LINE_LIMIT = 15
+CHAIN_REPORT_FILENAME = 'reporting.temp'

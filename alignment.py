@@ -7,7 +7,7 @@ from Bio.Align.Applications import MuscleCommandline
 
 def alignment_matrix(sequences):
     records = [SeqRecord(Seq(sequence)) for sequence in sequences]
-    muscle_cline = MuscleCommandline(clwstrict=True, cmd='./muscle')
+    muscle_cline = MuscleCommandline(clwstrict=True, cmd='muscle')
 
     handle = StringIO()
     SeqIO.write(records, handle, "fasta")
@@ -25,10 +25,20 @@ def alignment_matrix(sequences):
 ######################################
 
 if __name__ == "__main__":
-    print( alignment_matrix(['GCCGCTGCTGCTGCATCCGTCGACGTCG', 
-    'CCGTCGACGTCGAC', 
-    'GCAGCGCTGCCGTCGCCGGCTGAGCAGC', 
-    'GTCGCAGTCGCTGCC', 
-    'CGCTGTTGCGGCCGACGCTGACGCA',
-    'CGCTGCCACCGCTG',
-    'CAGCGGCTGCGGA']) )
+    res = alignment_matrix(['AGGAACAGAGTGTTC', 
+    'AGGAACAGAGTGTGC', 
+    'AGGAACAGAGTGTGC', 
+    'AGGAACAGAGTGTTC', 
+    'AGGAACAGAGTGTGC',
+    'AGGAACAGCTTGTTA',
+    'CAGCACAGAGTGCCC', 
+    'GTACCAAAGAGAACAAGATGTCACAATTAT',
+    'TGTAAAAAGGAACAGAGAGCATCCCATT',
+    'AAAGAACAATCAGTACTGAAT',
+    'TAGGGAACACAGTGCCAAG',
+    'ATAAGCACATAGAGTAC', 
+    'GGGAACACAGAGAAA',
+    'GAGAACAAGAAGTTT'])
+
+    for i in res:
+        print(i)

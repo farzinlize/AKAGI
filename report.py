@@ -1,3 +1,4 @@
+from constants import CHAIN_REPORT_FILENAME, CHAIN_REPORT_LINE_LIMIT
 from numpy.lib.utils import _Deprecate
 from TrieFind import ChainNode, TrieNode
 from functools import reduce
@@ -5,6 +6,8 @@ from matplotlib import pyplot
 from misc import Queue, make_location
 from onSequence import OnSequenceDistribution
 import numpy
+
+MESSAGE_TO_PRINT = ''
 
 # ########################################## #
 #                 class part                 #
@@ -149,6 +152,15 @@ class Ranking:
 # ########################################## #
 
 
+def report_print(saved, line, msg):
+    if line == CHAIN_REPORT_LINE_LIMIT:
+        with open(CHAIN_REPORT_FILENAME, 'w') as reporting:
+            reporting.write(saved+msg)
+        return '', 0
+
+    return saved+msg, line+1
+
+
 def colored_neighbours_analysis(chains, sequences, frame_size, figures_location):
 
     bins = numpy.linspace(0, max([len(s) for s in sequences]), max([len(s) for s in sequences]))
@@ -273,6 +285,7 @@ def test_reduce():
     # mask = '110011111000021'
     mask = [1, 0, 0, 1, 0, 1, 1, 0]
     print(reduce(lambda x,y:int(x)+int(y), mask))
+
 
 def test_savefig():
     # line 1 points 

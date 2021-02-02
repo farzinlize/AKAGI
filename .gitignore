@@ -18,3 +18,4 @@ __pycache__/*
 /hmchipdata/Human_hg18_peakcod/*
 /hmchipdata/HumanRank/*
 secret.json
+test.py

@@ -1,11 +1,11 @@
-from constants import FDR_SCORE, P_VALUE, SUMMIT
+from constants import FDR_SCORE, POOL_LIMIT, POOL_LIMITED, P_VALUE, SUMMIT
 from misc import ExtraPosition, binary_add
 from TrieFind import ChainNode
 
 class RankingPool:
 
     class Entity:
-        def __init__(self, score, data):
+        def __init__(self, score, data:ChainNode):
             self.score = score
             self.data = data
 
@@ -25,6 +25,9 @@ class RankingPool:
         score = self.scoreing(pattern, self.bundles)
         self.pool = binary_add(self.pool, RankingPool.Entity(score, pattern), allow_equal=True)
 
+        if POOL_LIMITED and len(self.pool) == POOL_LIMIT:
+            self.pool = self.pool[:-1]
+
     
     def all_ranks_report(self, report_filename, sequences):
         with open(report_filename, 'w') as report:
@@ -39,15 +42,28 @@ def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
     sequence_index = 0
     psum = 0
     nsum = 0
+    has_n = False
+
     while sequence_index < len(sequences_bundles):
-        if foundlist_seq_vector[foundlist_index] == sequence_index: # hit
+
+        # + pscore
+        if foundlist_index < len(foundlist_seq_vector) and foundlist_seq_vector[foundlist_index] == sequence_index:
             psum += sequences_bundles[sequence_index][P_VALUE]
             foundlist_index += 1
-        else:   # miss
+        
+        # - nscore
+        else:
+            has_n = True
             nsum += sequences_bundles[sequence_index][P_VALUE]
+
         sequence_index += 1
-    return (psum/len(foundlist_seq_vector)) \
-        - (nsum/(len(sequences_bundles)-len(foundlist_seq_vector)))
+
+    if has_n:
+        nscore = (nsum/(len(sequences_bundles)-len(foundlist_seq_vector)))
+    else:
+        nscore = 0
+
+    return (psum/len(foundlist_seq_vector)) - nscore
 
 
 def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
@@ -60,8 +76,9 @@ def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
             print('[ERROR] seq_id=%d out of range (len=%d)'%(seq_id, len(sequences_bundles)))
             continue
 
+        position: ExtraPosition
         for position in pattern_foundlist[1][index]:
-            end_index = int(position) + len(pattern.label)
+            end_index = position.end_position() # int(position) + len(pattern.label)
             start_index = position.start_position
             # if len(position.chain) != 0:
             #     start_index = position.chain[0]

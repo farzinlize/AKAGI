@@ -2,14 +2,14 @@
 # ignoring false unbound reports
 
 from typing import List
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, EXTRACT_OBJ, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
+from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, EXTRACT_OBJ, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
 from TrieFind import ChainNode, WatchNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import QueueDisk, heap_encode, alphabet_to_dictionary, read_bundle, read_fasta, Queue, make_location, ExtraPosition
+from misc import QueueDisk, heap_encode, alphabet_to_dictionary, lap_time, read_bundle, read_fasta, Queue, make_location, ExtraPosition
 from onSequence import OnSequenceDistribution
-from time import time as currentTime
-from report import location_histogram, motif_chain_report
+from time import gmtime, strftime, time as currentTime
+from report import location_histogram, motif_chain_report, report_print
 import sys
 
 '''
@@ -118,66 +118,46 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
 #          chaining motifs section           #
 # ########################################## #
 
-def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overlap=0, sequence_mask=None, report=(False, False), report_directory=''):
-
-    if report[0] and sequence_mask == None:
-        sequence_mask = [1 for _ in range(len(sequences))]
+def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overlap=0):
 
     # set default value of q
     if q == -1:
         q = len(sequences)
 
-    on_sequence = OnSequenceDistribution(lexicon, sequences)
+    on_sequence = OnSequenceDistribution(zmotifs, sequences)
     print('[CHAINING] onSequence object created (size of struct=%d)'%(sys.getsizeof(on_sequence.struct)))
-    # if report[2]:
 
     if QUEUE_MODE == QUEUE_DISK:
-        queue = QueueDisk(ChainNode, items=[ChainNode(motif.label, motif.foundmap) for motif in lexicon])
+        queue = QueueDisk(ChainNode, items=[ChainNode(motif.label, motif.foundmap) for motif in zmotifs])
     elif QUEUE_MODE == QUEUE_MEMO:
-        # queue = Queue(items=[motif.make_chain() for motif in lexicon])
+        # queue = Queue(items=[motif.make_chain() for motif in zmotifs])
         raise NotImplementedError
 
     pool_ssmart = RankingPool(bundles, objective_function_pvalue)
     pool_summit = RankingPool(bundles, distance_to_summit_score)
 
-    if report[0] or report[1]:
-        # reporting variables
-        current_level = 0
-        level_count = [0]
-        current_level_list = []
-    if report[0]:
-        make_location(report_directory)
-    if report[1]:
-        chains = []
-
-    queue_size = len(lexicon)
+    ### FOR REPORT ONLY ###
+    queue_size = len(zmotifs)
+    last_time = currentTime()
+    for_print = ''
+    number_of_line = 0
+    ### ############### ###
+        
 
     while not queue.isEmpty():
         link: ChainNode = queue.pop()
-        next_tree = WatchNode()
+
+        ### FOR REPORT ONLY ###
+        queue_time, last_time = lap_time(last_time)
         
-        queue_size -= 1
-        print('[CHAINING] (-) node in queue: %d'%queue_size, end='\r')
-
-        if report[0] or report[1]:
-            # updating report variables
-            if current_level == link.chain_level:
-                level_count[current_level] += 1
-                current_level_list += [link]
-            elif link.chain_level > current_level:
-                if report[0]:
-                # plot each chain level locations
-                    location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%((current_level+1), level_count[current_level]))
-                if report[1]:
-                    chains += [current_level_list[:]]
-
-                level_count += [0 for _ in range(link.chain_level-current_level)]
-                current_level = link.chain_level
-                current_level_list = []
-            else:
-                raise Exception('queue error: a node with lower chain level found in queue')
-
         bundle = link.foundmap.get_list()
+
+        ### FOR REPORT ONLY ###
+        foundmap_time, last_time = lap_time(last_time)
+
+        next_tree = WatchNode()
+        next_tree.bind_costume_foundmap(10000)
+        
         for index, seq_id in enumerate(bundle[0]):
             position: ExtraPosition
             for position in bundle[1][index]:
@@ -191,31 +171,45 @@ def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
                             next_condidate, 
                             seq_id, 
                             ExtraPosition(position.start_position, len(next_condidate) + sliding))
+        
+        ### FOR REPORT ONLY ###
+        observation_time, last_time = lap_time(last_time)
+
         next_motif: WatchNode
         for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
             queue.insert(ChainNode(
                 link.label + next_motif.label, 
                 next_motif.foundmap.clone()))
+        
+        ### FOR REPORT ONLY ###
+        next_generation_time, last_time = lap_time(last_time)
             
-            queue_size += 1
-            print('[CHAINING] (+) node in queue: %d'%queue_size, end='\r')
-            
-            # link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
         pool_ssmart.add(link)
         pool_summit.add(link)
+
+        ### FOR REPORT ONLY ###
+        pool_time, last_time = lap_time(last_time)
+
         next_tree.clear()
+
+        ### FOR REPORT ONLY ###
+        clear_tree_time, last_time = lap_time(last_time)
+        for_print, number_of_line = report_print(for_print, number_of_line, 
+            '[CHAINING][REPORT] chain-done %s | queue %s (size=%d) | foundmap %s | add2tree %s | next-gen %s | pool %s | clear %s'%(
+            strftime("%H:%M:%S", gmtime(queue_time + foundmap_time + observation_time + next_generation_time + pool_time + clear_tree_time)),
+            strftime("%H:%M:%S", gmtime(queue_time)),
+            queue_size,
+            strftime("%H:%M:%S", gmtime(foundmap_time)),
+            strftime("%H:%M:%S", gmtime(observation_time)),
+            strftime("%H:%M:%S", gmtime(next_generation_time)),
+            strftime("%H:%M:%S", gmtime(pool_time)),
+            strftime("%H:%M:%S", gmtime(clear_tree_time))
+        ))
+        last_time = currentTime()
+        ### ############### ###        
 
     pool_ssmart.all_ranks_report(AKAGI_PREDICTION_STATISTICAL, sequences)
     pool_summit.all_ranks_report(AKAGI_PREDICTION_EXPERIMENTAL, sequences)
-
-    if report[0]:
-        # plot last chain level locations
-        location_histogram(current_level_list, sequences, sequence_mask, savefilename=report_directory+'%d-chain-%d.png'%((current_level+1), level_count[current_level]))
-
-    if report[1]:
-        # return reporting variable
-        return chains + [current_level_list[:]]
-
 
 
 # ########################################## #
