@@ -1,6 +1,7 @@
 from io import BufferedReader
 import os, platform, random, string
 from typing import List
+from time import time as currentTime
 
 from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, QUEUE_NAMETAG, RANK, TYPES_OF
 
@@ -225,6 +226,12 @@ class ExtraPosition:
 #                 functions                  #
 # ########################################## #
 
+def lap_time(last_time):
+    now = currentTime()
+    lap = now - last_time
+    return lap, now
+
+
 # generate a free path with random name and defined extension (like .byte)
 def get_random_free_path(extension, length=PATH_LENGTH) -> str:
     random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
@@ -301,6 +308,8 @@ def read_bundle(filename):
             else:
                 key, value = line.split(',')
                 dictionary.update({key: TYPES_OF[key](value)})
+    
+    bundles += [dictionary]
     return bundles
 
 
@@ -645,7 +654,8 @@ def workbench_tests():
 
 # main function call
 if __name__ == "__main__":
-    test_diskQueue()
+    pass
+    # test_diskQueue()
     # b = read_bundle('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.bundle')
     # seq, rank = read_peak_fasta('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.fasta')
     # print(rank)
