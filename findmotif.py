@@ -2,7 +2,7 @@
 # ignoring false unbound reports
 
 from typing import List
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, EXTRACT_OBJ
+from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, EXTRACT_OBJ, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
 from TrieFind import ChainNode, WatchNode
 from GKmerhood import GKmerhood, GKHoodTree
@@ -128,8 +128,15 @@ def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
         q = len(sequences)
 
     on_sequence = OnSequenceDistribution(lexicon, sequences)
-    queue = QueueDisk(ChainNode, items=[ChainNode(motif.label, motif.foundmap) for motif in lexicon])
-    # queue = Queue(items=[motif.make_chain() for motif in motifs])
+    print('[CHAINING] onSequence object created (size of struct=%d)'%(sys.getsizeof(on_sequence.struct)))
+    # if report[2]:
+
+    if QUEUE_MODE == QUEUE_DISK:
+        queue = QueueDisk(ChainNode, items=[ChainNode(motif.label, motif.foundmap) for motif in lexicon])
+    elif QUEUE_MODE == QUEUE_MEMO:
+        # queue = Queue(items=[motif.make_chain() for motif in lexicon])
+        raise NotImplementedError
+
     pool_ssmart = RankingPool(bundles, objective_function_pvalue)
     pool_summit = RankingPool(bundles, distance_to_summit_score)
 
@@ -143,9 +150,14 @@ def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
     if report[1]:
         chains = []
 
+    queue_size = len(lexicon)
+
     while not queue.isEmpty():
         link: ChainNode = queue.pop()
         next_tree = WatchNode()
+        
+        queue_size -= 1
+        print('[CHAINING] (-) node in queue: %d'%queue_size, end='\r')
 
         if report[0] or report[1]:
             # updating report variables
@@ -184,6 +196,10 @@ def motif_chain(lexicon: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
             queue.insert(ChainNode(
                 link.label + next_motif.label, 
                 next_motif.foundmap.clone()))
+            
+            queue_size += 1
+            print('[CHAINING] (+) node in queue: %d'%queue_size, end='\r')
+            
             # link.add_chain(next_motif.make_chain(chain_level=link.chain_level+1, up_chain=link))
         pool_ssmart.add(link)
         pool_summit.add(link)
