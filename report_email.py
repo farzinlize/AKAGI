@@ -32,13 +32,22 @@ def send_files_mail(texts, attachments, types):
 
     message_body = ''
     for text in texts:
-        with open(text, 'r') as content:
-            message_body += content.read() + '\n###############################\n'
+        try:
+            with open(text, 'r') as content:
+                message_body += content.read() + '\n###############################\n'
+        except FileNotFoundError:
+            print("[MAIL][ERROR] file doesn't exist (%s)"%text)
+            message_body += "[ERROR] file doesn't exist (%s)"%text + '\n###############################\n'
+
     message.attach(MIMEText(MAIL_HEADER + '\n' + message_body))
 
     for type_of, filename in [(types[i], attachments[i]) for i in range(len(attachments))]:
-        with open(filename, READ_MODE[type_of]) as attachment:
-            message.attach(TYPES[type_of](attachment.read()))
+        try:
+            with open(filename, READ_MODE[type_of]) as attachment:
+                message.attach(TYPES[type_of](attachment.read()))
+        except FileNotFoundError:
+            print("[MAIL][ERROR] file doesn't exist (%s)"%text)
+            message_body += "[ERROR] file doesn't exist (%s)"%text + '\n###############################\n'
 
     # Sent Email
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
