@@ -19,3 +19,8 @@ __pycache__/*
 /hmchipdata/HumanRank/*
 secret.json
 test.py
+test_c.py
+akagi_1.fasta
+akagi_2.fasta
+*.temp
+*.log
