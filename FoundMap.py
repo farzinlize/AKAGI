@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from random import randrange
 from ast import Str
 from io import BufferedReader
 from typing import List
@@ -8,9 +8,9 @@ from constants import BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR
 
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
-def get_foundmap(batch_size=BATCH_SIZE):
-    if FOUNDMAP_MODE == FOUNDMAP_DISK:return FileMap(batch_size=batch_size)
-    elif FOUNDMAP_MODE == FOUNDMAP_MEMO:return MemoryMap()
+def get_foundmap(batch_limit=BATCH_SIZE, foundmap_type=FOUNDMAP_MODE):
+    if foundmap_type == FOUNDMAP_DISK:return FileMap(batch_limit=batch_limit)
+    elif foundmap_type == FOUNDMAP_MEMO:return MemoryMap()
     else:raise Exception('[FoundMap] FOUNDMAP_MODE variable unrecognized')
 
 
@@ -56,7 +56,7 @@ class FoundMap(Bytable):
 
 class MemoryMap(FoundMap):
 
-    def __init__(self, foundlist=[[],[]]):self.found_list = [[],[]]
+    def __init__(self):self.found_list = [[],[]]
 
     def add_location(self, seq_id, position):
         self.found_list = binary_special_add(self.found_list, seq_id, position)
@@ -72,6 +72,9 @@ class MemoryMap(FoundMap):
     def clone(self):
         return MemoryMap([self.found_list[0][:]] + [self.found_list[1][:]])
 
+    def turn_to_filemap(self):
+        return FileMap().dump_list(self.found_list)
+
 
 class FileMap(FoundMap, Bytable):
 
@@ -80,7 +83,7 @@ class FileMap(FoundMap, Bytable):
         '''
             Provides memory-disk transform using byte stream files for saving on disk
             functions:
-                init -> new born object loads data from its file (if exists)
+                init -> new born object loads data from its file
                 update -> updating data in memory using batch (temporary data saved on memory)
                 save -> transform data into byte stream and save it on file
 
@@ -90,12 +93,14 @@ class FileMap(FoundMap, Bytable):
                 special bytes -> special bytes are consider to prevent file errors defined at constants 
                     module (STR `start`, END `end`, DEL `delimitter`)
         '''
-        def __init__(self, path):
+        def __init__(self, path, dont_read=False):
 
             self.path = path
 
             self.sequences = []
             self.positions = []
+
+            if dont_read:return
 
             with open(path, 'rb') as mapfile:
 
@@ -113,16 +118,18 @@ class FileMap(FoundMap, Bytable):
                     positions = []
                     for _ in range(bytes_to_int(mapfile.read(INT_SIZE))):
                         position = bytes_to_int(mapfile.read(INT_SIZE))
-                        margin = bytes_to_int(mapfile.read(INT_SIZE), signed=True)
-                        positions += [ExtraPosition(position, margin)]
+                        size = bytes_to_int(mapfile.read(INT_SIZE))
+                        positions += [ExtraPosition(position, size)]
                     self.positions += [positions[:]]
+
+                    assert mapfile.read(1) == DEL
                 
                 assert mapfile.read(1) == END
 
 
         def update(self, seq_id, position, virgin):
 
-            # batch-stream
+            # batch-stream in order if virgin
             if virgin:
                 if len(self.sequences) == 0 or self.sequences[-1] != seq_id:
                     self.sequences += [seq_id]
@@ -153,7 +160,9 @@ class FileMap(FoundMap, Bytable):
                     position: ExtraPosition
                     for position in self.positions[index]:
                         mapfile.write(int_to_bytes(position.start_position))
-                        mapfile.write(int_to_bytes(position.size, signed=True))
+                        mapfile.write(int_to_bytes(position.size))
+                
+                    mapfile.write(DEL)
 
                 mapfile.write(END)
         
@@ -176,8 +185,13 @@ class FileMap(FoundMap, Bytable):
             Also, a non-virgin FileMap batch data is invalid and FileMap only saves Q in memory which is 
             the length of sequence vector
     '''
-    def __init__(self, initial=[[],[]], batch_size=0, batch_limit=BATCH_SIZE, q=0, path=None, virgin=True):
-        self.batch = initial
+    def __init__(self, initial=None, batch_size=0, batch_limit=BATCH_SIZE, q=0, path=None, virgin=True):
+        
+        if initial:
+            self.batch = initial
+        else:
+            self.batch = [[],[]]
+
         self.batch_size = batch_size
         self.batch_limit = batch_limit
         self.q = q
@@ -190,11 +204,15 @@ class FileMap(FoundMap, Bytable):
     '''
         dumping temporary data from memory to disk
         [WARNING] will raise exception if batch is empty
+            update -> no exception will be thrown (printing error and return)
     '''
     def dump(self, return_map=False):
 
         # there must be an item in batch to dump
-        assert self.batch[0]
+        # assert self.batch[0]
+        if len(self.batch[0]) == 0:
+            print('[ERROR] batch is empty for dumping: batch=%s'%(str(self.batch)))
+            return
 
         # assign a path if doesn't exist
         if not hasattr(self, 'path'):
@@ -209,13 +227,34 @@ class FileMap(FoundMap, Bytable):
                 map.update(seq_id, position, self.virgin)
         self.q = map.save()
         self.batch = [[], []]
+        self.batch_size = 0
+
+        self.virgin = False
 
         # WARNING: map could be heavy in memory
         if return_map:
             return map
         del map
 
-    
+
+    def dump_list(self, foundlist):
+        
+        self.virgin = False
+
+        # clearing already existed data in foundmap
+        if len(self.batch[0]) != 0:self.batch = [[],[]]
+        if hasattr(self, 'path'):os.remove(self.path)
+
+        self.path = get_random_free_path(FOUNDMAP_NAMETAG)
+        map = self.FileHandler(self.path, dont_read=True)
+        map.sequences = foundlist[0]
+        map.positions = foundlist[1]
+        self.q = map.save()
+
+        return self
+
+
+
     def __str__(self):
         if hasattr(self, 'path'):
             return "<(FileMap) path '%s'>"%self.path
@@ -235,6 +274,7 @@ class FileMap(FoundMap, Bytable):
 
         if self.batch[0]:
             self.dump()
+            
         return self.q
 
 
@@ -242,10 +282,12 @@ class FileMap(FoundMap, Bytable):
         self.batch = binary_special_add(self.batch, seq_id, position)
         self.batch_size += 1
 
+        if self.virgin:
+            self.q = len(self.batch[0])
+
         # dumping batch to file
         if self.batch_size == self.batch_limit:
             self.dump()
-            self.virgin = False
 
 
     # make a 2D array of ExtraPosition objects in foundmap 
@@ -311,7 +353,7 @@ class FileMap(FoundMap, Bytable):
     
     def clone(self):
         if self.virgin:
-            return FileMap(batch_size=self.batch_size, q=self.q, initial=([self.batch[0][:] + self.batch[1][:]]))
+            return FileMap(batch_size=self.batch_size, q=self.q, initial=([self.batch[0][:]] + [self.batch[1][:]]))
         
         with open(self.path, 'rb') as original:
             data = original.read()
@@ -362,29 +404,41 @@ def clear_disk(extension=FOUNDMAP_NAMETAG):
 
 def test_main():
     map = FileMap()
+    print('Q=%d (0) TEST -> %s'%(map.get_q(), str(map.get_q()==0)))
 
     map.add_location(0, ExtraPosition(5, 0))
+    print('Q=%d (1) TEST -> %s'%(map.get_q(), str(map.get_q()==1)))
+
     map.add_location(0, ExtraPosition(6, 0))
-    map.add_location(0, ExtraPosition(7, 0))
-    map.add_location(0, ExtraPosition(8, 0))
+    map.add_location(1, ExtraPosition(7, 0))
+    print('Q=%d (2) TEST -> %s'%(map.get_q(), str(map.get_q()==2)))
+
+    map.add_location(3, ExtraPosition(8, 0))
+    print('Q=%d (3) TEST -> %s'%(map.get_q(), str(map.get_q()==3)))
+
     map.add_location(0, ExtraPosition(9, 0))
     map.add_location(0, ExtraPosition(9, 1))
     map.add_location(0, ExtraPosition(10, 0))
-    map.add_location(0, ExtraPosition(13, 0))
+    map.add_location(3, ExtraPosition(13, 0))
     map.add_location(0, ExtraPosition(14, 0))
     map.add_location(0, ExtraPosition(15, 0))
+
+    map.dump()
+
     map.add_location(0, ExtraPosition(15, 1))
     map.add_location(0, ExtraPosition(16, 0))
     map.add_location(0, ExtraPosition(51, 0))
     map.add_location(1, ExtraPosition(0, 0))
     map.add_location(3, ExtraPosition(8, 0))
+    map.add_location(5, ExtraPosition(0, 0))
 
+    print('not empty batch, right?', end=' | batch=')
     print(map.batch)
 
     map.dump()
-    map.virgin=False
 
     print(map.batch)
+    print('Q=%d'%map.get_q())
 
 
     print('DONE OBSERVE')
@@ -395,24 +449,75 @@ def test_main():
 
     print(map.get_sequences())
     for index, seq_id in enumerate(bundle[0]):
+        position: ExtraPosition
         for position in bundle[1][index]:
-            print('seq-%d|index-%d|position-%d|extra-%d'%(seq_id, index, position.start_position, position.end_margin   ))
+            print('seq-%d|index-%d|position-%d|extra-%d'%(seq_id, index, position.start_position, position.size))
 
     print(map.get_q())
     print('virginity : %s'%str(map.virgin))
 
 
+def test_hard():
+    mem = MemoryMap()
+    dis = FileMap()
+
+    map_manual = [[],[]]
+
+    for _ in range(100000):
+        random_seq_id = randrange(100)
+        random_location = ExtraPosition(randrange(5000), randrange(10))
+        cloned_location = ExtraPosition(random_location.start_position, random_location.size)
+        cloned_location_2 = ExtraPosition(random_location.start_position, random_location.size)
+
+        map_manual = binary_special_add(map_manual, random_seq_id, cloned_location_2)
+
+        mem.add_location(random_seq_id, random_location)
+        dis.add_location(random_seq_id, cloned_location)
+
+    assert mem.get_q() == dis.get_q() and dis.get_q() == len(map_manual[0])
+
+    bundle_mem = mem.get_list()
+    bundle_dis = dis.get_list()
+
+    assert bundle_mem[0] == bundle_dis[0]
+    # assert bundle_mem[1] == bundle_dis[1]
+
+    error_seq = 0
+    no_error_seq = 0
+    for i in range(len(bundle_mem[0])):
+        if bundle_mem[1][i] != bundle_dis[1][i]:
+            error_seq+=1
+            print('ERROR FOUND at index=%d vec_size mem VS disk equal=%s'%(i, str(len(bundle_mem[1][i])==len(bundle_dis[1][i]))))
+            for j in range(len(bundle_mem[1][i])):
+                # print('mem %s | disk %s'%(str(bundle_mem[1][i][j]), bundle_dis[1][i][j]))
+                if j < len(bundle_dis[1][i]):
+                    if bundle_mem[1][i][j] != bundle_dis[1][i][j]:
+                        print('ERROR EXACT LOCATION -> i=%d, j=%d'%(i, j))
+                else:
+                    print('ERROR %d index out of range for disk bundle'%j)
+        else:
+            no_error_seq+=1
+
+    print('errors=%d | right=%d'%(error_seq, no_error_seq))
+
+    return bundle_mem, bundle_dis, map_manual
+
+
 if __name__ == "__main__":
+    # m, d, t = test_hard()
     # test_main()
     if len(sys.argv) == 1:
         print('clearing FOUNDMAP/DISKQUEUE junks...')
         clear_disk(FOUNDMAP_NAMETAG)
         clear_disk(DISK_QUEUE_NAMETAG)
     elif len(sys.argv) == 2:
-        print('clearing (extention=%s) junk...'%sys.argv[-1])
-        clear_disk(sys.argv[-1])
+        if sys.argv[-1] == 'NOP':
+            pass
+        else:
+            print('clearing (extention=%s) junk...'%sys.argv[-1])
+            clear_disk(sys.argv[-1])
     else:
-        print('- NO OPERATION -')
+        print('- WRONG INPUT -')
     # garbages = [f for f in os.listdir() if f.endswith(FOUNDMAP_NAMETAG)]
     # print('size = %d'%)
     # test_main()
