@@ -2,11 +2,11 @@
 # ignoring false unbound reports
 
 from typing import List
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, EXTRACT_OBJ, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
+from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
 from TrieFind import ChainNode, WatchNode
 from GKmerhood import GKmerhood, GKHoodTree
-from misc import QueueDisk, heap_encode, alphabet_to_dictionary, lap_time, read_bundle, read_fasta, Queue, make_location, ExtraPosition
+from misc import QueueDisk, clear_screen, heap_encode, alphabet_to_dictionary, lap_time, read_bundle, read_fasta, Queue, make_location, ExtraPosition
 from onSequence import OnSequenceDistribution
 from time import gmtime, strftime, time as currentTime
 from report import location_histogram, motif_chain_report, report_print
@@ -120,12 +120,22 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
 
 def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overlap=0):
 
+    # starting chaining report window
+    clear_screen()
+    DWE = '' # Details/Warnings/Errors
+    print(CR_HEADER%DWE)
+
+
     # set default value of q
     if q == -1:
         q = len(sequences)
 
     on_sequence = OnSequenceDistribution(zmotifs, sequences)
-    print('[CHAINING] onSequence object created (size of struct=%d)'%(sys.getsizeof(on_sequence.struct)))
+    if PIXELS_ANALYSIS:
+        DWE += on_sequence.analysis()
+        clear_screen()
+        print(CR_HEADER%DWE)
+
 
     if QUEUE_MODE == QUEUE_DISK:
         queue = QueueDisk(ChainNode, items=[ChainNode(motif.label, motif.foundmap) for motif in zmotifs])
@@ -156,7 +166,6 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
         foundmap_time, last_time = lap_time(last_time)
 
         next_tree = WatchNode()
-        next_tree.bind_costume_foundmap(10000)
         
         for index, seq_id in enumerate(bundle[0]):
             position: ExtraPosition
@@ -187,6 +196,11 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
         pool_ssmart.add(link)
         pool_summit.add(link)
 
+        clear_screen()
+        print(CR_HEADER%DWE)
+        print(CR_TABLE_HEADER_SSMART, pool_ssmart.top_ten_table())
+        print(CR_TABLE_HEADER_SUMMIT, pool_summit.top_ten_table())
+
         ### FOR REPORT ONLY ###
         pool_time, last_time = lap_time(last_time)
 
@@ -195,7 +209,7 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
         ### FOR REPORT ONLY ###
         clear_tree_time, last_time = lap_time(last_time)
         for_print, number_of_line = report_print(for_print, number_of_line, 
-            '[CHAINING][REPORT] chain-done %s | queue %s (size=%d) | foundmap %s | add2tree %s | next-gen %s | pool %s | clear %s'%(
+            '[CHAINING][REPORT] chain-done %s | queue %s (size=%d) | foundmap %s | add2tree %s | next-gen %s | pool %s | clear %s\n'%(
             strftime("%H:%M:%S", gmtime(queue_time + foundmap_time + observation_time + next_generation_time + pool_time + clear_tree_time)),
             strftime("%H:%M:%S", gmtime(queue_time)),
             queue_size,
