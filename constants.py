@@ -84,5 +84,19 @@ CHAINING_REPORT_EACH = True
 POOL_LIMITED = True
 POOL_LIMIT = 100
 
+CHAIN_REPORT_PRINT = False
 CHAIN_REPORT_LINE_LIMIT = 15
 CHAIN_REPORT_FILENAME = 'reporting.temp'
+
+PIXELS_ANALYSIS = True
+
+# chaining report window
+CR_HEADER = '\n\tAKAGI - Chaining report window\n\n**details/warnings/errors**\n#######\n%s\n#######\n\n'
+CR_TABLE_HEADER_SSMART = '\t\tSSMART SCORE TABLE\n'
+CR_TABLE_HEADER_SUMMIT = '\t\tSUMMIT SCORE TABLE\n'
+CR_FILE = 'chaining_report.window'
+LIVE_REPORT = True
+
+# multicore values
+TRY_DELAY = 5 # second
+TRY_COUNT = 10 # times

@@ -1,4 +1,5 @@
 # python libraries 
+from multi import multicore_chaining_main
 from time import time as currentTime
 from time import strftime, gmtime
 from getopt import getopt
@@ -13,7 +14,7 @@ from alignment import alignment_matrix
 from twobitHandler import download_2bit
 
 # importing constants
-from constants import DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
+from constants import DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -55,7 +56,8 @@ def motif_finding_chain(dataset_name,
                         multilayer=None, 
                         megalexa=None, 
                         additional_name='',
-                        chaining_disable=False):
+                        chaining_disable=False,
+                        multicore=False, cores=1):
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
         arguments -> f(s)=%s, q=%d, d(s)=%s, gap=%d, overlap=%d, dataset=%s\n\
@@ -128,17 +130,13 @@ def motif_finding_chain(dataset_name,
 
     assert len(bundles) == len(sequences)
 
-    last_time = currentTime()
-    chains = motif_chain(
-        motifs, 
-        sequences,
-        bundles,
-        q=q, 
-        gap=gap,
-        overlap=overlap, 
-        sequence_mask=s_mask, 
-        report=report, 
-        report_directory=HISTOGRAM_LOCATION%(dataset_name, str(frame_size), str(d), q, gap, overlap))
+    if multicore:
+        last_time = currentTime()
+        multicore_chaining_main(cores, motifs, sequences, bundles, overlap, gap, q)
+    else:        
+        last_time = currentTime()
+        chains = motif_chain(motifs, sequences, bundles, q, gap, overlap)
+        
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
     make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
@@ -299,21 +297,38 @@ def alignment_fasta(fasta_location):
                 align.write(line)
 
 
+def testing(dataset_name):
+    global FOUNDMAP_MODE
+
+    sequences = read_fasta('%s.fasta'%(dataset_name))
+    trees = [GKHoodTree(DATASET_TREES[index][0], DATASET_TREES[index][1]) for index in [1, 1]]
+
+    FOUNDMAP_MODE = FOUNDMAP_MEMO
+    motif_tree_disk = multiple_layer_window_find_motif(trees, [1, 1], [5, 6], sequences)
+
+    FOUNDMAP_MODE = FOUNDMAP_DISK
+    motif_tree_memo = multiple_layer_window_find_motif(trees, [1, 1], [5, 6], sequences)
+
+    return motif_tree_memo, motif_tree_disk
+
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
-        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'reference=', 'disable-chaining']
+        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'reference=', 'disable-chaining',
+        'multicore', 'ncores=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
-        'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False}
+        'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False,
+        'multicore': False, 'ncores':1}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -351,6 +366,8 @@ if __name__ == "__main__":
         elif o in ['-t', '--separated']:args_dict.update({'additional_name':a})
         elif o in ['-r', '--reference']:args_dict.update({'reference':a})
         elif o == '--disable-chaining':args_dict.update({'disable_chaining':True})
+        elif o in ['-P', 'multicore']: args_dict.update({'multicore':True})
+        elif o in ['-n', 'ncores']:args_dict.update({'ncores':int(a)})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -380,7 +397,9 @@ if __name__ == "__main__":
             multilayer=args_dict['multi-layer'],
             megalexa=args_dict['megalexa'],
             additional_name=args_dict['additional_name'],
-            chaining_disable=args_dict['disable_chaining'])
+            chaining_disable=args_dict['disable_chaining'],
+            multicore=args_dict['multicore'],
+            cores=args_dict['ncores'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
@@ -409,6 +428,8 @@ if __name__ == "__main__":
         )
     elif command == '2BT':
         download_2bit(args_dict['reference'])
+    elif command == 'TST':
+        tree_m, tree_d = testing(args_dict['sequences'])
     elif command == 'NOP':
         pass
     else:
