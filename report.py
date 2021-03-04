@@ -1,4 +1,4 @@
-from constants import CHAIN_REPORT_FILENAME, CHAIN_REPORT_LINE_LIMIT
+from constants import CHAIN_REPORT_FILENAME, CHAIN_REPORT_LINE_LIMIT, CHAIN_REPORT_PRINT
 from numpy.lib.utils import _Deprecate
 from TrieFind import ChainNode, TrieNode
 from functools import reduce
@@ -153,6 +153,9 @@ class Ranking:
 
 
 def report_print(saved, line, msg):
+    if CHAIN_REPORT_PRINT:
+        print(msg)
+
     if line == CHAIN_REPORT_LINE_LIMIT:
         with open(CHAIN_REPORT_FILENAME, 'w') as reporting:
             reporting.write(saved+msg)
