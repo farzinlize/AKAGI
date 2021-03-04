@@ -1,5 +1,5 @@
 from io import BufferedReader
-from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MODE, INT_SIZE
+from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, INT_SIZE
 from misc import Bytable, bytes_to_int, int_to_bytes
 from FoundMap import FileMap, FoundMap, get_foundmap
 from Nodmer import Nodmer
@@ -155,14 +155,35 @@ class WatchNode(TrieNode):
             self.foundmap.clear()
         for child in self.childs:
             child.clear()
-
-
-    def bind_costume_foundmap(self, costume_Size):
-        if not hasattr(self, 'foundmap'):
-            self.foundmap = get_foundmap(batch_size=costume_Size)
-        else:
-            print('[ERROR][WATCH] bind costume foundmap failed | already has foundmap')
             
+
+class WatchNodeC(WatchNode):
+
+    def __init__(self, label='', level=0, custom_foundmap_type=FOUNDMAP_MODE):
+        super().__init__(label=label, level=level)
+        self.custom_foundmap_type = custom_foundmap_type
+
+    # override 
+    def add_frame(self, kmer, seq_id, position):
+
+        if len(kmer) == 0:
+            # end of the path
+            if not hasattr(self, 'foundmap'):
+                self.foundmap = get_foundmap(foundmap_type=self.custom_foundmap_type)
+
+            self.foundmap.add_location(seq_id, position)
+            return
+        
+        # searching for proper path
+        for child in self.childs:
+            if child.label[-1] == kmer[0]:
+                return child.add_frame(kmer[1:], seq_id, position)
+
+        # proper child (path) dose not exist
+        new_child = WatchNodeC(self.label + kmer[0], self.level+1, custom_foundmap_type=self.custom_foundmap_type)
+        self.childs += [new_child]
+        return new_child.add_frame(kmer[1:], seq_id, position)
+
 
 # ########################################## #
 #              chain section                 #
@@ -171,7 +192,7 @@ class WatchNode(TrieNode):
 class ChainNode(Bytable):
 
     def __init__(self, label, foundmap: FoundMap):
-        self.chain_level = 0
+        # self.chain_level = 0
         self.foundmap = foundmap
         self.label = label
 
@@ -201,6 +222,16 @@ class ChainNode(Bytable):
 #           main function section            #
 # ########################################## #
 
+def try_this():
+    tree = WatchNodeC(custom_foundmap_type=FOUNDMAP_MEMO)
+    tree.add_frame('AAT', 0, 0)
+    tree.add_frame('ATT', 0, 2)
+    tree.add_frame('AAT', 1, 5)
+    tree.add_frame('AAT', 3, 43)
+    tree.add_frame('AAT', 5, 0)
+    return tree
+
+
 # testing binary search-add
 def test_main():
     t = TrieNode()
@@ -219,4 +250,5 @@ def test_main():
 ##########################################
 # main function call
 if __name__ == "__main__":
-    test_main()
+    # test_main()
+    t = try_this()
