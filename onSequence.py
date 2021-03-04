@@ -17,19 +17,27 @@ class OnSequenceDistribution:
     #         self.label = label
 
     def __init__(self, motifs, sequences):
-        self.struct = self.generate_list(motifs, sequences)
+        self.generate_list(motifs, sequences)
 
     def generate_list(self, motifs: List[WatchNode], sequences):
-        struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
+        self.struct = [[[] for _ in range(len(sequence))] for sequence in sequences]
         for motif in motifs:
             bundle = motif.foundmap.get_list()
             for index, seq_id in enumerate(bundle[0]):
                 position: ExtraPosition
                 for position in bundle[1][index]:
                     try:
-                        struct[seq_id][position.start_position] += [motif.label]
+                        self.struct[seq_id][position.start_position] += [motif.label]
                     except IndexError:
                         print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d'%(
                             seq_id, position.start_position, len(sequences[index])
                         ))
-        return struct
+
+    def analysis(self):
+        result = '[OnSequence][Analysis] id -> sequence id | z -> number of motifs in positions vector\n'
+        total = 0
+        for seq_id in range(len(self.struct)):
+            z = sum([len(positionlist) for positionlist in self.struct[seq_id]])
+            total += z
+            result += 'id:%d|z=%d\n'%(seq_id, z)
+        return result + '[OnSequence][Analysis] total=%d\n'%total
