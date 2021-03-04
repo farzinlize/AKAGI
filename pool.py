@@ -34,6 +34,26 @@ class RankingPool:
             item:RankingPool.Entity
             for index, item in enumerate(self.pool):
                 report.write('index:%d|score:%f\n%s\n'%(index, item.score, item.data.instances_str(sequences)))
+
+    
+    def top_ten_table(self):
+
+        table = '[rank] "sequence"\tSCORE\n'
+
+        if POOL_LIMIT < 10:
+            top = POOL_LIMIT
+        else:
+            top = 10
+
+        if len(self.pool) < top:
+            top = len(self.pool)
+
+        for rank in range(top):
+            entity: RankingPool.Entity = self.pool[rank]
+            table += '[%d] "%s"\t%d\n'%(rank, entity.data.label, entity.score)
+
+        return table
+
             
 
 def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
