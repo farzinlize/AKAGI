@@ -2,6 +2,7 @@ from io import BufferedReader
 import os, platform, random, string
 from typing import List
 from time import time as currentTime
+from multiprocessing.synchronize import Lock
 
 from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, QUEUE_NAMETAG, RANK, TYPES_OF
 
@@ -52,7 +53,9 @@ class TestByte(Bytable):
 
 class QueueDisk:
 
-    def __init__(self, item_class:Bytable, items=[]):
+    class QueueEmpty(Exception):pass
+
+    def __init__(self, item_class:Bytable, items=None):
         self.item_class = item_class
         self.files = []
         self.counter = 0
@@ -80,8 +83,17 @@ class QueueDisk:
         queue.close()
 
 
-    def pop(self):
-        assert self.files
+    def pop(self, lock:Lock=None):
+
+        if not self.files:
+            raise QueueDisk.QueueEmpty
+
+        # thread profing
+        if len(self.files) == 1 and lock:
+            lock.acquire()
+            locked = True
+        else:
+            locked = False
 
         # reading
         with open(self.files[0], 'rb') as queue_read:
@@ -97,10 +109,19 @@ class QueueDisk:
             os.remove(os.path.join(self.files[0]))
             self.files = self.files[1:]
 
+        if locked: lock.release()
+
         return popy
 
 
-    def insert(self, item: Bytable):
+    def insert(self, item: Bytable, lock:Lock=None):
+
+        if len(self.files)<=1 and lock:
+            lock.acquire()
+            locked = True
+        else:
+            locked = False
+
         if len(self.files) == 0 or self.counter == DISK_QUEUE_LIMIT:
             self.files += [get_random_free_path(DISK_QUEUE_NAMETAG)]
             self.counter = 0
@@ -108,6 +129,8 @@ class QueueDisk:
         self.counter += 1
         with open(self.files[-1], 'ab') as queue:
             queue.write(item.to_byte())
+
+        if locked: lock.release()
 
 
     def isEmpty(self) -> bool:
@@ -199,7 +222,7 @@ class ExtraPosition:
         return self.start_position <= other.start_position
 
     def __eq__(self, other):
-        return self.start_position == other.start_position
+        return self.start_position == other.start_position and self.size == other.size
 
     def __ne__(self, other):
         return self.start_position != other.start_position
@@ -225,6 +248,17 @@ class ExtraPosition:
 # ########################################## #
 #                 functions                  #
 # ########################################## #
+
+def clear_screen(): 
+
+    # for windows 
+    if os.name == 'nt': 
+        _ = os.system('cls') 
+  
+    # for mac and linux(here, os.name is 'posix') 
+    else: 
+        _ = os.system('clear') 
+
 
 def lap_time(last_time):
     now = currentTime()
