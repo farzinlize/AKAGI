@@ -1,10 +1,11 @@
 from io import BufferedReader
+from math import ceil
 import os, platform, random, string
-from typing import List
+from typing import Dict, List
 from time import time as currentTime
 from multiprocessing.synchronize import Lock
 
-from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FOUNDMAP_DISK, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, QUEUE_NAMETAG, RANK, TYPES_OF
+from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FDR_SCORE, FOUNDMAP_DISK, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, P_VALUE, QUEUE_NAMETAG, RANK, SUMMIT, TYPES_OF
 
 
 # ########################################## #
@@ -244,10 +245,37 @@ class ExtraPosition:
 
 
 
-
 # ########################################## #
 #                 functions                  #
 # ########################################## #
+
+def brief_sequence(sequences, bundles:List[Dict]):
+    zipped = [(sequences[i], bundles[i]) for i in range(len(sequences))]
+    zipped.sort(key=lambda x:x[1][P_VALUE], reverse=True)
+
+    if len(zipped) > MAX_SEQUENCE_COUNT:
+        zipped = zipped[:MAX_SEQUENCE_COUNT]
+
+    brief_sequences = []
+    brief_bundles = []
+    for sequence, bundle in zipped:
+        if len(sequence) > MAX_SEQUENCE_LENGTH:
+            summit = bundle[SUMMIT]
+            start = ceil((2*summit-MAX_SEQUENCE_LENGTH)/2)
+            end = ceil((2*summit+MAX_SEQUENCE_LENGTH)/2)
+
+            if start < 0:
+                end += abs(start)
+                start = 0
+
+            brief_sequences += [sequence[start:end]]
+            bundle.update({SUMMIT:summit-start})
+        else:
+            brief_sequences += [sequence]
+        brief_bundles += [bundle]
+
+    return brief_sequences, brief_bundles
+
 
 def clear_screen(): 
 
@@ -295,6 +323,23 @@ def binary_add(lst, item, allow_equal=False):
         else:
             end = mid - 1
     return lst[:start] + [item] + lst[start:]
+
+
+def binary_add_return_position(lst, item, allow_equal=False):
+    start = 0
+    end = len(lst)-1
+    while start <= end:
+        mid = (start+end)//2
+        if lst[mid] == item:
+            if allow_equal:
+                return lst[:mid] + [item] + lst[mid:], mid
+            else:
+                return lst, -1
+        elif lst[mid] < item:
+            start = mid + 1
+        else:
+            end = mid - 1
+    return lst[:start] + [item] + lst[start:], start
 
 
 '''
@@ -682,13 +727,22 @@ def workbench_tests():
     print(edit_distances_matrix(seq))
 
 
+def test_binary_add():
+    l = [1, 3, 6, 8, 12, 56, 89]
+    item = 0
+
+    l, index = binary_add_return_position(l, item, allow_equal=True)
+    print(l)
+    print(index)
+
+
 # ########################################## #
 #           main function call               #
 # ########################################## #
 
 # main function call
 if __name__ == "__main__":
-    pass
+    test_binary_add()
     # test_diskQueue()
     # b = read_bundle('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.bundle')
     # seq, rank = read_peak_fasta('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.fasta')
