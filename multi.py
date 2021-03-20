@@ -1,7 +1,8 @@
+import socket
 from time import sleep
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CR_FILE, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, LIVE_REPORT, TRY_COUNT, TRY_DELAY
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CR_FILE, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, HOST_ADDRESS, LIVE_REPORT, REJECT_REQUEST, REQUEST_PORT, TRY_COUNT, TRY_DELAY
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
-from misc import ExtraPosition, QueueDisk, clear_screen
+from misc import ExtraPosition, QueueDisk, bytes_to_int, clear_screen, int_to_bytes
 from TrieFind import ChainNode, WatchNode, WatchNodeC
 from multiprocessing import Lock, Process, Queue, Array
 from onSequence import OnSequenceDistribution
@@ -47,9 +48,13 @@ def ranking_thread(ready_to_judge: Queue, pools:List[RankingPool], work: Queue, 
 
     while True:
         motif: ChainNode = ready_to_judge.get()
-        for pool in pools:pool.add(motif)
+
+        good_hit = False
+        for pool in pools:good_hit |= pool.add(motif)
         # big_queue.insert(motif, lock=queue_lock)
-        work.put(motif)
+
+        if good_hit:
+            work.put(motif)
 
         # updating score board
         if LIVE_REPORT:
@@ -64,12 +69,49 @@ def ranking_thread(ready_to_judge: Queue, pools:List[RankingPool], work: Queue, 
                 window.write('work queue -> %d\t|\tnext queue -> %d\n'%(work.qsize(), ready_to_judge.qsize()))
 
 
+def agent_thread(port_id, work:Queue, merge_request:Queue):
+    pass
 
-def multicore_chaining_main(cores, zero_motifs: List[WatchNode], sequences, bundles, overlap, gap, q):
+
+def server_thread(on_sequence:OnSequenceDistribution):
+    
+    agents:List[Process] = []
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+
+        # setup
+        s.bind((HOST_ADDRESS, REQUEST_PORT))
+        s.listen()
+
+        while True:
+
+            # making connection
+            conn, _ = s.accept()
+
+            n_agent = bytes_to_int(conn.recv())
+            if n_agent > AGENTS_MAXIMUM_COUNT - len(agents):
+                conn.sendall(REJECT_REQUEST)
+                conn.close()
+                continue
+            
+            conn.sendall(ACCEPT_REQUEST)
+
+            # sending observation data (onSequence Distribution)
+            conn.sendall(on_sequence.to_byte())
+
+            previous_agents = len(agents)
+            for port in [AGENTS_PORT_START+previous_agents+i for i in range(n_agent)]:
+                conn.sendall(int_to_bytes(port))
+                agents += [Process(target=agent_thread, args=(port,))]
+                agents[-1].start()
+
+
+
+def multicore_chaining_main(cores, zero_motifs: List[WatchNode], sequences, bundles, overlap, gap, q, network=False):
 
     # initial necessary data
     on_sequence = OnSequenceDistribution(zero_motifs, sequences)
-    pool_ssmart = RankingPool(bundles, objective_function_pvalue)
+    pool_ssmart = RankingPool(bundles, objective_function_pvalue, sign=-1)
     pool_summit = RankingPool(bundles, distance_to_summit_score)
 
     # initializing work-queue
@@ -87,6 +129,9 @@ def multicore_chaining_main(cores, zero_motifs: List[WatchNode], sequences, bund
     disk_queue = QueueDisk(ChainNode)
     disk_queue_lock = Lock()
 
+    # initial merge request queue
+    merge_queue = Queue()
+
     # initial threads
     activity_array = Array('B', [1 for _ in range(cores)])
     judge_activity = Array('B', [1])
@@ -94,6 +139,11 @@ def multicore_chaining_main(cores, zero_motifs: List[WatchNode], sequences, bund
     the_judge = Process(target=ranking_thread, args=(next_generation,[pool_ssmart, pool_summit], work, disk_queue_lock, judge_activity))
     for worker in workers:worker.start()
     the_judge.start()
+
+    # initial server listener (in case of network computing)
+    if network:
+        server = Process(target=server_thread, args=(on_sequence,))
+        server.start()
 
     try_more = TRY_COUNT
 
