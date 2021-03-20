@@ -8,13 +8,13 @@ import sys
 # project imports
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_window_find_motif
-from misc import change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
+from misc import brief_sequence, change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
 
 # importing constants
-from constants import DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
+from constants import BRIEFING, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -57,7 +57,8 @@ def motif_finding_chain(dataset_name,
                         megalexa=None, 
                         additional_name='',
                         chaining_disable=False,
-                        multicore=False, cores=1):
+                        multicore=False, 
+                        cores=1):
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
         arguments -> f(s)=%s, q=%d, d(s)=%s, gap=%d, overlap=%d, dataset=%s\n\
@@ -76,7 +77,21 @@ def motif_finding_chain(dataset_name,
 
     print('[FOUNDMAP] foundmap mode: %s'%FOUNDMAP_MODE)
 
+    # reading sequences and its attachment including rank and summit
     sequences = read_fasta('%s.fasta'%(dataset_name))
+    bundle_name = dataset_name.split('/')[-1]
+    bundles = read_bundle('%s.bundle'%(dataset_name))
+
+    assert len(bundles) == len(sequences)
+
+    if BRIEFING:
+        sequences, bundles = brief_sequence(sequences, bundles)
+        assert len(sequences) == len(bundles)
+        print('[BRIEFING] number of sequences = %d'%len(sequences))
+        for seq, bundle in zip(sequences, bundles):
+            print('(len:%d,score:%f)'%(len(seq), bundle[P_VALUE]), end=' ', flush=True)
+        print('')
+
 
     if q == ARG_UNSET:
         q = len(sequences)
@@ -124,11 +139,6 @@ def motif_finding_chain(dataset_name,
     if chaining_disable:
         print('[CHAINING] chaining is disabled - end of process')
         return
-
-    bundle_name = dataset_name.split('/')[-1]
-    bundles = read_bundle('%s.bundle'%(dataset_name))
-
-    assert len(bundles) == len(sequences)
 
     if multicore:
         last_time = currentTime()
