@@ -1,11 +1,12 @@
 from io import BufferedReader
-from math import ceil
+from math import ceil, log2, inf
 import os, platform, random, string
 from typing import Dict, List
 from time import time as currentTime
 from multiprocessing.synchronize import Lock
+from functools import reduce
 
-from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FDR_SCORE, FOUNDMAP_DISK, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, P_VALUE, QUEUE_NAMETAG, RANK, SUMMIT, TYPES_OF
+from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FDR_SCORE, FOUNDMAP_DISK, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, PSEUDOCOUNT, P_VALUE, QUEUE_NAMETAG, RANK, SUMMIT, TYPES_OF
 
 
 # ########################################## #
@@ -248,6 +249,74 @@ class ExtraPosition:
 # ########################################## #
 #                 functions                  #
 # ########################################## #
+
+def read_pfm(filename):
+
+    with open(filename, 'r') as pfm:
+        _ = pfm.readline()
+
+        A = [int(float(a)) for a in pfm.readline().split()]
+        C = [int(float(a)) for a in pfm.readline().split()]
+        G = [int(float(a)) for a in pfm.readline().split()]
+        T = [int(float(a)) for a in pfm.readline().split()]
+
+        assert len(A) == len(C) and len(C) == len(G) and len(G) == len(T)
+        sites_count = A[0]+C[0]+G[0]+T[0]
+        for i in range(1, len(A)): assert A[i]+C[i]+G[i]+T[i] == sites_count
+
+        return [{'A':A[i], 'C':C[i], 'G':G[i], 'T':T[i]} for i in range(len(A))]
+
+
+def read_pfm_save_pwm(filename):
+
+    cal = lambda num:log2( ( (num+(PSEUDOCOUNT/4) ) / (sites_count+PSEUDOCOUNT) )/0.25 )
+
+    with open(filename, 'r') as pfm:
+        _ = pfm.readline()
+
+        A = [int(float(a)) for a in pfm.readline().split()]
+        C = [int(float(a)) for a in pfm.readline().split()]
+        G = [int(float(a)) for a in pfm.readline().split()]
+        T = [int(float(a)) for a in pfm.readline().split()]
+
+        assert len(A) == len(C) and len(C) == len(G) and len(G) == len(T)
+        sites_count = A[0]+C[0]+G[0]+T[0]
+        for i in range(1, len(A)): assert A[i]+C[i]+G[i]+T[i] == sites_count
+
+        return [{'A':cal(A[i]), 'C':cal(C[i]), 'G':cal(G[i]), 'T':cal(T[i])} for i in range(len(A))]
+
+
+def pfm_to_pwm(pfm):
+
+    sites_count = pfm[0]['A']+pfm[0]['C']+pfm[0]['G']+pfm[0]['T']
+    pwm = [{'A':0, 'C':0, 'G':0, 'T':0} for i in range(len(pfm))]
+
+    for i in range(len(pfm)):
+        for letter in 'ACGT':
+            pwm[i][letter] = log2( ( (pfm[i][letter]+(PSEUDOCOUNT/4) ) / (sites_count+PSEUDOCOUNT) )/0.25 )
+
+    return pwm
+
+
+def pwm_score_sequence(sequence, pwm):
+
+    if len(sequence) < len(pwm):
+        return 0
+
+    max_score = -inf
+
+    for start in range(len(sequence)-len(pwm)+1):
+
+        score = 0
+        for i in range(len(pwm)):
+            score += pwm[i][sequence[start+i]]
+
+        if score >= max_score:
+            max_score = score
+            max_position = start
+    
+    return max_score, max_position
+
 
 def brief_sequence(sequences, bundles:List[Dict]):
     zipped = [(sequences[i], bundles[i]) for i in range(len(sequences))]
@@ -742,7 +811,10 @@ def test_binary_add():
 
 # main function call
 if __name__ == "__main__":
-    test_binary_add()
+    test = read_pfm('./pfms/test2.pfm')
+    pwm = pfm_to_pwm(test)
+    pwm_2 = read_pfm_save_pwm('./pfms/test2.pfm')
+    # test_binary_add()
     # test_diskQueue()
     # b = read_bundle('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.bundle')
     # seq, rank = read_peak_fasta('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.fasta')
