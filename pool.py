@@ -1,5 +1,5 @@
-from constants import FDR_SCORE, POOL_LIMIT, POOL_LIMITED, P_VALUE, SUMMIT
-from misc import ExtraPosition, binary_add
+from constants import FDR_SCORE, GOOD_HIT, POOL_LIMIT, POOL_LIMITED, P_VALUE, SUMMIT
+from misc import ExtraPosition, binary_add, binary_add_return_position
 from TrieFind import ChainNode
 
 class RankingPool:
@@ -15,18 +15,21 @@ class RankingPool:
         def __lt__(self, other):
             return self.score < other.score
 
-    def __init__(self, sequences_bundle, score_function):
+    def __init__(self, sequences_bundle, score_function, sign=1):
         self.bundles = sequences_bundle
         self.scoreing = score_function
         self.pool = []
+        self.sign = sign
 
     
     def add(self, pattern:ChainNode):
-        score = self.scoreing(pattern, self.bundles)
-        self.pool = binary_add(self.pool, RankingPool.Entity(score, pattern), allow_equal=True)
+        score = self.scoreing(pattern, self.bundles) * self.sign
+        self.pool, rank = binary_add_return_position(self.pool, RankingPool.Entity(score, pattern), allow_equal=True)
 
         if POOL_LIMITED and len(self.pool) == POOL_LIMIT:
             self.pool = self.pool[:-1]
+
+        return rank <= GOOD_HIT
 
     
     def all_ranks_report(self, report_filename, sequences):
