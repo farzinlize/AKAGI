@@ -54,9 +54,9 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
 
             # adding motifs to tree
             now = currentTime()
-            motifs_tree.add_frame(frame, seq_id, ExtraPosition(frame_start, 0))
+            motifs_tree.add_frame(frame, seq_id, ExtraPosition(frame_start, len(frame)))
             for each in dneighbours:
-                motifs_tree.add_frame(each[0], seq_id, ExtraPosition(frame_start, frame_size-len(each[0])))
+                motifs_tree.add_frame(each[0], seq_id, ExtraPosition(frame_start, len(each[0])))
             add_to_tree_time = currentTime() - now
 
             frame_start += 1
@@ -86,7 +86,7 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
     
     for seq_id in range(len(sequences)):
         lframe_start = [0 for _ in range(len(ldmax))]
-        lframe_end = [frame_size for frame_size in lframe_size]
+        lframe_end = [frame_size for frame_size in lframe_size if frame_size <= len(sequences[seq_id])]
 
         while lframe_end:
 
