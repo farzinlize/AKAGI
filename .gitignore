@@ -24,3 +24,4 @@ akagi_1.fasta
 akagi_2.fasta
 *.temp
 *.log
+/pfms/*
