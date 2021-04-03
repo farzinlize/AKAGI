@@ -1,5 +1,6 @@
-from constants import FDR_SCORE, GOOD_HIT, POOL_LIMIT, POOL_LIMITED, P_VALUE, SUMMIT
-from misc import ExtraPosition, binary_add, binary_add_return_position
+from typing import List
+from constants import FDR_SCORE, GOOD_HIT, POOL_LIMITED, POOL_SIZE, P_VALUE, SUMMIT
+from misc import ExtraPosition, binary_add, binary_add_return_position, pwm_score_sequence
 from TrieFind import ChainNode
 
 class RankingPool:
@@ -15,21 +16,22 @@ class RankingPool:
         def __lt__(self, other):
             return self.score < other.score
 
-    def __init__(self, sequences_bundle, score_function, sign=1):
-        self.bundles = sequences_bundle
+    def __init__(self, function_argument, score_function, sign=1):
+        self.args = function_argument
         self.scoreing = score_function
-        self.pool = []
+        self.pool: List[RankingPool.Entity] = []
         self.sign = sign
 
     
     def add(self, pattern:ChainNode):
-        score = self.scoreing(pattern, self.bundles) * self.sign
+        score = self.scoreing(pattern, self.args) * self.sign
         self.pool, rank = binary_add_return_position(self.pool, RankingPool.Entity(score, pattern), allow_equal=True)
 
-        if POOL_LIMITED and len(self.pool) == POOL_LIMIT:
+        if POOL_LIMITED and len(self.pool) == POOL_SIZE + 1:
+            # self.pool[-1].data.clear_foundmap()
             self.pool = self.pool[:-1]
 
-        return rank <= GOOD_HIT
+        return rank
 
     
     def all_ranks_report(self, report_filename, sequences):
@@ -43,8 +45,8 @@ class RankingPool:
 
         table = '[rank] "sequence"\tSCORE\n'
 
-        if POOL_LIMIT < 10:
-            top = POOL_LIMIT
+        if POOL_SIZE < 10:
+            top = POOL_SIZE
         else:
             top = 10
 
@@ -57,7 +59,40 @@ class RankingPool:
 
         return table
 
-            
+    
+    def merge(self, other):
+        
+        merged = []
+        self_index = 0 
+        other_index = 0
+
+        while self_index < len(self.pool) and other_index < len(other.pool) and len(merged) < POOL_SIZE:
+
+            if self.pool[self_index] < other.pool[other_index]:
+                merged.append(self.pool[self_index])
+                self_index += 1
+
+            elif self.pool[self_index] == other.pool[other_index]:
+                merged.append(self.pool[self_index])
+
+                # prevent adding same entities 
+                if self.pool[self_index].data.label == other.pool[other_index].data.label:other_index += 1
+                self_index += 1
+
+            else:
+                merged.append(other.pool[other_index])
+                other_index += 1
+
+        while self_index < len(self.pool) and len(merged) < POOL_SIZE:
+            merged.append(self.pool[self_index])
+            self_index += 1
+
+        while other_index < len(other.pool) and len(merged) < POOL_SIZE:
+            merged.append(other.pool[other_index])
+            other_index += 1
+        
+        self.pool = merged
+
 
 def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
     foundlist_seq_vector = pattern.foundmap.get_list()[0]
@@ -110,3 +145,23 @@ def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
             num_instances += 1
     return sum_distances / num_instances
     
+
+def pwm_score(pattern: ChainNode, arg_bundle):
+
+    # unpacking arguments
+    sequences = arg_bundle[0]
+    pwm = arg_bundle[1]
+    
+    aggregated = 0
+    count = 0
+    bundle = pattern.foundmap.get_list()
+    for index, seq_id in enumerate(bundle[0]):
+        position: ExtraPosition
+        for position in bundle[1][index]:
+            end = position.end_position()
+            start = position.start_position
+            sequence = sequences[seq_id][start:end]
+            score, _ = pwm_score_sequence(sequence, pwm)
+            aggregated += score
+            count += 1
+    return aggregated / count
