@@ -8,13 +8,13 @@ import sys
 # project imports
 from GKmerhood import GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_window_find_motif
-from misc import brief_sequence, change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
+from misc import brief_sequence, change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
 
 # importing constants
-from constants import BRIEFING, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER
+from constants import BRIEFING, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SEQUENCES, SEQUENCE_BUNDLES
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -58,7 +58,8 @@ def motif_finding_chain(dataset_name,
                         additional_name='',
                         chaining_disable=False,
                         multicore=False, 
-                        cores=1):
+                        cores=1,
+                        pfm=None):
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
         arguments -> f(s)=%s, q=%d, d(s)=%s, gap=%d, overlap=%d, dataset=%s\n\
@@ -81,6 +82,7 @@ def motif_finding_chain(dataset_name,
     sequences = read_fasta('%s.fasta'%(dataset_name))
     bundle_name = dataset_name.split('/')[-1]
     bundles = read_bundle('%s.bundle'%(dataset_name))
+    pwm = read_pfm_save_pwm(pfm)
 
     assert len(bundles) == len(sequences)
 
@@ -141,18 +143,22 @@ def motif_finding_chain(dataset_name,
         return
 
     if multicore:
+        dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm}
         last_time = currentTime()
-        multicore_chaining_main(cores, motifs, sequences, bundles, overlap, gap, q)
+        multicore_chaining_main(cores, motifs, dataset_dict, overlap, gap, q)
     else:        
-        last_time = currentTime()
-        chains = motif_chain(motifs, sequences, bundles, q, gap, overlap)
+        # changes must be applied
+        raise NotImplementedError
+        # last_time = currentTime()
+        # chains = motif_chain(motifs, sequences, bundles, q, gap, overlap)
         
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
     make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
 
     if report[1]:
-        colored_neighbours_analysis(chains, sequences, color_frame, '%s%s-colored/'%(RESULT_LOCATION, dataset_name))
+        pass
+        # colored_neighbours_analysis(chains, sequences, color_frame, '%s%s-colored/'%(RESULT_LOCATION, dataset_name))
     else:
         pass
         # motif_chain_report(motifs, '%s%s%s/f%s-d%s-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, additional_name, str(frame_size), str(d), q, gap, overlap), sequences)
@@ -328,17 +334,17 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
         'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'reference=', 'disable-chaining',
-        'multicore', 'ncores=']
+        'multicore', 'ncores=', 'jaspar=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
         'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False,
-        'multicore': False, 'ncores':1}
+        'multicore': False, 'ncores':1, 'jaspar':''}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -376,8 +382,9 @@ if __name__ == "__main__":
         elif o in ['-t', '--separated']:args_dict.update({'additional_name':a})
         elif o in ['-r', '--reference']:args_dict.update({'reference':a})
         elif o == '--disable-chaining':args_dict.update({'disable_chaining':True})
-        elif o in ['-P', 'multicore']: args_dict.update({'multicore':True})
-        elif o in ['-n', 'ncores']:args_dict.update({'ncores':int(a)})
+        elif o in ['-P', '--multicore']: args_dict.update({'multicore':True})
+        elif o in ['-n', '--ncores']:args_dict.update({'ncores':int(a)})
+        elif o in ['-j', '--jaspar']:args_dict.update({'jaspar':a})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -409,7 +416,8 @@ if __name__ == "__main__":
             additional_name=args_dict['additional_name'],
             chaining_disable=args_dict['disable_chaining'],
             multicore=args_dict['multicore'],
-            cores=args_dict['ncores'])
+            cores=args_dict['ncores'],
+            pfm=args_dict['jaspar'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':

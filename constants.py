@@ -14,6 +14,15 @@ DNA_ALPHABET = 'ATCG'
 BATCH_SIZE = 512
 PATH_LENGTH = 10
 
+# execution mode flags
+MULTICORE = False
+SERVER = False
+BRIEFING = True
+
+# briefing values
+MAX_SEQUENCE_LENGTH = 500
+MAX_SEQUENCE_COUNT = 100
+
 # bytes streaming constants
 STR = b'\xFF'
 DEL = b'\xDD'
@@ -81,8 +90,12 @@ CHAINING_REPORT_PEND = REMOTE
 
 CHAINING_REPORT_EACH = True
 
+# ranking pool values
 POOL_LIMITED = True
-POOL_LIMIT = 100
+POOL_SIZE = 100
+GOOD_HIT_RATIO = 0.25
+GOOD_HIT = POOL_SIZE * GOOD_HIT_RATIO
+POOL_HIT_SCORE = 2
 
 CHAIN_REPORT_PRINT = False
 CHAIN_REPORT_LINE_LIMIT = 15
@@ -94,9 +107,35 @@ PIXELS_ANALYSIS = True
 CR_HEADER = '\n\tAKAGI - Chaining report window\n\n**details/warnings/errors**\n#######\n%s\n#######\n\n'
 CR_TABLE_HEADER_SSMART = '\t\tSSMART SCORE TABLE\n'
 CR_TABLE_HEADER_SUMMIT = '\t\tSUMMIT SCORE TABLE\n'
+CR_TABLE_HEADER_JASPAR = '\t\tJASPAR SCORE TABLE\n'
 CR_FILE = 'chaining_report.window'
 LIVE_REPORT = True
 
 # multicore values
 TRY_DELAY = 5 # second
 TRY_COUNT = 10 # times
+
+# picture values
+SEQUENCE_KEY = 0
+POSITION_KEY = 1
+MOTIF_KEY = 2
+MARGIN_KEY = 3
+INT_SIZE_BIT = 32
+
+# network
+HOST_ADDRESS = '127.0.0.1'
+REQUEST_PORT = 1250
+AGENTS_PORT_START = 1251
+AGENTS_MAXIMUM_COUNT = 10
+ACCEPT_REQUEST = b'\xAA'
+REJECT_REQUEST = b'\xBB'
+
+PSEUDOCOUNT = 1
+
+# dataset dictionary keys
+SEQUENCES = 'seq'
+SEQUENCE_BUNDLES = 'bundle'
+PWM = 'pwm'
+
+NEAR_FULL = 5000
+NEAR_EMPTY = 1000

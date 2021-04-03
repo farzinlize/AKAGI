@@ -1,8 +1,9 @@
 import socket
 from time import sleep
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CR_FILE, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, HOST_ADDRESS, LIVE_REPORT, REJECT_REQUEST, REQUEST_PORT, TRY_COUNT, TRY_DELAY
-from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
-from misc import ExtraPosition, QueueDisk, bytes_to_int, clear_screen, int_to_bytes
+from datetime import datetime
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CR_FILE, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, GOOD_HIT, HOST_ADDRESS, LIVE_REPORT, NEAR_EMPTY, NEAR_FULL, POOL_HIT_SCORE, PWM, REJECT_REQUEST, REQUEST_PORT, SEQUENCES, SEQUENCE_BUNDLES, TRY_COUNT, TRY_DELAY
+from pool import RankingPool, distance_to_summit_score, objective_function_pvalue, pwm_score
+from misc import ExtraPosition, QueueDisk, bytes_to_int, clear_screen, int_to_bytes, pfm_to_pwm
 from TrieFind import ChainNode, WatchNode, WatchNodeC
 from multiprocessing import Lock, Process, Queue, Array
 from onSequence import OnSequenceDistribution
@@ -10,14 +11,37 @@ import os
 from typing import List
 
 
-
-def chaining_thread(id, work: Queue, activity_array, done: Queue, on_sequence: OnSequenceDistribution, overlap, gap, q):
+def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
     
+    # unpacking dataset dictionary
+    sequences = dataset_dict[SEQUENCES]
+    bundles = dataset_dict[SEQUENCE_BUNDLES]
+    pwm = dataset_dict[PWM]
+
+    # local ranking pools
+    pool_ssmart = RankingPool(bundles, objective_function_pvalue, sign=-1)
+    pool_summit = RankingPool(bundles, distance_to_summit_score)
+    pool_jaspar = RankingPool((sequences,pwm), pwm_score, sign=-1)
+
     while True:
 
         # obtaining a job
         motif: ChainNode = work.get()
-        activity_array[id] = 1
+
+        # evaluation the job (motif)
+        good_enough = 0
+        for pool, multiplier in [(pool_ssmart, 1), (pool_summit, 1), (pool_jaspar, 2)]:
+            rank = pool.add(motif)
+            good_enough += int(rank <= GOOD_HIT)*multiplier
+
+            # merge request policy
+            if rank == 0:merge.put(pool)
+
+        if len(motif.label) <= 30:
+            good_enough += POOL_HIT_SCORE + 1
+
+        # ignouring low rank motifs
+        if good_enough <= POOL_HIT_SCORE:continue
 
         # chaining
         bundle = motif.foundmap.get_list()
@@ -32,47 +56,58 @@ def chaining_thread(id, work: Queue, activity_array, done: Queue, on_sequence: O
                         next_tree.add_frame(
                             next_condidate, 
                             seq_id, 
-                            ExtraPosition(position.start_position, len(next_condidate) + sliding))
+                            ExtraPosition(position.start_position, position.size + len(next_condidate) + sliding))
         
+        # next generation
         next_motif: WatchNodeC
         for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
-            done.put(ChainNode(
+            work.put(ChainNode(
                 motif.label + next_motif.label, 
                 next_motif.foundmap.turn_to_filemap()))
-
-        activity_array[id] = 0
         
 
+def global_pool_thread(merge: Queue, dataset_dict):
+    
+    report_count = 0
 
-def ranking_thread(ready_to_judge: Queue, pools:List[RankingPool], work: Queue, queue_lock, judge_activity):
+    # unpacking dataset dictionary
+    sequences = dataset_dict[SEQUENCES]
+    bundles = dataset_dict[SEQUENCE_BUNDLES]
+    pwm = dataset_dict[PWM]
+
+    # global ranking pools
+    pool_summit = RankingPool(bundles, distance_to_summit_score)
+    pool_ssmart = RankingPool(bundles, objective_function_pvalue, sign=-1)
+    pool_jaspar = RankingPool((sequences,pwm), pwm_score, sign=-1)
 
     while True:
-        motif: ChainNode = ready_to_judge.get()
 
-        good_hit = False
-        for pool in pools:good_hit |= pool.add(motif)
-        # big_queue.insert(motif, lock=queue_lock)
+        merge_request: RankingPool = merge.get()
+        if merge_request.scoreing == pool_summit.scoreing:pool_summit.merge(merge_request)
+        elif merge_request.scoreing == pool_ssmart.scoreing:pool_ssmart.merge(merge_request)
+        elif merge_request.scoreing == pool_jaspar.scoreing:pool_jaspar.merge(merge_request)
 
-        if good_hit:
-            work.put(motif)
+        with open(CR_FILE, 'w') as window:
 
-        # updating score board
-        if LIVE_REPORT:
-            clear_screen()
-            print(CR_TABLE_HEADER_SSMART + pools[0].top_ten_table())
-            print(CR_TABLE_HEADER_SUMMIT + pools[1].top_ten_table())
-            print('work queue -> %d\t|\tnext queue -> %d'%(work.qsize(), ready_to_judge.qsize()))
-        else:
-            with open(CR_FILE, 'w') as window:
-                window.write(CR_TABLE_HEADER_SSMART + pools[0].top_ten_table() + '\n')
-                window.write(CR_TABLE_HEADER_SUMMIT + pools[1].top_ten_table() + '\n')
-                window.write('work queue -> %d\t|\tnext queue -> %d\n'%(work.qsize(), ready_to_judge.qsize()))
+            # time stamp
+            window.write(str(datetime.now()) + ' | report #%d\n\n'%report_count)
+            report_count += 1
+
+            window.write(CR_TABLE_HEADER_SSMART + pool_ssmart.top_ten_table() + '\n')
+            window.write(CR_TABLE_HEADER_SUMMIT + pool_summit.top_ten_table() + '\n')
+            window.write(CR_TABLE_HEADER_JASPAR + pool_jaspar.top_ten_table() + '\n\n\n')
+
+            if pool_ssmart.pool:window.write('> SSMART\n' + pool_ssmart.pool[0].data.instances_str(sequences))
+            if pool_summit.pool:window.write('> SUMMIT\n' + pool_summit.pool[0].data.instances_str(sequences))
+            if pool_jaspar.pool:window.write('> JASPAR\n' + pool_jaspar.pool[0].data.instances_str(sequences))
+
 
 
 def agent_thread(port_id, work:Queue, merge_request:Queue):
-    pass
+    raise NotImplementedError
 
 
+# not completed nor tested
 def server_thread(on_sequence:OnSequenceDistribution):
     
     agents:List[Process] = []
@@ -107,68 +142,57 @@ def server_thread(on_sequence:OnSequenceDistribution):
 
 
 
-def multicore_chaining_main(cores, zero_motifs: List[WatchNode], sequences, bundles, overlap, gap, q, network=False):
+def multicore_chaining_main(cores, zero_motifs: List[WatchNode], dataset_dict, overlap, gap, q, network=False):
 
-    # initial necessary data
+    print('HEY YOU MF 2') #debug
+
+    # unpacking necessary parts of dataset dictionary
+    sequences = dataset_dict[SEQUENCES]
+
+    # generate on sequence distribution 
     on_sequence = OnSequenceDistribution(zero_motifs, sequences)
-    pool_ssmart = RankingPool(bundles, objective_function_pvalue, sign=-1)
-    pool_summit = RankingPool(bundles, distance_to_summit_score)
-
-    # initializing work-queue
+    
+    # initializing synchronized queues
     work = Queue()
+    merge = Queue()
     for motif in zero_motifs:
-        turn_to_chain = ChainNode(motif.label, motif.foundmap)
-        work.put_nowait(turn_to_chain)
-        pool_ssmart.add(turn_to_chain)
-        pool_summit.add(turn_to_chain)
+        work.put_nowait(ChainNode(motif.label, motif.foundmap))
 
-    # each thread result will be putted here (producer/consumer)
-    next_generation = Queue()
-
-    # initial disk queue for saving big data
+    # initial disk queue for memory balancing
     disk_queue = QueueDisk(ChainNode)
-    disk_queue_lock = Lock()
-
-    # initial merge request queue
-    merge_queue = Queue()
 
     # initial threads
-    activity_array = Array('B', [1 for _ in range(cores)])
-    judge_activity = Array('B', [1])
-    workers = [Process(target=chaining_thread, args=(i, work, activity_array, next_generation, on_sequence, overlap, gap, q)) for i in range(cores)]
-    the_judge = Process(target=ranking_thread, args=(next_generation,[pool_ssmart, pool_summit], work, disk_queue_lock, judge_activity))
+    workers = [Process(target=chaining_thread_and_local_pool, args=(work, merge, on_sequence, dataset_dict, overlap, gap, q)) for _ in range(cores)]
+    global_pooler = Process(target=global_pool_thread, args=(merge,dataset_dict))
     for worker in workers:worker.start()
-    the_judge.start()
+    global_pooler.start()
 
     # initial server listener (in case of network computing)
     if network:
         server = Process(target=server_thread, args=(on_sequence,))
         server.start()
 
-    try_more = TRY_COUNT
+    counter = 0
 
-    # working loop
-    while True:
-        if try_more:
+    # memory balancing 
+    while counter <= 100:
+        memory_balance = work.qsize()
+        if memory_balance > NEAR_FULL:
+            item: ChainNode = work.get()
+            disk_queue.insert(item)
+        elif memory_balance < NEAR_EMPTY:
             try:
-                pass
-            #     work.put(disk_queue.pop(lock=disk_queue_lock))
-            #     try_more = TRY_COUNT
-            # except QueueDisk.QueueEmpty:
-            #     print('QUEUE_EMPTY SIGNAL')
-            #     if sum(activity_array) == 0 and not next_generation.empty():
-            #         try_more -= 1
-            #     sleep(TRY_DELAY)
-            except KeyboardInterrupt:
-                break
-        else:break
+                item: ChainNode = disk_queue.pop()
+                work.put(item)
+            except QueueDisk.QueueEmpty:
+                if memory_balance == 0:counter += 1
+                else:counter = 0
+                sleep(5)
         
     # killing processes/threads
     for worker in workers:worker.terminate()
-    the_judge.terminate()
-    # judge_activity[0] = 1
-    # the_judge.join()
+    global_pooler.terminate()
 
-    # pool_ssmart.all_ranks_report(AKAGI_PREDICTION_STATISTICAL, sequences)
-    # pool_summit.all_ranks_report(AKAGI_PREDICTION_EXPERIMENTAL, sequences)        
+    print(work.qsize()) #debug
 
+    
