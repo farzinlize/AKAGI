@@ -269,7 +269,7 @@ def read_pfm(filename):
 
 def read_pfm_save_pwm(filename):
 
-    cal = lambda num:log2( ( (num+(PSEUDOCOUNT/4) ) / (sites_count+PSEUDOCOUNT) )/0.25 )
+    cal = lambda col, row:log2( ( (col[row]+(PSEUDOCOUNT/4) ) / (A[row]+C[row]+G[row]+T[row]+PSEUDOCOUNT) )/0.25 )
 
     with open(filename, 'r') as pfm:
         _ = pfm.readline()
@@ -281,9 +281,11 @@ def read_pfm_save_pwm(filename):
 
         assert len(A) == len(C) and len(C) == len(G) and len(G) == len(T)
         sites_count = A[0]+C[0]+G[0]+T[0]
-        for i in range(1, len(A)): assert A[i]+C[i]+G[i]+T[i] == sites_count
 
-        return [{'A':cal(A[i]), 'C':cal(C[i]), 'G':cal(G[i]), 'T':cal(T[i])} for i in range(len(A))]
+        # for some unknown reseon site count at each row is not equal in JASPAR dataset
+        # for i in range(1, len(A)): assert A[i]+C[i]+G[i]+T[i] == sites_count
+
+        return [{'A':cal(A, i), 'C':cal(C, i), 'G':cal(G, i), 'T':cal(T, i)} for i in range(len(A))]
 
 
 def pfm_to_pwm(pfm):
@@ -299,9 +301,30 @@ def pfm_to_pwm(pfm):
 
 
 def pwm_score_sequence(sequence, pwm):
+    
+    max_score = -inf
+
+    for i in range(1, len(sequence) + len(pwm)):
+
+        seq_idx = max(0, i - len(pwm))
+        ref_idx = max(0, len(pwm) - i)
+
+        score = 0
+        while seq_idx < len(sequence) and ref_idx < len(pwm):
+            score += pwm[ref_idx][sequence[seq_idx]]
+            ref_idx += 1; seq_idx += 1
+
+        if score >= max_score:
+            max_score = score
+            max_position = seq_idx
+    
+    return max_score, max_position
+
+
+def pwm_score_sequence_bad(sequence, pwm):
 
     if len(sequence) < len(pwm):
-        return 0
+        return 0, -1
 
     max_score = -inf
 
