@@ -28,6 +28,7 @@ class FoundMap(Bytable):
     def get_positions(self):raise NotImplementedError
     def get_list(self) -> List[List]:raise NotImplementedError
     def clone(self): raise NotImplementedError
+    def clear(self): pass
 
 
     def instances_to_string_fastalike(self, label, sequences: List[str]):

@@ -217,6 +217,9 @@ class ChainNode(Bytable):
         return self.foundmap.instances_to_string_fastalike(self.label, sequences)
 
 
+    def clear_foundmap(self):
+        self.foundmap.clear()
+
 
 # ########################################## #
 #           main function section            #
