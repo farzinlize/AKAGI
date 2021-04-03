@@ -25,3 +25,4 @@ akagi_2.fasta
 *.temp
 *.log
 /pfms/*
+*.window
