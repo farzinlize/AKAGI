@@ -337,7 +337,7 @@ if __name__ == "__main__":
     shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
-        'multi-layer', 'feature', 'megalexa', 'separated=', 'change=', 'reference=', 'disable-chaining',
+        'multi-layer', 'feature', 'megalexa=', 'separated=', 'change=', 'reference=', 'disable-chaining',
         'multicore', 'ncores=', 'jaspar=']
 
     # default values
