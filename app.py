@@ -334,11 +334,11 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
         'multi-layer', 'feature', 'megalexa=', 'separated=', 'change=', 'reference=', 'disable-chaining',
-        'multicore', 'ncores=', 'jaspar=']
+        'multicore', 'ncores=', 'jaspar=', 'arguments=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
@@ -385,12 +385,13 @@ if __name__ == "__main__":
         elif o in ['-P', '--multicore']: args_dict.update({'multicore':True})
         elif o in ['-n', '--ncores']:args_dict.update({'ncores':int(a)})
         elif o in ['-j', '--jaspar']:args_dict.update({'jaspar':a})
+        elif o in ['-a', '--arguments']:
+            with open(o, 'r') as arguments:opts += getopt(arguments.read().split(), shortopt, longopts)[0]
         
         # only available with NOP command
         elif o in ['-C', '--change']:
             assert command == 'NOP'
             variable_name, new_value = a.split('=')
-            # print(variable_name, new_value)
             change_global_constant_py(variable_name, new_value)
 
 
