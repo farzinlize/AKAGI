@@ -20,8 +20,8 @@ SERVER = False
 BRIEFING = True
 
 # briefing values
-MAX_SEQUENCE_LENGTH = 500
-MAX_SEQUENCE_COUNT = 100
+MAX_SEQUENCE_LENGTH = 400
+MAX_SEQUENCE_COUNT = 200
 
 # bytes streaming constants
 STR = b'\xFF'
@@ -114,6 +114,7 @@ LIVE_REPORT = True
 # multicore values
 TRY_DELAY = 5 # second
 TRY_COUNT = 10 # times
+PARENT_WORK = False
 
 # picture values
 SEQUENCE_KEY = 0
@@ -139,3 +140,5 @@ PWM = 'pwm'
 
 NEAR_FULL = 5000
 NEAR_EMPTY = 1000
+
+CHAINING_PERMITTERD_SIZE = 30
