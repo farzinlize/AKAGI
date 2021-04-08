@@ -26,3 +26,4 @@ akagi_2.fasta
 *.log
 /pfms/*
 *.window
+test_argument.arg
