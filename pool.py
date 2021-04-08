@@ -55,7 +55,7 @@ class RankingPool:
 
         for rank in range(top):
             entity: RankingPool.Entity = self.pool[rank]
-            table += '[%d] "%s"\t%d\n'%(rank, entity.data.label, entity.score)
+            table += '[%d] "%s"\t%.2f\n'%(rank, entity.data.label, entity.score * self.sign)
 
         return table
 
