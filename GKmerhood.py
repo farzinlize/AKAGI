@@ -194,15 +194,12 @@ class GKHoodTree:
 
 
     def dneighbours_mem(self, kmer, dmax):
+        assert hasattr(self, 'gkhood')
         node = self.gkhood.trie.find(kmer)
         return node.dneighbours(dmax)
 
 
     def dneighbours(self, kmer, dmax):
-
-        # from memory
-        if hasattr(self, 'gkhood'):
-            return self.dneighbours_mem(kmer, dmax)
 
         # from dataset
         line = heap_encode(kmer, self.dictionary) - self.metadata['bias']
@@ -242,6 +239,11 @@ class GKHoodTree:
         line = heap_encode(kmer, self.dictionary) - self.metadata['bias']
         return self.tree[line]
         
+
+# dummy tree object for distance=0 observation
+class DummyTree:
+    def __init__(self, filename='', directory_name='', gkhood=None):pass
+    def dneighbours(self, kmer, dmax):return []
 
 # ########################################## #
 #           main function section            #
