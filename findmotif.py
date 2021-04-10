@@ -226,6 +226,37 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
     pool_summit.all_ranks_report(AKAGI_PREDICTION_EXPERIMENTAL, sequences)
 
 
+
+'''
+    finding next motifs to be chained on a single motif
+    results are list of motifs represendting next generations
+
+    [WARNING] procedure uses in memory dataset to store foundmaps
+        motifs should convert their foundmap to disk mode for furthur use 
+'''
+def next_chain(motif, on_sequence, overlap, gap, q):
+    bundle = motif.foundmap.get_list()
+    next_tree = WatchNodeC(custom_foundmap_type=FOUNDMAP_MEMO)
+    for index, seq_id in enumerate(bundle[0]):
+        position: ExtraPosition
+        for position in bundle[1][index]:
+            for sliding in [i for i in range(-overlap, gap+1)]:
+                next_position = position.end_position() + sliding
+                if next_position >= len(on_sequence.struct[seq_id]):continue
+
+                for next_condidate in on_sequence.struct[seq_id][next_position]:
+                    
+                    # ignoring condidates which dosen't extend the motif length
+                    if next_position + len(next_condidate) <= position.end_position():continue
+
+                    next_tree.add_frame(
+                        next_condidate, 
+                        seq_id, 
+                        ExtraPosition(position.start_position, position.size + len(next_condidate) + sliding))
+    
+    return next_tree.extract_motifs(q, EXTRACT_OBJ)
+
+
 # ########################################## #
 #              other functions               #
 # ########################################## #

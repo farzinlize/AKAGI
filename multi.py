@@ -8,6 +8,7 @@ from misc import ExtraPosition, QueueDisk, bytes_to_int, clear_screen, int_to_by
 from TrieFind import ChainNode, WatchNode, WatchNodeC
 from multiprocessing import Lock, Process, Queue, Array
 from onSequence import OnSequenceDistribution
+from findmotif import next_chain
 import os
 from typing import List
 
@@ -44,24 +45,8 @@ def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSeq
         # ignouring low rank motifs
         if good_enough <= POOL_HIT_SCORE:continue
 
-        # chaining
-        bundle = motif.foundmap.get_list()
-        next_tree = WatchNodeC(custom_foundmap_type=FOUNDMAP_MEMO)
-        for index, seq_id in enumerate(bundle[0]):
-            position: ExtraPosition
-            for position in bundle[1][index]:
-                for sliding in [i for i in range(-overlap, gap+1)]:
-                    next_position = position.end_position() + sliding
-                    if next_position >= len(on_sequence.struct[seq_id]):continue
-                    for next_condidate in on_sequence.struct[seq_id][next_position]:
-                        next_tree.add_frame(
-                            next_condidate, 
-                            seq_id, 
-                            ExtraPosition(position.start_position, position.size + len(next_condidate) + sliding))
-        
-        # next generation
-        next_motif: WatchNodeC
-        for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
+        # chaining and insert next generation jobs
+        for next_motif in next_chain(motif, on_sequence, overlap, gap, q):
             work.put(ChainNode(
                 motif.label + next_motif.label, 
                 next_motif.foundmap.turn_to_filemap()))
@@ -184,24 +169,8 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
         # ignouring low rank motifs
         if good_enough <= POOL_HIT_SCORE:continue
 
-        # chaining
-        bundle = motif.foundmap.get_list()
-        next_tree = WatchNodeC(custom_foundmap_type=FOUNDMAP_MEMO)
-        for index, seq_id in enumerate(bundle[0]):
-            position: ExtraPosition
-            for position in bundle[1][index]:
-                for sliding in [i for i in range(-overlap, gap+1)]:
-                    next_position = position.end_position() + sliding
-                    if next_position >= len(on_sequence.struct[seq_id]):continue
-                    for next_condidate in on_sequence.struct[seq_id][next_position]:
-                        next_tree.add_frame(
-                            next_condidate, 
-                            seq_id, 
-                            ExtraPosition(position.start_position, position.size + len(next_condidate) + sliding))
-        
-        # next generation
-        next_motif: WatchNodeC
-        for next_motif in next_tree.extract_motifs(q, EXTRACT_OBJ):
+        # chaining and insert next generation jobs
+        for next_motif in next_chain(motif, on_sequence, overlap, gap, q):
             work.put(ChainNode(
                 motif.label + next_motif.label, 
                 next_motif.foundmap.turn_to_filemap()))
