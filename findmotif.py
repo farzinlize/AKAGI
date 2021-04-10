@@ -4,7 +4,7 @@
 from typing import List
 from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
-from TrieFind import ChainNode, WatchNode
+from TrieFind import ChainNode, WatchNode, WatchNodeC
 from GKmerhood import GKmerhood, GKHoodTree
 from misc import QueueDisk, clear_screen, heap_encode, alphabet_to_dictionary, lap_time, read_bundle, read_fasta, Queue, make_location, ExtraPosition
 from onSequence import OnSequenceDistribution
@@ -246,7 +246,7 @@ def next_chain(motif, on_sequence, overlap, gap, q):
 
                 for next_condidate in on_sequence.struct[seq_id][next_position]:
                     
-                    # ignoring condidates which dosen't extend the motif length
+                    # ignoring candidates which doesn't extend the motif length
                     if next_position + len(next_condidate) <= position.end_position():continue
 
                     next_tree.add_frame(
