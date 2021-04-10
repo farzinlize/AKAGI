@@ -16,7 +16,8 @@ from twobitHandler import download_2bit
 # importing constants
 from constants import BRIEFING, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SEQUENCES, SEQUENCE_BUNDLES
 
-# global constants from dependencies
+# [WARNING] related to DATASET_TREES in constants 
+# any change to one of these lists must be applied to another
 TREES_TYPE = [DummyTree, GKHoodTree, GKHoodTree]
 
 

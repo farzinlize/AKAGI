@@ -1,7 +1,8 @@
-
-# Global Variables
+# [WARNING] related to TREES_TYPE as global constant from app module
+# any change to one of these lists must be applied to another
 DATASET_TREES = [('', ''), ('gkhood56', 'cache56'), ('gkhood78', 'cache78')]
 
+# Global Variables
 HISTOGRAM_LOCATION = './results/figures/%s-f%s-d%s-q%d-g%d-o%d/'
 RESULT_LOCATION = './results/'
 BINDING_SITE_LOCATION = './data/answers.fasta'
