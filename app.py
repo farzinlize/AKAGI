@@ -6,7 +6,7 @@ from getopt import getopt
 import sys
 
 # project imports
-from GKmerhood import GKmerhood, GKHoodTree
+from GKmerhood import DummyTree, GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_window_find_motif
 from misc import brief_sequence, change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
 from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
@@ -15,6 +15,9 @@ from twobitHandler import download_2bit
 
 # importing constants
 from constants import BRIEFING, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SEQUENCES, SEQUENCE_BUNDLES
+
+# global constants from dependencies
+TREES_TYPE = [DummyTree, GKHoodTree, GKHoodTree]
 
 
 def single_level_dataset(kmin, kmax, level, dmax):
@@ -106,13 +109,13 @@ def motif_finding_chain(dataset_name,
     if multilayer:
         assert isinstance(gkhood_index, list) and isinstance(d, list) and isinstance(frame_size, list)
 
-        trees = [GKHoodTree(DATASET_TREES[index][0], DATASET_TREES[index][1]) for index in gkhood_index]
+        trees = [TREES_TYPE[index](DATASET_TREES[index][0], DATASET_TREES[index][1]) for index in gkhood_index]
         last_time = currentTime()
         motif_tree = multiple_layer_window_find_motif(trees, d, frame_size, sequences)
     else:
         assert isinstance(gkhood_index, int) and isinstance(d, int) and isinstance(frame_size, int)
 
-        tree = GKHoodTree(DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
+        tree = TREES_TYPE[gkhood_index](DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
         last_time = currentTime()
         motif_tree = find_motif_all_neighbours(tree, d, frame_size, sequences)
 
