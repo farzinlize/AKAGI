@@ -2,7 +2,7 @@ from queue import Empty
 import socket
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_PERMITTED_SIZE, CR_FILE, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, GOOD_HIT, HOST_ADDRESS, LIVE_REPORT, NEAR_EMPTY, NEAR_FULL, PARENT_WORK, POOL_HIT_SCORE, PWM, REJECT_REQUEST, REQUEST_PORT, SEQUENCES, SEQUENCE_BUNDLES, TRY_COUNT, TRY_DELAY
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_PERMITTED_SIZE, CR_FILE, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, GOOD_HIT, HOST_ADDRESS, LIVE_REPORT, NEAR_EMPTY, NEAR_FULL, ON_SEQUENCE_ANALYSIS, PARENT_WORK, POOL_HIT_SCORE, PWM, REJECT_REQUEST, REQUEST_PORT, SEQUENCES, SEQUENCE_BUNDLES, TRY_COUNT, TRY_DELAY
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue, pwm_score
 from misc import ExtraPosition, QueueDisk, bytes_to_int, clear_screen, int_to_bytes, pfm_to_pwm
 from TrieFind import ChainNode, WatchNode, WatchNodeC
@@ -144,6 +144,10 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
 
     while counter < 10:
 
+        # reports before work
+        with open('parent.report', 'w') as report:
+            report.write("work queue size => %d\nmerge queue size => %d"%(work.qsize(), merge.qsize()))
+
         # obtaining a job if available
         try:
             motif: ChainNode = work.get(timeout=5)
@@ -183,6 +187,9 @@ def multicore_chaining_main(cores, zero_motifs: List[WatchNode], dataset_dict, o
 
     # generate on sequence distribution 
     on_sequence = OnSequenceDistribution(zero_motifs, sequences)
+
+    # reports for analysis
+    if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
     
     # initializing synchronized queues
     work = Queue()
