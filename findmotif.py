@@ -2,7 +2,7 @@
 # ignoring false unbound reports
 
 from typing import List
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
+from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_FOUNDMAP_MODE, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
 from TrieFind import ChainNode, WatchNode, WatchNodeC
 from GKmerhood import GKmerhood, GKHoodTree
@@ -236,7 +236,7 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
 '''
 def next_chain(motif, on_sequence, overlap, gap, q):
     bundle = motif.foundmap.get_list()
-    next_tree = WatchNodeC(custom_foundmap_type=FOUNDMAP_MEMO)
+    next_tree = WatchNodeC(custom_foundmap_type=CHAINING_FOUNDMAP_MODE)
     for index, seq_id in enumerate(bundle[0]):
         position: ExtraPosition
         for position in bundle[1][index]:
