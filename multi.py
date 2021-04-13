@@ -50,6 +50,7 @@ def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSeq
             work.put(ChainNode(
                 motif.label + next_motif.label, 
                 next_motif.foundmap.turn_to_filemap()))
+            del next_motif
         
 
 def global_pool_thread(merge: Queue, dataset_dict):
@@ -178,6 +179,7 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
             work.put(ChainNode(
                 motif.label + next_motif.label, 
                 next_motif.foundmap.turn_to_filemap()))
+            del next_motif
 
 
 def multicore_chaining_main(cores, zero_motifs: List[WatchNode], dataset_dict, overlap, gap, q, network=False):

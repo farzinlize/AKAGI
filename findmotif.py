@@ -254,7 +254,9 @@ def next_chain(motif, on_sequence, overlap, gap, q):
                         seq_id, 
                         ExtraPosition(position.start_position, position.size + len(next_condidate) + sliding))
     
-    return next_tree.extract_motifs(q, EXTRACT_OBJ)
+    # next_chain_motifs = next_tree.extract_motifs(q, EXTRACT_OBJ)
+    # next_tree.clear_child_references()
+    return next_tree.extract_motifs_and_delete_childs(q, EXTRACT_OBJ)
 
 
 # ########################################## #

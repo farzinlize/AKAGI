@@ -133,6 +133,19 @@ class WatchNode(TrieNode):
             motifs += child.extract_motifs(q, result_kmer)
         return motifs
 
+    
+    def extract_motifs_and_delete_childs(self, q, result_kmer=EXTRACT_KMER):
+        motifs = []
+        if hasattr(self, 'foundmap'):
+            if self.foundmap.get_q() >= q:
+                if result_kmer==EXTRACT_KMER  :motifs += [self.label]
+                elif result_kmer==EXTRACT_OBJ :motifs += [self]
+        for child in self.childs:
+            motifs += child.extract_motifs(q, result_kmer)
+        
+        del self.childs
+        return motifs
+
 
     def find_max_q(self, q_old=-1):
         my_q = -1
