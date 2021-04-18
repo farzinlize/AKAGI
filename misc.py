@@ -417,16 +417,13 @@ def binary_add(lst, item, allow_equal=False):
     return lst[:start] + [item] + lst[start:]
 
 
-def binary_add_return_position(lst, item, allow_equal=False):
+def binary_add_return_position(lst, item):
     start = 0
     end = len(lst)-1
     while start <= end:
         mid = (start+end)//2
         if lst[mid] == item:
-            if allow_equal:
-                return lst[:mid] + [item] + lst[mid:], mid
-            else:
-                return lst, -1
+            return lst[:mid] + [item] + lst[mid:], mid
         elif lst[mid] < item:
             start = mid + 1
         else:
