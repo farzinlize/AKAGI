@@ -2,8 +2,8 @@ from queue import Empty
 import socket
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_PERMITTED_SIZE, CR_FILE, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, GOOD_HIT, HOST_ADDRESS, LIVE_REPORT, NEAR_EMPTY, NEAR_FULL, ON_SEQUENCE_ANALYSIS, PARENT_WORK, POOL_HIT_SCORE, PWM, REJECT_REQUEST, REQUEST_PORT, SEQUENCES, SEQUENCE_BUNDLES, TRY_COUNT, TRY_DELAY
-from pool import RankingPool, distance_to_summit_score, objective_function_pvalue, pwm_score
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, ARGUMENT_KEY, CHAINING_PERMITTED_SIZE, CR_FILE, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, FUNCTION_KEY, GOOD_HIT, HOST_ADDRESS, LIVE_REPORT, NEAR_EMPTY, NEAR_FULL, ON_SEQUENCE_ANALYSIS, PARENT_WORK, POOL_HIT_SCORE, PWM, REJECT_REQUEST, REQUEST_PORT, SEQUENCES, SEQUENCE_BUNDLES, SIGN_KEY, TABLE_HEADER_KEY, TRY_COUNT, TRY_DELAY
+from pool import AKAGIPool, RankingPool, distance_to_summit_score, get_AKAGI_pools_configuration, objective_function_pvalue, pwm_score
 from misc import ExtraPosition, QueueDisk, bytes_to_int, clear_screen, int_to_bytes, pfm_to_pwm
 from TrieFind import ChainNode, WatchNode, WatchNodeC
 from multiprocessing import Lock, Process, Queue, Array
@@ -14,16 +14,9 @@ from typing import List
 
 
 def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
-    
-    # unpacking dataset dictionary
-    sequences = dataset_dict[SEQUENCES]
-    bundles = dataset_dict[SEQUENCE_BUNDLES]
-    pwm = dataset_dict[PWM]
 
     # local ranking pools
-    pool_ssmart = RankingPool(bundles, objective_function_pvalue, sign=-1)
-    pool_summit = RankingPool(bundles, distance_to_summit_score)
-    pool_jaspar = RankingPool((sequences,pwm), pwm_score, sign=-1)
+    local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
 
     while True:
 
@@ -32,12 +25,13 @@ def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSeq
 
         # evaluation the job (motif)
         good_enough = 0
-        for pool, multiplier in [(pool_ssmart, 1), (pool_summit, 1), (pool_jaspar, 2)]:
-            rank = pool.add(motif)
+        go_merge = False
+        for rank, multiplier in zip(local_pool.judge(motif), [1, 1, 2]):
             good_enough += int(rank <= GOOD_HIT)*multiplier
 
             # merge request policy
-            if rank == 0:merge.put(pool)
+            if rank == 0:go_merge = True
+        if go_merge:merge.put(local_pool)
 
         if len(motif.label) <= CHAINING_PERMITTED_SIZE:
             good_enough += POOL_HIT_SCORE + 1
@@ -57,36 +51,28 @@ def global_pool_thread(merge: Queue, dataset_dict):
     
     report_count = 0
 
-    # unpacking dataset dictionary
-    sequences = dataset_dict[SEQUENCES]
-    bundles = dataset_dict[SEQUENCE_BUNDLES]
-    pwm = dataset_dict[PWM]
-
-    # global ranking pools
-    pool_summit = RankingPool(bundles, distance_to_summit_score)
-    pool_ssmart = RankingPool(bundles, objective_function_pvalue, sign=-1)
-    pool_jaspar = RankingPool((sequences,pwm), pwm_score, sign=-1)
+    global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
 
     while True:
 
+        # merging
         merge_request: RankingPool = merge.get()
-        if merge_request.scoreing == pool_summit.scoreing:pool_summit.merge(merge_request)
-        elif merge_request.scoreing == pool_ssmart.scoreing:pool_ssmart.merge(merge_request)
-        elif merge_request.scoreing == pool_jaspar.scoreing:pool_jaspar.merge(merge_request)
+        global_pool.merge(merge_request)
 
+        # reporting
         with open(CR_FILE, 'w') as window:
 
             # time stamp
             window.write(str(datetime.now()) + ' | report #%d\n\n'%report_count)
             report_count += 1
 
-            window.write(CR_TABLE_HEADER_SSMART + pool_ssmart.top_ten_table() + '\n')
-            window.write(CR_TABLE_HEADER_SUMMIT + pool_summit.top_ten_table() + '\n')
-            window.write(CR_TABLE_HEADER_JASPAR + pool_jaspar.top_ten_table() + '\n\n\n')
+            # table reports
+            window.write(global_pool.top_ten_reports())
 
-            if pool_ssmart.pool:window.write('> SSMART\n' + pool_ssmart.pool[0].data.instances_str(sequences))
-            if pool_summit.pool:window.write('> SUMMIT\n' + pool_summit.pool[0].data.instances_str(sequences))
-            if pool_jaspar.pool:window.write('> JASPAR\n' + pool_jaspar.pool[0].data.instances_str(sequences))
+            # best entity instances report
+            for table in global_pool.tables:
+                if table:window.write('>\n' + table[0].data.instances_str(dataset_dict[SEQUENCES]))
+
 
 
 
@@ -131,15 +117,7 @@ def server_thread(on_sequence:OnSequenceDistribution):
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
 def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
 
-    # unpacking dataset dictionary
-    sequences = dataset_dict[SEQUENCES]
-    bundles = dataset_dict[SEQUENCE_BUNDLES]
-    pwm = dataset_dict[PWM]
-
-    # local ranking pools
-    pool_ssmart = RankingPool(bundles, objective_function_pvalue, sign=-1)
-    pool_summit = RankingPool(bundles, distance_to_summit_score)
-    pool_jaspar = RankingPool((sequences,pwm), pwm_score, sign=-1)
+    local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
 
     counter = 0
 
@@ -161,12 +139,13 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
 
         # evaluation the job (motif)
         good_enough = 0
-        for pool, multiplier in [(pool_ssmart, 1), (pool_summit, 1), (pool_jaspar, 2)]:
-            rank = pool.add(motif)
+        go_merge = False
+        for rank, multiplier in zip(local_pool.judge(motif), [1, 1, 2]):
             good_enough += int(rank <= GOOD_HIT)*multiplier
 
             # merge request policy
-            if rank == 0:merge.put(pool)
+            if rank == 0:go_merge = True
+        if go_merge:merge.put(local_pool)
 
         if len(motif.label) <= CHAINING_PERMITTED_SIZE:
             good_enough += POOL_HIT_SCORE + 1
