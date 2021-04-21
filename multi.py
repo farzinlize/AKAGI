@@ -56,7 +56,7 @@ def global_pool_thread(merge: Queue, dataset_dict):
     while True:
 
         # merging
-        merge_request: RankingPool = merge.get()
+        merge_request: AKAGIPool = merge.get()
         global_pool.merge(merge_request)
 
         # reporting
@@ -70,8 +70,8 @@ def global_pool_thread(merge: Queue, dataset_dict):
             window.write(global_pool.top_ten_reports())
 
             # best entity instances report
-            for table in global_pool.tables:
-                if table:window.write('>\n' + table[0].data.instances_str(dataset_dict[SEQUENCES]))
+            # for table in global_pool.tables:
+            #     if table:window.write('>\n' + table[0].data.instances_str(dataset_dict[SEQUENCES]))
 
 
 

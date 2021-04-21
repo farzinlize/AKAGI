@@ -47,6 +47,8 @@ class AKAGIPool:
 
             if POOL_LIMITED and len(table) == POOL_SIZE + 1:
                 table = table[:-1]
+
+            self.tables[sorted_by] = table
         
         return ranks
     
@@ -60,6 +62,7 @@ class AKAGIPool:
 
         for sorted_by, table in enumerate(self.tables):
             report += self.descriptions[sorted_by][TABLE_HEADER_KEY]
+            report += '> table count -> %d\n'%len(table)
 
             if len(table) < global_top:
                 top = len(table)
@@ -75,18 +78,25 @@ class AKAGIPool:
                 report += '\n'
 
             # last rank
-            entity: AKAGIPool.Entity = table[-1]
-            report += '...\n[%d] "%s"\t'%(len(table)-1, entity.data.label)
-            for index, score in enumerate(entity.scores):
-                report += '%.2f\t'%(score * self.descriptions[index][SIGN_KEY])
-            report += '\n'
+            if len(table) > top:
+                entity: AKAGIPool.Entity = table[-1]
+                report += '...\n[%d] "%s"\t'%(len(table)-1, entity.data.label)
+                for index, score in enumerate(entity.scores):
+                    report += '%.2f\t'%(score * self.descriptions[index][SIGN_KEY])
+                report += '\n'
         
         return report
 
 
     def merge(self, other):
-        
-        for sorted_by, self_table, other_table in enumerate(zip(self.tables, other.tables)):
+
+        assert len(self.tables) == len(other.tables)
+
+        for sorted_by, self_table, other_table in zip([i for i in range(len(self.tables))], self.tables, other.tables):
+
+            if len(other_table) == 0:
+                print('[POOL] empty merge request on table index of %d (sorted_by)'%sorted_by)
+                continue
 
             merged = []
             self_index = 0 
