@@ -250,6 +250,43 @@ class ExtraPosition:
 #                 functions                  #
 # ########################################## #
 
+def memechip_jaspar_evaluation(memehip_motif_sites, jaspar):
+    sequences = read_fasta(memehip_motif_sites)
+    pwm = read_pfm_save_pwm(jaspar, reverse=True)
+    
+    aggregated = 0
+    for sequence in sequences:
+        score, _ = pwm_score_sequence(sequence, pwm)
+        aggregated += score
+    
+    print('jasper score of memechip motif -> %.2f'%(aggregated/len(sequences)))
+    
+
+def read_meme_motif_to_pwm(memechip_motif_address):
+
+    pwm = []
+    with open(memechip_motif_address, 'r') as memechip_file:
+
+        for line in memechip_file:
+
+            col = {}
+            sum_col = 0
+            index = 0
+            for letter_count in [int(token) for token in line.split()]:
+                meme_order = 'ACGT'
+                sum_col += letter_count
+                col.update({meme_order[index]:letter_count})
+                
+                index = (index+1)%4
+            
+            for letter in col.keys():
+                col[letter] = log2( ( (col[letter]+(PSEUDOCOUNT/4)) / (sum_col+PSEUDOCOUNT) )/0.25 )
+
+            pwm.append(col)
+        
+    return pwm
+
+
 def read_pfm(filename):
 
     with open(filename, 'r') as pfm:
@@ -279,13 +316,19 @@ def read_pfm_save_pwm(filename):
         G = [int(float(a)) for a in pfm.readline().split()]
         T = [int(float(a)) for a in pfm.readline().split()]
 
+        rA = list(reversed(T))
+        rC = list(reversed(G))
+        rG = list(reversed(C))
+        rT = list(reversed(A))
+
         assert len(A) == len(C) and len(C) == len(G) and len(G) == len(T)
-        sites_count = A[0]+C[0]+G[0]+T[0]
 
         # for some unknown reseon site count at each row is not equal in JASPAR dataset
+        # sites_count = A[0]+C[0]+G[0]+T[0]
         # for i in range(1, len(A)): assert A[i]+C[i]+G[i]+T[i] == sites_count
 
-        return [{'A':cal(A, i), 'C':cal(C, i), 'G':cal(G, i), 'T':cal(T, i)} for i in range(len(A))]
+        return [{'A':cal(A, i), 'C':cal(C, i), 'G':cal(G, i), 'T':cal(T, i)} for i in range(len(A))], \
+            [{'A':cal(rA, i), 'C':cal(rC, i), 'G':cal(rG, i), 'T':cal(rT, i)} for i in range(len(A))]
 
 
 def pfm_to_pwm(pfm):
@@ -831,9 +874,14 @@ def test_binary_add():
 
 # main function call
 if __name__ == "__main__":
-    test = read_pfm('./pfms/test2.pfm')
-    pwm = pfm_to_pwm(test)
-    pwm_2 = read_pfm_save_pwm('./pfms/test2.pfm')
+    # test = read_pfm('./pfms/test2.pfm')
+    # pwm = pfm_to_pwm(test)
+    memechip_jaspar_evaluation('./memechip/motif_1_fasta.txt', './pfms/MA0595.1.pfm')
+    # pwm_2 = read_pfm_save_pwm('./pfms/meme_my.pfm')
+    # pwm_1 = read_meme_motif_to_pwm('./memechip/motif_3_counts.txt')
+    # print(pwm_1)
+    # print('-------------------')
+    # print(pwm_2)
     # test_binary_add()
     # test_diskQueue()
     # b = read_bundle('./hmchipdata/Human_hg18_peakcod/ENCODE_Broad_GM12878_H3K4me1_peak.bundle')
