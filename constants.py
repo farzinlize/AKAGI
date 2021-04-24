@@ -109,9 +109,9 @@ PIXELS_ANALYSIS = True
 
 # chaining report window
 CR_HEADER = '\n\tAKAGI - Chaining report window\n\n**details/warnings/errors**\n#######\n%s\n#######\n\n'
-CR_TABLE_HEADER_SSMART = '\t\tSSMART SCORE TABLE\n\n'
-CR_TABLE_HEADER_SUMMIT = '\t\tSUMMIT SCORE TABLE\n\n'
-CR_TABLE_HEADER_JASPAR = '\t\tJASPAR SCORE TABLE\n\n'
+CR_TABLE_HEADER_SSMART = '\n\t\tSSMART SCORE TABLE\n\n'
+CR_TABLE_HEADER_SUMMIT = '\n\t\tSUMMIT SCORE TABLE\n\n'
+CR_TABLE_HEADER_JASPAR = '\n\t\tJASPAR SCORE TABLE\n\n'
 CR_FILE = 'chaining_report.window'
 LIVE_REPORT = True
 
@@ -153,3 +153,7 @@ SIGN_KEY = 2
 TABLE_HEADER_KEY = 3
 
 TOP_TEN_REPORT_HEADER = '****** [AKAGI] TOP TEN REPORT ******\n'
+
+MEME_FASTA_ID = True
+CLASSIC_MODE = '> id=%d\n%s\n'
+MEME_MODE = '>%d\n%s\n'
