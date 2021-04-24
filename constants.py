@@ -36,6 +36,7 @@ BYTE_READ_INT_MODE = 'big'
 FOUNDMAP_DISK = 'disk'
 FOUNDMAP_MEMO = 'memory'
 FOUNDMAP_NAMETAG = '.byte'
+APPDATA_PATH = './appdata/'
 
 QUEUE_DISK = 'qdisk'
 QUEUE_MEMO = 'qmemory'

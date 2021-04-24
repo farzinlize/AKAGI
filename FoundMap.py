@@ -4,7 +4,7 @@ from io import BufferedReader
 from typing import List
 from misc import Bytable, ExtraPosition, get_random_free_path, get_random_path, binary_add, bytes_to_int, int_to_bytes
 import os, sys
-from constants import BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import APPDATA_PATH, BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
@@ -395,11 +395,11 @@ def binary_special_add(found_list, seq_id, position):
 
 def clear_disk(extension=FOUNDMAP_NAMETAG):
     garbage_size = 0
-    garbages = [f for f in os.listdir() if f.endswith(extension)]
+    garbages = [f for f in os.listdir(APPDATA_PATH) if f.endswith(extension)]
     print('[CLEAN] %d number of temp file are found and ... '%len(garbages), end='')
     for garbage in garbages:
-        garbage_size += os.stat(garbage).st_size
-        os.remove(os.path.join(garbage))
+        garbage_size += os.stat(APPDATA_PATH + garbage).st_size
+        os.remove(os.path.join(APPDATA_PATH + garbage))
     print('cleared\ngarbage size = %d'%garbage_size)
 
 

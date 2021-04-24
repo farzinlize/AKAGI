@@ -6,7 +6,7 @@ from time import time as currentTime
 from multiprocessing.synchronize import Lock
 from functools import reduce
 
-from constants import DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FDR_SCORE, FOUNDMAP_DISK, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, PSEUDOCOUNT, P_VALUE, QUEUE_NAMETAG, RANK, SUMMIT, TYPES_OF
+from constants import APPDATA_PATH, DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FDR_SCORE, FOUNDMAP_DISK, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, PSEUDOCOUNT, P_VALUE, QUEUE_NAMETAG, RANK, SUMMIT, TYPES_OF
 
 
 # ########################################## #
@@ -430,11 +430,11 @@ def lap_time(last_time):
 
 
 # generate a free path with random name and defined extension (like .byte)
-def get_random_free_path(extension, length=PATH_LENGTH) -> str:
-    random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
-    while os.path.isfile(random_name+extension):
-        random_name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
-    return random_name + extension
+def get_random_free_path(extension, length=PATH_LENGTH, directory=APPDATA_PATH) -> str:
+    random_name = directory + ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length)) + extension
+    while os.path.isfile(random_name):
+        random_name = directory + ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length)) + extension
+    return random_name
 
 
 # deprecated - useing `get_random_free_path` instead
