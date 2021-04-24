@@ -1,4 +1,4 @@
-from constants import ENCODE_CHR, ENCODE_END, ENCODE_FRD, ENCODE_LEN, ENCODE_P, ENCODE_RANK, ENCODE_START, ENCODE_SUMMIT, FDR_SCORE, P_VALUE, SUMMIT
+from constants import CLASSIC_MODE, ENCODE_CHR, ENCODE_END, ENCODE_FRD, ENCODE_LEN, ENCODE_P, ENCODE_RANK, ENCODE_START, ENCODE_SUMMIT, FDR_SCORE, MEME_FASTA_ID, MEME_MODE, P_VALUE, SUMMIT
 from twobitreader import TwoBitFile
 from getopt import getopt
 import sys, os
@@ -72,7 +72,10 @@ def annotation_to_sequences(cod, reference, fasta:str = ''):
             maxlog2FC = float(peakline[ENCODE_P])
             summit = int(peakline[ENCODE_SUMMIT]) - start
 
-            out.write('> id=%d\n%s\n'%(rank, peak_seq.upper()))
+            # write
+            out.write(((int(MEME_FASTA_ID))*CLASSIC_MODE + (int(MEME_FASTA_ID))*MEME_MODE)
+                                                                %(rank, peak_seq.upper()))
+                
             out_bundle.write('> id=%d\n%s,%f\n%s,%f\n%s,%d\n'%(
                 rank, FDR_SCORE, fdr, P_VALUE, maxlog2FC, SUMMIT, summit
             ))
