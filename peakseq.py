@@ -73,8 +73,7 @@ def annotation_to_sequences(cod, reference, fasta:str = ''):
             summit = int(peakline[ENCODE_SUMMIT]) - start
 
             # write
-            out.write(((int(MEME_FASTA_ID))*CLASSIC_MODE + (int(MEME_FASTA_ID))*MEME_MODE)
-                                                                %(rank, peak_seq.upper()))
+            out.write(((int(not MEME_FASTA_ID))*CLASSIC_MODE + (int(MEME_FASTA_ID))*MEME_MODE)%(rank, peak_seq.upper()))
                 
             out_bundle.write('> id=%d\n%s,%f\n%s,%f\n%s,%d\n'%(
                 rank, FDR_SCORE, fdr, P_VALUE, maxlog2FC, SUMMIT, summit
