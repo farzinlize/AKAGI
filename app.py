@@ -1,4 +1,8 @@
 # python libraries 
+import os
+from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
+from checkpoint import checkpoint_name, load_checkpoint, save_checkpoint
+from TrieFind import ChainNode
 from multi import multicore_chaining_main
 from time import time as currentTime
 from time import strftime, gmtime
@@ -63,7 +67,49 @@ def motif_finding_chain(dataset_name,
                         chaining_disable=False,
                         multicore=False, 
                         cores=1,
-                        pfm=None):
+                        pfm=None,
+                        checkpoint=None):
+
+    def observation(q):
+
+        if multilayer:
+            assert isinstance(gkhood_index, list) and isinstance(d, list) and isinstance(frame_size, list)
+
+            trees = [TREES_TYPE[index](DATASET_TREES[index][0], DATASET_TREES[index][1]) for index in gkhood_index]
+            last_time = currentTime()
+            motif_tree = multiple_layer_window_find_motif(trees, d, frame_size, sequences)
+        else:
+            assert isinstance(gkhood_index, int) and isinstance(d, int) and isinstance(frame_size, int)
+
+            tree = TREES_TYPE[gkhood_index](DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
+            last_time = currentTime()
+            motif_tree = find_motif_all_neighbours(tree, d, frame_size, sequences)
+
+        # nearly like SSMART objective function 
+        if q == FIND_MAX:
+            q = motif_tree.find_max_q()
+            print('[find_max_q] q = %d'%q)
+
+        motifs = motif_tree.extract_motifs(q, EXTRACT_OBJ)
+        print('\nnumber of motifs->%d | execute time->%s'%(len(motifs), strftime("%H:%M:%S", gmtime(currentTime() - last_time))))
+
+        while len(motifs) < megalexa:
+            q = q - 1
+            print('[lexicon] not enough (q--==%d)'%q)
+
+            if q == 0:
+                print('[lexicon] FAILED - exit with %d motifs'%(len(motifs)))
+                break
+
+            # adding new motifs with less frequency 
+            # ONLY add new motifs with same q-value
+            motifs += motif_tree.extract_motifs(q, EXTRACT_OBJ, greaterthan=False)
+
+        print('[lexicon] lexicon size = %d'%len(motifs))
+
+        # only return label and foundmap for forthur use as chain node instead of watch node
+        return [ChainNode(motif.label, motif.foundmap) for motif in motifs]
+
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
         arguments -> f(s)=%s, q=%d, d(s)=%s, gap=%d, overlap=%d, dataset=%s\n\
@@ -90,6 +136,7 @@ def motif_finding_chain(dataset_name,
 
     assert len(bundles) == len(sequences)
 
+    # make sequences shorter and ignore low score sequences for lower computations
     if BRIEFING:
         sequences, bundles = brief_sequence(sequences, bundles)
         assert len(sequences) == len(bundles)
@@ -97,7 +144,6 @@ def motif_finding_chain(dataset_name,
         for seq, bundle in zip(sequences, bundles):
             print('(len:%d,score:%f)'%(len(seq), bundle[P_VALUE]), end=' ', flush=True)
         print('')
-
 
     if q == ARG_UNSET:
         q = len(sequences)
@@ -107,40 +153,24 @@ def motif_finding_chain(dataset_name,
     if s_mask != None:
         assert len(sequences) == len(s_mask)
 
-    if multilayer:
-        assert isinstance(gkhood_index, list) and isinstance(d, list) and isinstance(frame_size, list)
+    # search for checkpoint
+    if checkpoint:
+        checkpoint_file = checkpoint_name(dataset_name, frame_size, d, multilayer)
+        motifs = load_checkpoint(checkpoint_file)
 
-        trees = [TREES_TYPE[index](DATASET_TREES[index][0], DATASET_TREES[index][1]) for index in gkhood_index]
-        last_time = currentTime()
-        motif_tree = multiple_layer_window_find_motif(trees, d, frame_size, sequences)
+        # run and save observation data
+        if motifs == None:
+            motifs = observation(q)
+            save_checkpoint(motifs, checkpoint_file)
+    
+    # run observation without checkpoint check
     else:
-        assert isinstance(gkhood_index, int) and isinstance(d, int) and isinstance(frame_size, int)
+        motifs = observation(q)
 
-        tree = TREES_TYPE[gkhood_index](DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
-        last_time = currentTime()
-        motif_tree = find_motif_all_neighbours(tree, d, frame_size, sequences)
-
-    # nearly like SSMART objective function 
-    if q == FIND_MAX:
-        q = motif_tree.find_max_q()
-        print('[find_max_q] q = %d'%q)
-
-    motifs = motif_tree.extract_motifs(q, EXTRACT_OBJ)
-    print('\nnumber of motifs->%d | execute time->%s'%(len(motifs), strftime("%H:%M:%S", gmtime(currentTime() - last_time))))
-
-    while len(motifs) < megalexa:
-        q = q - 1
-        print('[lexicon] not enough (q--==%d)'%q)
-
-        if q == 0:
-            print('[lexicon] FAILED - exit with %d motifs'%(len(motifs)))
-            break
-
-        # adding new motifs with less frequency 
-        # ONLY add new motifs with same q-value
-        motifs += motif_tree.extract_motifs(q, EXTRACT_OBJ, greaterthan=False)
-
-    print('[lexicon] lexicon size = %d'%len(motifs))
+    # # # # # # # #
+    # - update motifs are reported as chain node from `observation()` 
+    # chaining procedure required chain nodes instead of watch nodes 
+    # zero_chain_nodes = [ChainNode(motif.label, motif.foundmap) for motif in motifs]
 
     if chaining_disable:
         print('[CHAINING] chaining is disabled - end of process')
@@ -317,6 +347,44 @@ def alignment_fasta(fasta_location):
                 align.write(line)
 
 
+def download_checkpoint(dataset_name, f, d, multilayer):
+
+    checkpoint = checkpoint_name(dataset_name, f, d, multilayer)
+
+    for f in os.listdir():
+        if f == checkpoint:
+            print('[CHECKPOINT] already exist offline')
+            return
+
+    objects_file, drive = query_download_checkpoint(checkpoint)
+
+    if objects_file == None:
+        print('[CHECKPOINT] query not found')
+        return
+
+    # feed already exist drive instance
+    download_checkpoint_from_drive(checkpoint, objects_file, drive=drive)
+    
+
+def upload_checkpoint(dataset_name, f, d, multilayer):
+
+    checkpoint = checkpoint_name(dataset_name, f, d, multilayer)
+
+    motifs = load_checkpoint(checkpoint)
+
+    # check for offline check-points
+    if motifs == None:
+        print('[CHECKPOINT] no checkpoint of interest was found, you need to run MFC operation first')
+        print('[ERROR] upload failed')
+        return
+
+    name = checkpoint_name(dataset_name, f, d, multilayer)
+    directory_name = APPDATA_PATH + name.split('.')[0] + '/'
+    
+    store_checkpoint_to_cloud(name, directory_name)
+        
+
+
 def testing(dataset_name):
     global FOUNDMAP_MODE
 
@@ -341,17 +409,17 @@ if __name__ == "__main__":
     make_location(APPDATA_PATH)
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:k'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
         'multi-layer', 'feature', 'megalexa=', 'separated=', 'change=', 'reference=', 'disable-chaining',
-        'multicore', 'ncores=', 'jaspar=', 'arguments=']
+        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
         'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False,
-        'multicore': False, 'ncores':1, 'jaspar':''}
+        'multicore': False, 'ncores':1, 'jaspar':'', 'checkpoint':True}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -425,7 +493,8 @@ if __name__ == "__main__":
             chaining_disable=args_dict['disable_chaining'],
             multicore=args_dict['multicore'],
             cores=args_dict['ncores'],
-            pfm=args_dict['jaspar'])
+            pfm=args_dict['jaspar'],
+            checkpoint=args_dict['checkpoint'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
@@ -456,6 +525,10 @@ if __name__ == "__main__":
         download_2bit(args_dict['reference'])
     elif command == 'TST':
         tree_m, tree_d = testing(args_dict['sequences'])
+    elif command == 'DCP':
+        download_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
+    elif command == 'UCP':
+        upload_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
     elif command == 'NOP':
         pass
     else:

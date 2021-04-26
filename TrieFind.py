@@ -213,7 +213,10 @@ class ChainNode(Bytable):
     '''
         serialization methods for byte/object conversion 
     '''
-    def to_byte(self):
+    def to_byte(self, protect=False, directory=''):
+
+        if protect:self.foundmap.protect(directory)
+
         return int_to_bytes(len(self.label)) + \
             bytes(self.label, encoding='ascii') + \
             self.foundmap.to_byte()
@@ -221,9 +224,12 @@ class ChainNode(Bytable):
 
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
-        label = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), 'ascii')
-        foundmap = FileMap.byte_to_object(buffer)
-        return ChainNode(label, foundmap)
+        first_read = buffer.read(INT_SIZE)
+        if first_read:
+            label = str(buffer.read(bytes_to_int(first_read)), 'ascii')
+            foundmap = FileMap.byte_to_object(buffer)
+            return ChainNode(label, foundmap)
+            
         
 
     def instances_str(self, sequences):

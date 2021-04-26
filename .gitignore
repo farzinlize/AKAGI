@@ -27,3 +27,4 @@ akagi_2.fasta
 /pfms/*
 *.window
 test_argument.arg
+*.checkpoint

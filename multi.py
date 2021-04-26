@@ -161,7 +161,7 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
             del next_motif
 
 
-def multicore_chaining_main(cores, zero_motifs: List[WatchNode], dataset_dict, overlap, gap, q, network=False):
+def multicore_chaining_main(cores, zero_motifs: List[ChainNode], dataset_dict, overlap, gap, q, network=False):
 
     # unpacking necessary parts of dataset dictionary
     sequences = dataset_dict[SEQUENCES]
@@ -176,7 +176,7 @@ def multicore_chaining_main(cores, zero_motifs: List[WatchNode], dataset_dict, o
     work = Queue()
     merge = Queue()
     for motif in zero_motifs:
-        work.put_nowait(ChainNode(motif.label, motif.foundmap))
+        work.put_nowait(motif)
 
     # initial disk queue for memory balancing
     disk_queue = QueueDisk(ChainNode)

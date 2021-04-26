@@ -158,3 +158,6 @@ TOP_TEN_REPORT_HEADER = '****** [AKAGI] TOP TEN REPORT ******\n'
 MEME_FASTA_ID = True
 CLASSIC_MODE = '> id=%d\n%s\n'
 MEME_MODE = '>%d\n%s\n'
+
+CHECKPOINT_TAG = '.checkpoint'
+GOOGLE_CREDENTIALS_FILE = 'cred.txt'

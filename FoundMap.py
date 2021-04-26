@@ -29,6 +29,7 @@ class FoundMap(Bytable):
     def get_list(self) -> List[List]:raise NotImplementedError
     def clone(self): raise NotImplementedError
     def clear(self): pass
+    def protect(self, directory): raise NotImplementedError
 
 
     def instances_to_string_fastalike(self, label, sequences: List[str]):
@@ -351,6 +352,9 @@ class FileMap(FoundMap, Bytable):
             os.remove(self.path)
             del self.path
 
+    # ########################################## #
+    #                other functions             #
+    # ########################################## #
     
     def clone(self):
         if self.virgin:
@@ -370,6 +374,19 @@ class FileMap(FoundMap, Bytable):
                 path=clone_path,
                 virgin=False)
             
+    
+    def protect(self, directory):
+
+        if self.virgin:self.dump()
+
+        with open(self.path, 'rb') as original:
+            data = original.read()
+        
+        protected_path = get_random_free_path(FOUNDMAP_NAMETAG, directory=directory)
+        with open(protected_path, 'wb') as protected:
+            protected.write(data)
+        
+        self.path = protected_path
 
 
 # ########################################## #

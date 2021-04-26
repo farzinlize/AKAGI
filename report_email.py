@@ -61,7 +61,7 @@ if __name__ == "__main__":
     longopts = ['in-body=', 'attachment=', 'types=']
 
     # default values
-    args_dict = {}
+    args_dict = {'attachments':[], 'types':[]}
 
     opts, args = getopt(sys.argv[1:], shortopt, longopts)
     for o, a in opts:
