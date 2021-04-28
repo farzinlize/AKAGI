@@ -1,19 +1,21 @@
+from pause import save_the_rest, time_has_ended
 from queue import Empty
-import socket
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, ARGUMENT_KEY, CHAINING_PERMITTED_SIZE, CR_FILE, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, FUNCTION_KEY, GOOD_HIT, HOST_ADDRESS, LIVE_REPORT, NEAR_EMPTY, NEAR_FULL, ON_SEQUENCE_ANALYSIS, PARENT_WORK, POOL_HIT_SCORE, PWM, REJECT_REQUEST, REQUEST_PORT, SEQUENCES, SEQUENCE_BUNDLES, SIGN_KEY, TABLE_HEADER_KEY, TRY_COUNT, TRY_DELAY
-from pool import AKAGIPool, RankingPool, distance_to_summit_score, get_AKAGI_pools_configuration, objective_function_pvalue, pwm_score
-from misc import ExtraPosition, QueueDisk, bytes_to_int, clear_screen, int_to_bytes, pfm_to_pwm
-from TrieFind import ChainNode, WatchNode, WatchNodeC
-from multiprocessing import Lock, Process, Queue, Array
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, GOOD_HIT, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, PARENT_WORK, POOL_HIT_SCORE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD
+from pool import AKAGIPool, get_AKAGI_pools_configuration
+from misc import QueueDisk, bytes_to_int, int_to_bytes
+from TrieFind import ChainNode
+from multiprocessing import Process, Queue
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
-import os
 from typing import List
 
+TIMESUP_EXIT = -1
+END_EXIT = 0
 
-def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
+
+def chaining_thread_and_local_pool(message:Queue, work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
 
     # local ranking pools
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
@@ -46,17 +48,29 @@ def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSeq
                 next_motif.foundmap.turn_to_filemap()))
             del next_motif
         
+        try:
+            command = message.get_nowait()
+            if command == 'MK':merge.put(local_pool);return # exit
+        except Empty:pass
+        
 
-def global_pool_thread(merge: Queue, dataset_dict):
+def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
     
     report_count = 0
 
-    global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
+    if initial_pool == None:
+        global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
+    else:
+        global_pool = initial_pool
 
     while True:
 
         # merging
         merge_request: AKAGIPool = merge.get()
+        if type(merge_request)==str and merge_request=='PK':
+            global_pool.savefile('akagi.pool')
+            return
+
         global_pool.merge(merge_request)
 
         # reporting
@@ -74,48 +88,11 @@ def global_pool_thread(merge: Queue, dataset_dict):
             #     if table:window.write('>\n' + table[0].data.instances_str(dataset_dict[SEQUENCES]))
 
 
-
-
-def agent_thread(port_id, work:Queue, merge_request:Queue):
-    raise NotImplementedError
-
-
-# not completed nor tested
-def server_thread(on_sequence:OnSequenceDistribution):
-    
-    agents:List[Process] = []
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-
-        # setup
-        s.bind((HOST_ADDRESS, REQUEST_PORT))
-        s.listen()
-
-        while True:
-
-            # making connection
-            conn, _ = s.accept()
-
-            n_agent = bytes_to_int(conn.recv())
-            if n_agent > AGENTS_MAXIMUM_COUNT - len(agents):
-                conn.sendall(REJECT_REQUEST)
-                conn.close()
-                continue
-            
-            conn.sendall(ACCEPT_REQUEST)
-
-            # sending observation data (onSequence Distribution)
-            conn.sendall(on_sequence.to_byte())
-
-            previous_agents = len(agents)
-            for port in [AGENTS_PORT_START+previous_agents+i for i in range(n_agent)]:
-                conn.sendall(int_to_bytes(port))
-                agents += [Process(target=agent_thread, args=(port,))]
-                agents[-1].start()
-
-
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
 def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
+
+    # timer first stamp
+    since = datetime.now()
 
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
 
@@ -160,47 +137,46 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
                 next_motif.foundmap.turn_to_filemap()))
             del next_motif
 
+        if time_has_ended(since):
+            merge.put(local_pool)
+            return TIMESUP_EXIT
+    
+    return END_EXIT
 
-def multicore_chaining_main(cores, zero_motifs: List[ChainNode], dataset_dict, overlap, gap, q, network=False):
 
-    # unpacking necessary parts of dataset dictionary
-    sequences = dataset_dict[SEQUENCES]
-
-    # generate on sequence distribution 
-    on_sequence = OnSequenceDistribution(zero_motifs, sequences)
-
-    # reports for analysis
-    if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
+def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:OnSequenceDistribution, dataset_dict, overlap, gap, q, network=False, initial_pool=None):
     
     # initializing synchronized queues
-    work = Queue()
-    merge = Queue()
-    for motif in zero_motifs:
+    work =    Queue()   # chaining jobs with type of chain nodes
+    merge =   Queue()   # merging requests to a global pool
+    message = Queue()   # message box to terminate workers loop
+
+    for motif in initial_works:
         work.put_nowait(motif)
 
     # initial disk queue for memory balancing
     disk_queue = QueueDisk(ChainNode)
 
     # initial threads
-    workers = [Process(target=chaining_thread_and_local_pool, args=(work, merge, on_sequence, dataset_dict, overlap, gap, q)) for _ in range(cores)]
-    global_pooler = Process(target=global_pool_thread, args=(merge,dataset_dict))
+    workers = [Process(target=chaining_thread_and_local_pool, args=(message,work,merge,on_sequence,dataset_dict,overlap,gap,q)) for _ in range(cores)]
+    global_pooler = Process(target=global_pool_thread, args=(merge,dataset_dict,initial_pool))
     for worker in workers:worker.start()
     global_pooler.start()
 
     # initial server listener (in case of network computing)
-    if network:
-        server = Process(target=server_thread, args=(on_sequence,))
-        server.start()
-
-    counter = 0
+    if network:raise NotImplementedError
 
     # parent also is a worker
     # [WARNING] may results in memory full
     if PARENT_WORK:
-        parent_chaining(work, merge, on_sequence, dataset_dict, overlap, gap, q)
+        exit = parent_chaining(work, merge, on_sequence, dataset_dict, overlap, gap, q)
 
     # parent is in charge of memory balancing 
     else:
+        exit = END_EXIT
+        since = datetime.now()
+        counter = 0
+
         while counter <= 100:
             memory_balance = work.qsize()
             if memory_balance > NEAR_FULL:
@@ -214,10 +190,31 @@ def multicore_chaining_main(cores, zero_motifs: List[ChainNode], dataset_dict, o
                     if memory_balance == 0:counter += 1
                     else:counter = 0
                     sleep(5)
+            else:
+                sleep(10)
 
+            if time_has_ended(since):exit = TIMESUP_EXIT;break
+
+    # message the workers to terminate their job and merge for last time
+    for _ in workers:
+        message.put_nowait('MK')
+
+    # waiting for workers to die
+    for worker in workers:
+        worker.join()
+
+    # message global_pooler to terminate
+    merge.put('PK')
+    global_pooler.join()
+
+    # send rest of the jobs to cloud in case of timeout
+    if exit == TIMESUP_EXIT:
+
+        rest_work = []
+        while True:
+            try:rest_work.append(work.get_nowait())
+            except Empty:break
         
-    # killing processes/threads
-    for worker in workers:worker.terminate()
-    global_pooler.terminate()
+        save_the_rest(rest_work, on_sequence, cloud=SAVE_THE_REST_CLOUD)
 
     assert work.qsize() == 0 
