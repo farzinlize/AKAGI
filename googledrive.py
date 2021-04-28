@@ -1,9 +1,15 @@
+'''
+    googledrive.py module
+        - all functions responsible of downloading and uploading checkpoints are safe
+        to use with any kind of checkpoint (observation or jobs)
+'''
+
 import sys
+from typing import List
 from misc import make_location
 from pydrive.files import GoogleDriveFile
-from checkpoint import checkpoint_name
 import os
-from constants import APPDATA_PATH, GOOGLE_CREDENTIALS_FILE
+from constants import APPDATA_PATH, CHECKPOINT_TAG, GOOGLE_CREDENTIALS_FILE
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
@@ -20,13 +26,13 @@ def connect_drive():
     return GoogleDrive(auth)
 
 
-def download_checkpoint_from_drive(checkpoint:str, object_file:GoogleDriveFile, drive=None):
+def download_checkpoint_from_drive(checkpoint_drive:GoogleDriveFile, drive=None):
 
     if drive==None:
         drive = connect_drive()
 
     # query from drive for checkpoint folder id
-    folder_name = checkpoint.split('.')[0]
+    folder_name = checkpoint_drive['title'].split('.')[0]
     query = "title = '%s' and trashed=false"%(folder_name)
     folders = drive.ListFile({'q': query}).GetList()
 
@@ -52,12 +58,13 @@ def download_checkpoint_from_drive(checkpoint:str, object_file:GoogleDriveFile, 
 
     print('\nDone downloading folder')
 
-    object_file.GetContentFile(checkpoint)
+    checkpoint_drive.GetContentFile(checkpoint_drive['title'])
 
 
-def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_objectfile=False):
+def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_objectfile=False, drive=None):
 
-    drive = connect_drive()
+    if drive == None:
+        drive = connect_drive()
 
     obj_file_drive = drive.CreateFile({'title': objects_file})
     obj_file_drive.SetContentFile(objects_file)
@@ -85,22 +92,43 @@ def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_object
         print('|' + '#'*progress + '-'*(step-progress) + '| %d/%d'%(done, total), end='\r')
     
     print('\ndone uploading')
+    return drive
 
 
-def query_download_checkpoint(checkpoint_name) -> GoogleDriveFile:
+def query_download_checkpoint(checkpoint=None, filter_resumable=False) -> GoogleDriveFile:
 
     drive = connect_drive()
 
-    checkpoint: GoogleDriveFile
-    for checkpoint in drive.ListFile({'q': "title contains '.checkpoint'"}).GetList():
-        if checkpoint['title'] == checkpoint_name:return checkpoint, drive
+    checkpoint_drive: GoogleDriveFile
+    result = []
+    for checkpoint_drive in drive.ListFile({'q': f"title contains '{CHECKPOINT_TAG}'"}).GetList():
+        if checkpoint and checkpoint_drive['title'] == checkpoint:
+            return checkpoint_drive, drive
+        else:
+            if filter_resumable:
+                if checkpoint_drive['title'][0] == 'R':
+                    result.append(checkpoint_drive)
+            else:result.append(checkpoint_drive)
+
+    if checkpoint:
+        raise FileNotFoundError
+    return result, drive
     
+
+def store_single_file(single_file:str, drive=None):
+
+    if drive == None:
+        drive = connect_drive()
+    
+    drive_file = drive.CreateFile({'title': single_file.split('/')[-1]})
+    drive_file.SetContentFile(single_file)
+    drive_file.Upload()
+
 
 if __name__ == '__main__':
     # WARNING: this part of code is functional (no testing)
     connect_and_save_credentials()
 
-    # name = checkpoint_name('hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak', [5, 6], [1, 1], True)
     # directory_name = APPDATA_PATH + name.split('.')[0] + '/'
     # print(directory_name.split('/')[-2])
     # store_checkpoint_to_cloud(name, directory_name, only_objectfile=True)

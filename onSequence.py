@@ -1,9 +1,12 @@
+import pickle
 from ast import Bytes
+from checkpoint import load_checkpoint
+from constants import BRIEFING, INT_SIZE
 from io import BufferedReader
 from socket import socket
 from typing import List
 from TrieFind import WatchNode
-from misc import ExtraPosition, int_to_bytes
+from misc import ExtraPosition, brief_sequence, int_to_bytes, read_bundle, read_fasta
 
 
 '''
@@ -52,9 +55,8 @@ class OnSequenceDistribution:
 
 
     @staticmethod
-    def byte_to_object_conn(bytes:Bytes):
-        pass
-        # conn.recv(2)
+    def byte_to_object(buffer:BufferedReader):
+        raise NotImplementedError
 
 
     def analysis(self):
@@ -68,3 +70,37 @@ class OnSequenceDistribution:
             total += z
             result += 'id:%d|z=%d\n'%(seq_id, z)
         return result + '[OnSequence][Analysis] total=%d\t|\tempty positions -> %d\n'%(total, position_without_motif)
+
+
+def test():
+    checkpoint = 'ENCODE_HAIB_GM12878_SRF_peak_f5-6_d1-1.checkpoint'
+    dataset_name = 'hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak'
+    motifs = load_checkpoint(checkpoint)
+    sequences = read_fasta('%s.fasta'%(dataset_name))
+    bundles = read_bundle('%s.bundle'%(dataset_name))
+
+    if BRIEFING:
+        sequences, bundles = brief_sequence(sequences, bundles)
+        assert len(sequences) == len(bundles)
+        print('[BRIEFING] number of sequences = %d'%len(sequences))
+
+    on_sequence = OnSequenceDistribution(motifs, sequences)
+    with open('test.pickle', 'wb') as f:
+        pickle.dump(398, f)
+        pickle.dump('salam', f)
+        pickle.dump(on_sequence, f)
+        f.write(b'\xff\xaa')
+    with open('test.pickle', 'rb') as f:
+        numq = pickle.load(f)
+        test = pickle.load(f)
+        assert test == 'salam'
+        assert numq == 398
+        on_pickled = pickle.load(f)
+        assert f.read(1) == b'\xff'
+        assert f.read(1) == b'\xaa'
+
+    return on_sequence, on_pickled
+
+
+if __name__ == '__main__':
+    o, p = test()

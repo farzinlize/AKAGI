@@ -161,3 +161,6 @@ MEME_MODE = '>%d\n%s\n'
 
 CHECKPOINT_TAG = '.checkpoint'
 GOOGLE_CREDENTIALS_FILE = 'cred.txt'
+
+TIMER_CHAINING_HOURS = 8
+SAVE_THE_REST_CLOUD = True

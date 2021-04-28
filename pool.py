@@ -52,6 +52,7 @@ class AKAGIPool:
         
         return ranks
     
+
     def top_ten_reports(self):
         report = TOP_TEN_REPORT_HEADER
 
@@ -132,6 +133,9 @@ class AKAGIPool:
 
             self.tables[sorted_by] = merged
 
+
+    def savefile(self, filename):
+        pass
 
 
 class RankingPool:
