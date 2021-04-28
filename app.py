@@ -1,7 +1,9 @@
 # python libraries 
+from pause import resume_any_cloud
+from onSequence import OnSequenceDistribution
 import os
 from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
-from checkpoint import checkpoint_name, load_checkpoint, save_checkpoint
+from checkpoint import checkpoint_name, load_checkpoint, observation_checkpoint_name, save_checkpoint
 from TrieFind import ChainNode
 from multi import multicore_chaining_main
 from time import time as currentTime
@@ -18,7 +20,7 @@ from alignment import alignment_matrix
 from twobitHandler import download_2bit
 
 # importing constants
-from constants import APPDATA_PATH, BRIEFING, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, HISTOGRAM_LOCATION, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SEQUENCES, SEQUENCE_BUNDLES
+from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -130,9 +132,9 @@ def motif_finding_chain(dataset_name,
 
     # reading sequences and its attachment including rank and summit
     sequences = read_fasta('%s.fasta'%(dataset_name))
-    bundle_name = dataset_name.split('/')[-1]
     bundles = read_bundle('%s.bundle'%(dataset_name))
     pwm = read_pfm_save_pwm(pfm)
+    # bundle_name = dataset_name.split('/')[-1]
 
     assert len(bundles) == len(sequences)
 
@@ -153,10 +155,10 @@ def motif_finding_chain(dataset_name,
     if s_mask != None:
         assert len(sequences) == len(s_mask)
 
-    # search for checkpoint
+    # search for observation checkpoint
     if checkpoint:
-        checkpoint_file = checkpoint_name(dataset_name, frame_size, d, multilayer)
-        motifs = load_checkpoint(checkpoint_file)
+        checkpoint_file = observation_checkpoint_name(dataset_name, frame_size, d, multilayer)
+        motifs = load_checkpoint(checkpoint_file, resumable=False)
 
         # run and save observation data
         if motifs == None:
@@ -176,10 +178,14 @@ def motif_finding_chain(dataset_name,
         print('[CHAINING] chaining is disabled - end of process')
         return
 
+    on_sequence = OnSequenceDistribution(motifs,  sequences)
+    # reports for analysis
+    if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
+
     if multicore:
         dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm}
         last_time = currentTime()
-        multicore_chaining_main(cores, motifs, dataset_dict, overlap, gap, q)
+        multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
     else:        
         # changes must be applied
         raise NotImplementedError
@@ -347,9 +353,9 @@ def alignment_fasta(fasta_location):
                 align.write(line)
 
 
-def download_checkpoint(dataset_name, f, d, multilayer):
+def download_observation_checkpoint(dataset_name, f, d, multilayer):
 
-    checkpoint = checkpoint_name(dataset_name, f, d, multilayer)
+    checkpoint = observation_checkpoint_name(dataset_name, f, d, multilayer)
 
     for f in os.listdir():
         if f == checkpoint:
@@ -363,12 +369,12 @@ def download_checkpoint(dataset_name, f, d, multilayer):
         return
 
     # feed already exist drive instance
-    download_checkpoint_from_drive(checkpoint, objects_file, drive=drive)
+    download_checkpoint_from_drive(objects_file, drive=drive)
     
 
-def upload_checkpoint(dataset_name, f, d, multilayer):
+def upload_observation_checkpoint(dataset_name, f, d, multilayer):
 
-    checkpoint = checkpoint_name(dataset_name, f, d, multilayer)
+    checkpoint = observation_checkpoint_name(dataset_name, f, d, multilayer)
 
     motifs = load_checkpoint(checkpoint)
 
@@ -378,11 +384,36 @@ def upload_checkpoint(dataset_name, f, d, multilayer):
         print('[ERROR] upload failed')
         return
 
-    name = checkpoint_name(dataset_name, f, d, multilayer)
-    directory_name = APPDATA_PATH + name.split('.')[0] + '/'
+    directory_name = APPDATA_PATH + checkpoint.split('.')[0] + '/'
     
-    store_checkpoint_to_cloud(name, directory_name)
+    store_checkpoint_to_cloud(checkpoint, directory_name)
         
+
+def resume_chaining(cores, overlap, gap, pfm):
+    offline_checkpoints = [f for f in os.listdir() if f.endswith(CHECKPOINT_TAG) and f[0]=='R']
+
+    if offline_checkpoints:
+        checkpoint = offline_checkpoints[0]
+    else:
+        checkpoint = resume_any_cloud()
+    
+    if checkpoint == None:
+        print('[APP] found nothing to resume - end')
+        return
+
+    motifs, on_sequence, q, dataset_name = load_checkpoint(checkpoint, resumable=True)
+
+    sequences = read_fasta('%s.fasta'%(dataset_name))
+    bundles = read_bundle('%s.bundle'%(dataset_name))
+    pwm = read_pfm_save_pwm(pfm)
+
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+    # 
+    # [WARNING] for correct setting make sure 
+    dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm}
+    multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+
+
 
 
 def testing(dataset_name):
@@ -525,10 +556,12 @@ if __name__ == "__main__":
         download_2bit(args_dict['reference'])
     elif command == 'TST':
         tree_m, tree_d = testing(args_dict['sequences'])
-    elif command == 'DCP':
-        download_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
-    elif command == 'UCP':
-        upload_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
+    elif command == 'DOC':
+        download_observation_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
+    elif command == 'UOC':
+        upload_observation_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
+    elif command == 'RCH':
+        resume_chaining(args_dict['ncores'], args_dict['overlap'], args_dict['gap'], args_dict['jaspar'])
     elif command == 'NOP':
         pass
     else:
