@@ -1,3 +1,4 @@
+from report_email import send_files_mail
 from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
@@ -146,10 +147,18 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
         # need for help check
         estimated_size = work.qsize()
         if estimated_size > NEED_HELP:
+
             help_me_with = []
             for _ in range(estimated_size*HELP_PORTION):
                 help_me_with.append(work.get())
+
+            # uploading to drive
             save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=True)
+
+            # inform by email
+            send_files_mail(
+                strings=['HELP HAS SENT - EXECUTION OF ANOTHER AKAGI INSTANCE IS REQUESTED'],
+                additional_subject=' HELP AKAGI')
     
     return END_EXIT
 
@@ -236,5 +245,8 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
             except Empty:break
         
         save_the_rest(rest_work, on_sequence, q, dataset_dict[DATASET_NAME], cloud=SAVE_THE_REST_CLOUD)
+        send_files_mail(
+            strings=['REST OF JOBS HAS SENT - unfinished program has sent its remaining data into cloud'],
+            additional_subject=' an unfinished end')
 
     assert work.qsize() == 0 

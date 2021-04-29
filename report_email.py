@@ -16,7 +16,7 @@ def secret_password():
     return password
 
 
-def send_files_mail(texts, attachments, types):
+def send_files_mail(texts=[], attachments=[], types=[], strings=[], additional_subject=''):
 
     assert len(attachments) == len(types)
 
@@ -28,9 +28,9 @@ def send_files_mail(texts, attachments, types):
     mail_to = MAIL_TO
 
     message = MIMEMultipart()
-    message['Subject'] = MAIL_SUBJECT
+    message['Subject'] = MAIL_SUBJECT + additional_subject
 
-    message_body = ''
+    message_body = '\n'.join(strings) + '\n'
     for text in texts:
         try:
             with open(text, 'r') as content:
