@@ -576,8 +576,7 @@ if __name__ == "__main__":
             args_dict['ncores'], 
             args_dict['overlap'], 
             args_dict['gap'], 
-            args_dict['jaspar'], 
-            args_dict['sequences'])
+            args_dict['jaspar'])
     elif command == 'NOP':
         pass
     else:
