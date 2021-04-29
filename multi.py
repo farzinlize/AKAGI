@@ -2,7 +2,7 @@ from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, GOOD_HIT, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, PARENT_WORK, POOL_HIT_SCORE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_PORTION, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, TIMER_HELP_HOURS
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk, bytes_to_int, int_to_bytes
 from TrieFind import ChainNode
@@ -93,6 +93,7 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
 
     # timer first stamp
     since = datetime.now()
+    # since_last_help = datetime.now()
 
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
 
@@ -137,9 +138,18 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
                 next_motif.foundmap.turn_to_filemap()))
             del next_motif
 
-        if time_has_ended(since):
+        # timout check
+        if time_has_ended(since, TIMER_CHAINING_HOURS):
             merge.put(local_pool)
             return TIMESUP_EXIT
+
+        # need for help check
+        estimated_size = work.qsize()
+        if estimated_size > NEED_HELP:
+            help_me_with = []
+            for _ in range(estimated_size*HELP_PORTION):
+                help_me_with.append(work.get())
+            save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=True)
     
     return END_EXIT
 
@@ -175,6 +185,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     else:
         exit = END_EXIT
         since = datetime.now()
+        # call_for_help = datetime.now()
         counter = 0
 
         while counter <= 100:
@@ -193,7 +204,16 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
             else:
                 sleep(10)
 
-            if time_has_ended(since):exit = TIMESUP_EXIT;break
+            # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+            # TODO: send for help policy when parent is in charge of memory balancing
+            # challenge: jobs are both in disk and memory -> send disk jobs for help
+            #
+            # if time_has_ended(call_for_help, TIMER_HELP_HOURS) and memory_balance:
+            #     help_jobs = []
+            #     for _ in range(memory_balance*HELP_PORTION):
+            #         try:help_jobs.append(work.get(timeout=5))
+
+            if time_has_ended(since, TIMER_CHAINING_HOURS):exit = TIMESUP_EXIT;break
 
     # message the workers to terminate their job and merge for last time
     for _ in workers:
@@ -215,6 +235,6 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
             try:rest_work.append(work.get_nowait())
             except Empty:break
         
-        save_the_rest(rest_work, on_sequence, cloud=SAVE_THE_REST_CLOUD)
+        save_the_rest(rest_work, on_sequence, q, dataset_dict[DATASET_NAME], cloud=SAVE_THE_REST_CLOUD)
 
     assert work.qsize() == 0 
