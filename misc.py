@@ -52,7 +52,6 @@ class TestByte(Bytable):
         return TestByte(number, st)
 
 
-
 class QueueDisk:
 
     class QueueEmpty(Exception):pass
@@ -245,7 +244,6 @@ class ExtraPosition:
         return self.start_position + self.size
 
 
-
 # ########################################## #
 #                 functions                  #
 # ########################################## #
@@ -331,6 +329,7 @@ def read_pfm_save_pwm(filename):
             [{'A':cal(rA, i), 'C':cal(rC, i), 'G':cal(rG, i), 'T':cal(rT, i)} for i in range(len(A))]
 
 
+# deprecated -> integrated into other functions
 def pfm_to_pwm(pfm):
 
     sites_count = pfm[0]['A']+pfm[0]['C']+pfm[0]['G']+pfm[0]['T']
@@ -364,6 +363,7 @@ def pwm_score_sequence(sequence, pwm):
     return max_score, max_position
 
 
+# deprecated -> wrong score
 def pwm_score_sequence_bad(sequence, pwm):
 
     if len(sequence) < len(pwm):
@@ -615,8 +615,7 @@ def make_location(location):
         pass
 
 
-# A Dynamic Programming based Python program for edit 
-# distance problem 
+# A Dynamic Programming based Python program for edit  distance problem 
 def editDistDP(str1, str2): 
     m = len(str1); n = len(str2)
 
@@ -707,8 +706,6 @@ def change_global_constant_py(variable_name: str, new_value: str):
                 f.write(' ' + new_value + '\n')
             else:
                 f.write(list_line[1])
-
-
 
 
 # ########################################## #

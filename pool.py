@@ -285,7 +285,8 @@ def pwm_score(pattern: ChainNode, arg_bundle):
 
     # unpacking arguments
     sequences = arg_bundle[0]
-    pwm = arg_bundle[1]
+    pwm = arg_bundle[1][0]
+    r_pwm = arg_bundle[1][1]
     
     aggregated = 0
     count = 0
@@ -297,7 +298,8 @@ def pwm_score(pattern: ChainNode, arg_bundle):
             start = position.start_position
             sequence = sequences[seq_id][start:end]
             score, _ = pwm_score_sequence(sequence, pwm)
-            aggregated += score
+            r_score, _ = pwm_score_sequence(sequence, r_pwm)
+            aggregated += max(score, r_score)
             count += 1
     return aggregated / count
 
