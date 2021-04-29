@@ -26,15 +26,14 @@ def connect_drive():
     return GoogleDrive(auth)
 
 
-def download_checkpoint_from_drive(checkpoint_drive:GoogleDriveFile, drive=None):
+def download_checkpoint_from_drive(checkpoint_drive:GoogleDriveFile, drive=None, clear_cloud=False):
 
     if drive==None:
         drive = connect_drive()
 
     # query from drive for checkpoint folder id
     folder_name = checkpoint_drive['title'].split('.')[0]
-    query = "title = '%s' and trashed=false"%(folder_name)
-    folders = drive.ListFile({'q': query}).GetList()
+    folders = drive.ListFile({'q': f"title = '{folder_name}' and trashed=false"}).GetList()
 
     if len(folders) > 1:print('[WARNING] XXX multiple folder with same name exist XXX')
     folder = folders[0]
@@ -52,13 +51,23 @@ def download_checkpoint_from_drive(checkpoint_drive:GoogleDriveFile, drive=None)
     for google_file in file_to_download:
         google_file.GetContentFile(APPDATA_PATH + folder_name + '/' + google_file['title'])
 
+        if clear_cloud:google_file.Delete()
+
         done += 1
         progress = done*step//total
         print('|' + '#'*progress + '-'*(step-progress) + '| %d/%d'%(done, total), end='\r')
 
     print('\nDone downloading folder')
 
-    checkpoint_drive.GetContentFile(checkpoint_drive['title'])
+    # object file
+    name = checkpoint_drive['title']
+    checkpoint_drive.GetContentFile(name)
+    
+    if clear_cloud:
+        checkpoint_drive.Delete()
+        folder.Delete()
+
+    return name
 
 
 def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_objectfile=False, drive=None):
