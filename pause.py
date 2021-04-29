@@ -5,19 +5,20 @@ from constants import TIMER_CHAINING_HOURS
 from datetime import datetime, timedelta
 
 
-def save_the_rest(works, on_sequence:OnSequenceDistribution, cloud=True):
+def save_the_rest(works, on_sequence:OnSequenceDistribution, q, dataset_name, cloud=True):
 
     # grant a free name for checkpoint
     checkpoint = unique_checkpoint_name()
 
     # store objects and protect their data under directory
-    directory = save_checkpoint(works, checkpoint, on_sequence=on_sequence)
+    directory = save_checkpoint(works, checkpoint, resumable=True, on_sequence=on_sequence, q=q, dataset_name=dataset_name)
 
     # upload to cloud
     if cloud:store_checkpoint_to_cloud(checkpoint, directory)
 
 
-time_has_ended = lambda since:(datetime.now() - since) > timedelta(hours=TIMER_CHAINING_HOURS)
+def time_has_ended(since, hours):
+    return (datetime.now() - since) > timedelta(hours=hours)
 
 
 def resume_any_cloud():
@@ -30,8 +31,7 @@ def resume_any_cloud():
 
     # pick the first one in list and download
     checkpoint_drive = resumable_checkpoints[0]
-    download_checkpoint_from_drive(checkpoint_drive, drive)
-    return checkpoint_drive['title']
+    return download_checkpoint_from_drive(checkpoint_drive, drive, clear_cloud=True)
 
 
 if __name__ == '__main__':
