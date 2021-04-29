@@ -1,4 +1,5 @@
 # python libraries 
+from peakseq import annotation_to_sequences
 from pause import resume_any_cloud
 from onSequence import OnSequenceDistribution
 import os
@@ -20,7 +21,7 @@ from alignment import alignment_matrix
 from twobitHandler import download_2bit
 
 # importing constants
-from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SEQUENCES, SEQUENCE_BUNDLES
+from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SAVE_THE_REST_CLOUD, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -70,7 +71,8 @@ def motif_finding_chain(dataset_name,
                         multicore=False, 
                         cores=1,
                         pfm=None,
-                        checkpoint=None):
+                        checkpoint=None,
+                        cloud=SAVE_OBSERVATION_CLOUD):
 
     def observation(q):
 
@@ -136,7 +138,6 @@ def motif_finding_chain(dataset_name,
     pwm = read_pfm_save_pwm(pfm)
     # bundle_name = dataset_name.split('/')[-1]
 
-    assert len(bundles) == len(sequences)
 
     # make sequences shorter and ignore low score sequences for lower computations
     if BRIEFING:
@@ -147,13 +148,12 @@ def motif_finding_chain(dataset_name,
             print('(len:%d,score:%f)'%(len(seq), bundle[P_VALUE]), end=' ', flush=True)
         print('')
 
-    if q == ARG_UNSET:
-        q = len(sequences)
+    if q == ARG_UNSET:q = len(sequences)
 
+    # assertion to catch error
+    assert len(bundles) == len(sequences)
     assert q <= len(sequences) or q == FIND_MAX
-
-    if s_mask != None:
-        assert len(sequences) == len(s_mask)
+    if s_mask != None:assert len(sequences) == len(s_mask)
 
     # search for observation checkpoint
     if checkpoint:
@@ -163,7 +163,8 @@ def motif_finding_chain(dataset_name,
         # run and save observation data
         if motifs == None:
             motifs = observation(q)
-            save_checkpoint(motifs, checkpoint_file)
+            protected_directory = save_checkpoint(motifs, checkpoint_file)
+            if cloud:store_checkpoint_to_cloud(checkpoint_file, protected_directory)
     
     # run observation without checkpoint check
     else:
@@ -183,7 +184,7 @@ def motif_finding_chain(dataset_name,
     if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
 
     if multicore:
-        dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm}
+        dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
         last_time = currentTime()
         multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
     else:        
@@ -194,7 +195,7 @@ def motif_finding_chain(dataset_name,
         
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
 
-    make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
+    # make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
 
     if report[1]:
         pass
@@ -403,16 +404,18 @@ def resume_chaining(cores, overlap, gap, pfm):
 
     motifs, on_sequence, q, dataset_name = load_checkpoint(checkpoint, resumable=True)
 
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+    # 
+    # [AKAGI EXE] data prepartion for caught resumable checkpoint
+    annotation_to_sequences(dataset_name+'.cod', '2bits/hg18.2bit')
     sequences = read_fasta('%s.fasta'%(dataset_name))
     bundles = read_bundle('%s.bundle'%(dataset_name))
     pwm = read_pfm_save_pwm(pfm)
-
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-    # 
-    # [WARNING] for correct setting make sure 
-    dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm}
+    #
+    dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
     multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
-
+    #
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 
 
@@ -557,11 +560,24 @@ if __name__ == "__main__":
     elif command == 'TST':
         tree_m, tree_d = testing(args_dict['sequences'])
     elif command == 'DOC':
-        download_observation_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
+        download_observation_checkpoint(
+            args_dict['sequences'], 
+            args_dict['frame_size'], 
+            args_dict['dmax'], 
+            args_dict['multi-layer'])
     elif command == 'UOC':
-        upload_observation_checkpoint(args_dict['sequences'], args_dict['frame_size'], args_dict['dmax'], args_dict['multi-layer'])
+        upload_observation_checkpoint(
+            args_dict['sequences'], 
+            args_dict['frame_size'], 
+            args_dict['dmax'], 
+            args_dict['multi-layer'])
     elif command == 'RCH':
-        resume_chaining(args_dict['ncores'], args_dict['overlap'], args_dict['gap'], args_dict['jaspar'])
+        resume_chaining(
+            args_dict['ncores'], 
+            args_dict['overlap'], 
+            args_dict['gap'], 
+            args_dict['jaspar'], 
+            args_dict['sequences'])
     elif command == 'NOP':
         pass
     else:
