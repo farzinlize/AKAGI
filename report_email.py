@@ -41,7 +41,7 @@ def send_files_mail(texts, attachments, types):
 
     message.attach(MIMEText(MAIL_HEADER + '\n' + message_body))
 
-    for type_of, filename in [(types[i], attachments[i]) for i in range(len(attachments))]:
+    for type_of, filename in zip(types, attachments):
         try:
             with open(filename, READ_MODE[type_of]) as attachment:
                 message.attach(TYPES[type_of](attachment.read()))
