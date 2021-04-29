@@ -1,4 +1,5 @@
 # python libraries 
+from jaspar import costume_table_jaspar, download_jaspar_raw
 from peakseq import annotation_to_sequences
 from pause import resume_any_cloud
 from onSequence import OnSequenceDistribution
@@ -390,7 +391,7 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer):
     store_checkpoint_to_cloud(checkpoint, directory_name)
         
 
-def resume_chaining(cores, overlap, gap, pfm):
+def resume_chaining(cores, overlap, gap):
     offline_checkpoints = [f for f in os.listdir() if f.endswith(CHECKPOINT_TAG) and f[0]=='R']
 
     if offline_checkpoints:
@@ -403,6 +404,7 @@ def resume_chaining(cores, overlap, gap, pfm):
         return
 
     motifs, on_sequence, q, dataset_name = load_checkpoint(checkpoint, resumable=True)
+    pfm = download_jaspar_raw(costume_table_jaspar(dataset_name))
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     # 
@@ -575,8 +577,7 @@ if __name__ == "__main__":
         resume_chaining(
             args_dict['ncores'], 
             args_dict['overlap'], 
-            args_dict['gap'], 
-            args_dict['jaspar'])
+            args_dict['gap'])
     elif command == 'NOP':
         pass
     else:
