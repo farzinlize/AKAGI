@@ -5,7 +5,7 @@ from pause import resume_any_cloud
 from onSequence import OnSequenceDistribution
 import os
 from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
-from checkpoint import checkpoint_name, load_checkpoint, observation_checkpoint_name, save_checkpoint
+from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkpoint
 from TrieFind import ChainNode
 from multi import multicore_chaining_main
 from time import time as currentTime
