@@ -149,7 +149,7 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
         if estimated_size > NEED_HELP:
 
             help_me_with = []
-            for _ in range(estimated_size*HELP_PORTION):
+            for _ in range(int(estimated_size*HELP_PORTION)):
                 help_me_with.append(work.get())
 
             # uploading to drive
