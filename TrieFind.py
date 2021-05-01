@@ -217,7 +217,7 @@ class ChainNode(Bytable):
 
         if protect:self.foundmap.protect(directory)
 
-        return int_to_bytes(len(self.label)) + \
+        return int_to_bytes(len(self.label))    + \
             bytes(self.label, encoding='ascii') + \
             self.foundmap.to_byte()
 
