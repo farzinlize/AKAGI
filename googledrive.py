@@ -4,12 +4,14 @@
         to use with any kind of checkpoint (observation or jobs)
 '''
 
+import io
 import sys
+from datetime import datetime
 from typing import List
-from misc import make_location
+from misc import bytes_to_int, int_to_bytes, make_location
 from pydrive.files import GoogleDriveFile
 import os
-from constants import APPDATA_PATH, CHECKPOINT_TAG, GOOGLE_CREDENTIALS_FILE
+from constants import APPDATA_PATH, CHECKPOINT_TAG, GOOGLE_CREDENTIALS_FILE, INT_SIZE
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
@@ -31,41 +33,42 @@ def download_checkpoint_from_drive(checkpoint_drive:GoogleDriveFile, drive=None,
     if drive==None:
         drive = connect_drive()
 
+    since = datetime.now()
+
     # query from drive for checkpoint folder id
-    folder_name = checkpoint_drive['title'].split('.')[0]
-    folders = drive.ListFile({'q': f"title = '{folder_name}' and trashed=false"}).GetList()
+    compressed_name = checkpoint_drive['title'].split('.')[0]
+    compressed_files = drive.ListFile({'q': f"title = '{compressed_name}.bin' and trashed=false"}).GetList()
 
-    if len(folders) > 1:print('[WARNING] XXX multiple folder with same name exist XXX')
-    folder = folders[0]
 
-    make_location(APPDATA_PATH + folder_name + '/')
+    if len(compressed_files) > 1:print('[WARNING] XXX multiple compressed file with the same name exist XXX')
+    compressed:GoogleDriveFile = compressed_files[0]
+    compressed.GetContentFile('temp.bin')
 
-    file_to_download = drive.ListFile({'q': f"'{folder['id']}' in parents"}).GetList()
+    protected_directory = APPDATA_PATH + compressed_name + '/'
+    make_location(protected_directory)
 
-    total = len(file_to_download)
-    step = 20
-    done = 0
-    progress = 0
-    print('|' + '-'*step + '|', end='\r')
+    with open('temp.bin', 'rb') as compressed_data:
 
-    for google_file in file_to_download:
-        google_file.GetContentFile(APPDATA_PATH + folder_name + '/' + google_file['title'])
+        filename_size = bytes_to_int(compressed_data.read(INT_SIZE))
+        while filename_size:
+            filename = str(compressed_data.read(filename_size), encoding='ascii')
+            with open(protected_directory + filename, 'wb') as protected:
+                protected.write(compressed_data.read(bytes_to_int(compressed_data.read(INT_SIZE))))
+            filename_size = bytes_to_int(compressed_data.read(INT_SIZE))
 
-        if clear_cloud:google_file.Delete()
+        assert len(compressed_data.read()) == 0
 
-        done += 1
-        progress = done*step//total
-        print('|' + '#'*progress + '-'*(step-progress) + '| %d/%d'%(done, total), end='\r')
-
-    print('\nDone downloading folder')
+    os.remove('temp.bin')
 
     # object file
     name = checkpoint_drive['title']
     checkpoint_drive.GetContentFile(name)
     
+    print('\n[CLOUD] download is done in %s time'%(datetime.now()-since))
+
     if clear_cloud:
+        compressed.Delete()
         checkpoint_drive.Delete()
-        folder.Delete()
 
     return name
 
@@ -75,32 +78,26 @@ def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_object
     if drive == None:
         drive = connect_drive()
 
+    since = datetime.now()
+
     obj_file_drive = drive.CreateFile({'title': objects_file})
     obj_file_drive.SetContentFile(objects_file)
     obj_file_drive.Upload()
 
     if only_objectfile:return
 
-    folder = drive.CreateFile({'title': protected_directory.split('/')[-2], "mimeType": "application/vnd.google-apps.folder"})
-    folder.Upload()
-    file_to_upload = [u for u in os.listdir(protected_directory)]
-    total = len(file_to_upload)
-    step = 20
-    done = 0
-    progress = 0
-    print('|' + '-'*step + '|', end='\r')
+    compressed = b''
+    for f in os.listdir(protected_directory):
+        with open(protected_directory + f, 'rb') as data:
+            content = data.read()
+            compressed += int_to_bytes(len(f)) + bytes(f, 'ascii')
+            compressed += int_to_bytes(len(content)) + content
 
-    for f in file_to_upload:
-        f_drive = drive.CreateFile({'title':f , 'parents': [{'id': folder['id']}]})
-        f_drive.SetContentFile(protected_directory + f)
-        f_drive.Upload()
-
-        done += 1
-        progress = done*step//total
-
-        print('|' + '#'*progress + '-'*(step-progress) + '| %d/%d'%(done, total), end='\r')
+    compressed_drive = drive.CreateFile({'title': protected_directory.split('/')[-2]+'.bin', "mimeType": "application/octet-stream"})
+    compressed_drive.content = io.BytesIO(compressed)
+    compressed_drive.Upload()
     
-    print('\ndone uploading')
+    print('\n[CLOUD] upload is done in %s time'%(datetime.now()-since))
     return drive
 
 
@@ -137,7 +134,11 @@ def store_single_file(single_file:str, drive=None):
 if __name__ == '__main__':
     # WARNING: this part of code is functional (no testing)
     connect_and_save_credentials()
-
+    
+    # drive = connect_drive()
+    # store_checkpoint_to_cloud('ENCODE_HAIB_GM12878_SRF_peak_f5-6_d1-1.checkpoint', 'appdata/ENCODE_HAIB_GM12878_SRF_peak_f5-6_d1-1/')
+    # f, drive = query_download_checkpoint(checkpoint='ENCODE_HAIB_GM12878_SRF_peak_f5-6_d1-1.checkpoint')
+    # download_checkpoint_from_drive(f, drive=drive, clear_cloud=True)
     # directory_name = APPDATA_PATH + name.split('.')[0] + '/'
     # print(directory_name.split('/')[-2])
     # store_checkpoint_to_cloud(name, directory_name, only_objectfile=True)
