@@ -12,6 +12,7 @@ from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 from typing import List
 
+ERROR_EXIT = -2
 TIMESUP_EXIT = -1
 END_EXIT = 0
 
@@ -152,13 +153,17 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
             for _ in range(int(estimated_size*HELP_PORTION)):
                 help_me_with.append(work.get())
 
-            # uploading to drive
-            save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=True)
+            try:
+                # uploading to drive
+                save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=True)
 
-            # inform by email
-            send_files_mail(
-                strings=['HELP HAS SENT - EXECUTION OF ANOTHER AKAGI INSTANCE IS REQUESTED'],
-                additional_subject=' HELP AKAGI')
+                # inform by email
+                send_files_mail(
+                    strings=['HELP HAS SENT - EXECUTION OF ANOTHER AKAGI INSTANCE IS REQUESTED'],
+                    additional_subject=' HELP AKAGI')
+            except:
+                print('[ERROR] something went wrong when sending help')
+                return ERROR_EXIT
     
     return END_EXIT
 
@@ -248,5 +253,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
         send_files_mail(
             strings=['REST OF JOBS HAS SENT - unfinished program has sent its remaining data into cloud'],
             additional_subject=' an unfinished end')
+
+    elif exit == ERROR_EXIT:return
 
     assert work.qsize() == 0 

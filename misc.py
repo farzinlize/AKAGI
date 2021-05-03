@@ -1,5 +1,5 @@
 from io import BufferedReader
-from math import ceil, log2, inf
+from math import ceil, e, log2, inf
 import os, platform, random, string
 from typing import Dict, List
 from time import time as currentTime
@@ -718,7 +718,10 @@ def bytes_to_int(b :bytes, signed=False):
 
 
 def int_to_bytes(i :int, int_size=INT_SIZE, signed=False):
-    return i.to_bytes(int_size, 'big', signed=signed)
+    try:
+        return i.to_bytes(int_size, 'big', signed=signed)
+    except:
+        print('[ERROR]', i, type(i), sep='\t')
 
 
 # ########################################## #
