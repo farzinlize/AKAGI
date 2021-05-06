@@ -134,17 +134,26 @@ class WatchNode(TrieNode):
         return motifs
 
     
+    '''
+        special extraction function for chaining
+            delete child attrubutes after extraction
+            also return total number of nodes in tree
+    '''
     def extract_motifs_and_delete_childs(self, q, result_kmer=EXTRACT_KMER):
         motifs = []
+        tree_node_count = 1
         if hasattr(self, 'foundmap'):
             if self.foundmap.get_q() >= q:
                 if result_kmer==EXTRACT_KMER  :motifs += [self.label]
                 elif result_kmer==EXTRACT_OBJ :motifs += [self]
         for child in self.childs:
-            motifs += child.extract_motifs(q, result_kmer)
+            child_motifs, child_tree_count = child.extract_motifs_and_delete_childs(q, result_kmer)
+            motifs += child_motifs
+            tree_node_count += child_tree_count
         
+        # delete childs references
         del self.childs
-        return motifs
+        return motifs, tree_node_count
 
 
     def find_max_q(self, q_old=-1):

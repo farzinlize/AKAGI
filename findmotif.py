@@ -1,6 +1,7 @@
 # pyright: reportUnboundVariable=false
 # ignoring false unbound reports
 
+from io import BufferedWriter
 from typing import List
 from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_FOUNDMAP_MODE, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
@@ -234,12 +235,14 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
     [WARNING] procedure uses in memory dataset to store foundmaps
         motifs should convert their foundmap to disk mode for furthur use 
 '''
-def next_chain(motif, on_sequence, overlap, gap, q):
+def next_chain(motif, on_sequence, overlap, gap, q, report:BufferedWriter, chain_id):
+    observation_size = 0
     bundle = motif.foundmap.get_list()
     next_tree = WatchNodeC(custom_foundmap_type=CHAINING_FOUNDMAP_MODE)
     for index, seq_id in enumerate(bundle[0]):
         position: ExtraPosition
         for position in bundle[1][index]:
+            observation_size += 1
             for sliding in [i for i in range(-overlap, gap+1)]:
                 next_position = position.end_position() + sliding
                 if next_position >= len(on_sequence.struct[seq_id]):continue
@@ -254,8 +257,8 @@ def next_chain(motif, on_sequence, overlap, gap, q):
                         seq_id, 
                         ExtraPosition(position.start_position, position.size + len(next_condidate) + sliding))
     
-    # next_chain_motifs = next_tree.extract_motifs(q, EXTRACT_OBJ)
-    # next_tree.clear_child_references()
+    report.write('OBSERVATION SIZE %d | CHAIN_ID %d | '%(observation_size, chain_id))
+
     return next_tree.extract_motifs_and_delete_childs(q, EXTRACT_OBJ)
 
 

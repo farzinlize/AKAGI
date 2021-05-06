@@ -171,3 +171,11 @@ SEND_FOR_HELP = True
 TIMER_HELP_HOURS = 4
 HELP_PORTION = 0.6
 NEED_HELP = 50000 # pathetic XD
+
+PROCESS_REPORT_FILE = 'process_%d.report'
+PROCESS_ENDING_REPORT = \
+'''
+############ DONE ############
+jobs done by me: %d
+chaining done by me: %d
+'''

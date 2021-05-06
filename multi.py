@@ -1,9 +1,10 @@
+import os
 from report_email import send_files_mail
 from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_PORTION, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, TIMER_HELP_HOURS
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_PORTION, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, TIMER_HELP_HOURS
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk, bytes_to_int, int_to_bytes
 from TrieFind import ChainNode
@@ -21,11 +22,14 @@ def chaining_thread_and_local_pool(message:Queue, work: Queue, merge: Queue, on_
 
     # local ranking pools
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
+    jobs_done_by_me = 0
+    chaining_done_by_me = 0
 
     while True:
 
         # obtaining a job
         motif: ChainNode = work.get()
+        jobs_done_by_me += 1
 
         # evaluation the job (motif)
         good_enough = 0
@@ -43,16 +47,32 @@ def chaining_thread_and_local_pool(message:Queue, work: Queue, merge: Queue, on_
         # ignouring low rank motifs
         if good_enough <= POOL_HIT_SCORE:continue
 
-        # chaining and insert next generation jobs
-        for next_motif in next_chain(motif, on_sequence, overlap, gap, q):
+        # open process report file
+        report = open(PROCESS_REPORT_FILE%(os.getpid()), 'a+')
+
+        # chaining
+        next_motifs, used_nodes = next_chain(motif, on_sequence, overlap, gap, q, report=report, chain_id=chaining_done_by_me)
+
+        # report and close
+        report.write('USED NODES COUNT %d\n'%used_nodes)
+        report.close()
+
+        # insert next generation jobs
+        for next_motif in next_motifs:
             work.put(ChainNode(
                 motif.label + next_motif.label, 
                 next_motif.foundmap.turn_to_filemap()))
             del next_motif
         
+        chaining_done_by_me += 1
+
         try:
             command = message.get_nowait()
-            if command == 'MK':merge.put(local_pool);return # exit
+            if command == 'MK':
+                merge.put(local_pool)
+                with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
+                    last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+                return # exit
         except Empty:pass
         
 
@@ -100,6 +120,8 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
 
     counter = 0
+    chaining_done_by_me = 0
+    jobs_done_by_me = 0
 
     while counter < 10:
 
@@ -110,6 +132,7 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
         # obtaining a job if available
         try:
             motif: ChainNode = work.get(timeout=5)
+            jobs_done_by_me += 1
             counter = 0
         
         # no job is found - try again another time till the counter reaches its limit
@@ -133,16 +156,30 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
         # ignouring low rank motifs
         if good_enough <= POOL_HIT_SCORE:continue
 
-        # chaining and insert next generation jobs
-        for next_motif in next_chain(motif, on_sequence, overlap, gap, q):
+        # open process report file
+        report = open(PROCESS_REPORT_FILE%(os.getpid()), 'a+')
+
+        # chaining
+        next_motifs, used_nodes = next_chain(motif, on_sequence, overlap, gap, q, report=report, chain_id=chaining_done_by_me)
+
+        # report and close
+        report.write('USED NODES COUNT %d\n'%used_nodes)
+        report.close()
+
+        # insert next generation jobs
+        for next_motif in next_motifs:
             work.put(ChainNode(
                 motif.label + next_motif.label, 
                 next_motif.foundmap.turn_to_filemap()))
             del next_motif
+        
+        chaining_done_by_me += 1
 
         # timout check
         if time_has_ended(since, TIMER_CHAINING_HOURS):
             merge.put(local_pool)
+            with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
+                last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
             return TIMESUP_EXIT
 
         # need for help check
