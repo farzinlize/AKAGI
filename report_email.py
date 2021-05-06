@@ -1,9 +1,11 @@
+import os
 import smtplib, json
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from getopt import getopt
 import sys
+from re import match
 
 from constants import DELIMETER, EMAIL_ACCOUNT, MAIL_HEADER, MAIL_SUBJECT, MAIL_TO, SECRET_FILE_ADDRESS
 
@@ -56,9 +58,13 @@ def send_files_mail(texts=[], attachments=[], types=[], strings=[], additional_s
     server.close()
 
 
+def find_file_with_pattern(pattern):
+    return [f for f in os.listdir() if match(pattern, f)]
+
+
 if __name__ == "__main__":
-    shortopt = 'i:a:t:'
-    longopts = ['in-body=', 'attachment=', 'types=']
+    shortopt = 'i:a:t:r:'
+    longopts = ['in-body=', 'attachment=', 'types=', 're=']
 
     # default values
     args_dict = {'attachments':[], 'types':[]}
@@ -68,8 +74,10 @@ if __name__ == "__main__":
         if o in ['-i', '--in-body']:
             args_dict.update({'in-body':a.split(DELIMETER)})
         elif o in ['-a', '--attachment']:
-            args_dict.update({'attachments':a.split(DELIMETER)})
+            args_dict['attachments'] += a.split(DELIMETER)
         elif o in ['-t', '--types']:
             args_dict.update({'types':a.split(DELIMETER)})
+        elif o in ['-r', '--re']:
+            args_dict['attachments'] += find_file_with_pattern(a)
 
     send_files_mail(args_dict['in-body'], args_dict['attachments'], args_dict['types'])
