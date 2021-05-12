@@ -7,7 +7,7 @@ from getopt import getopt
 import sys
 from re import match
 
-from constants import DELIMETER, EMAIL_ACCOUNT, MAIL_HEADER, MAIL_SUBJECT, MAIL_TO, SECRET_FILE_ADDRESS
+from constants import DELIMETER, EMAIL_ACCOUNT, MAIL_HEADER, MAIL_SUBJECT, MAIL_TO, PROCESS_REPORT_FILE, PROCESS_REPORT_FILE_PATTERN, SECRET_FILE_ADDRESS
 
 TYPES = {'T':MIMEText, 'I':MIMEImage}
 READ_MODE = {'T': 'r', 'I': 'rb'}
@@ -64,7 +64,7 @@ def find_file_with_pattern(pattern):
 
 if __name__ == "__main__":
     shortopt = 'i:a:t:r:'
-    longopts = ['in-body=', 'attachment=', 'types=', 're=']
+    longopts = ['in-body=', 'attachment=', 'types=', 're=', 're-p']
 
     # default values
     args_dict = {'attachments':[], 'types':[]}
@@ -79,5 +79,8 @@ if __name__ == "__main__":
             args_dict.update({'types':a.split(DELIMETER)})
         elif o in ['-r', '--re']:
             args_dict['attachments'] += find_file_with_pattern(a)
+        elif o == '--re-p':
+            args_dict['attachments'] += find_file_with_pattern(PROCESS_REPORT_FILE_PATTERN)
 
+    # print(args_dict)
     send_files_mail(args_dict['in-body'], args_dict['attachments'], args_dict['types'])
