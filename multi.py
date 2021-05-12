@@ -18,7 +18,7 @@ TIMESUP_EXIT = -1
 END_EXIT = 0
 
 
-def chaining_thread_and_local_pool(message:Queue, work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
+def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
 
     # local ranking pools
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
@@ -30,6 +30,13 @@ def chaining_thread_and_local_pool(message:Queue, work: Queue, merge: Queue, on_
         # obtaining a job
         motif: ChainNode = work.get()
         jobs_done_by_me += 1
+
+        # check for exit signal
+        if not motif:
+            merge.put(local_pool)
+            with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
+                last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+            return # exit
 
         # evaluation the job (motif)
         good_enough = 0
@@ -66,14 +73,14 @@ def chaining_thread_and_local_pool(message:Queue, work: Queue, merge: Queue, on_
         
         chaining_done_by_me += 1
 
-        try:
-            command = message.get_nowait()
-            if command == 'MK':
-                merge.put(local_pool)
-                with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
-                    last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-                return # exit
-        except Empty:pass
+        # try:
+        #     command = message.get_nowait()
+        #     if command == 'MK':
+        #         merge.put(local_pool)
+        #         with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
+        #             last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+        #         return # exit
+        # except Empty:pass
         
 
 def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
@@ -210,7 +217,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     # initializing synchronized queues
     work =    Queue()   # chaining jobs with type of chain nodes
     merge =   Queue()   # merging requests to a global pool
-    message = Queue()   # message box to terminate workers loop
+    # message = Queue()   # message box to terminate workers loop
 
     for motif in initial_works:
         work.put_nowait(motif)
@@ -219,7 +226,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     disk_queue = QueueDisk(ChainNode)
 
     # initial threads
-    workers = [Process(target=chaining_thread_and_local_pool, args=(message,work,merge,on_sequence,dataset_dict,overlap,gap,q)) for _ in range(cores)]
+    workers = [Process(target=chaining_thread_and_local_pool, args=(work,merge,on_sequence,dataset_dict,overlap,gap,q)) for _ in range(cores)]
     global_pooler = Process(target=global_pool_thread, args=(merge,dataset_dict,initial_pool))
     for worker in workers:worker.start()
     global_pooler.start()
@@ -266,20 +273,14 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
 
             if time_has_ended(since, TIMER_CHAINING_HOURS):exit = TIMESUP_EXIT;break
 
-    # message the workers to terminate their job and merge for last time
-    for _ in workers:
-        message.put_nowait('MK')
-
-    # waiting for workers to die
-    for worker in workers:
-        worker.join()
-
-    # message global_pooler to terminate
-    merge.put('PK')
-    global_pooler.join()
+    # IN CASE OF ERROR, KILL EVERYONE AND LEAVE
+    if exit == ERROR_EXIT:
+        for worker in workers:worker.kill()
+        global_pooler.kill()
+        return
 
     # send rest of the jobs to cloud in case of timeout
-    if exit == TIMESUP_EXIT:
+    elif exit == TIMESUP_EXIT:
 
         rest_work = []
         while True:
@@ -291,6 +292,41 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
             strings=['REST OF JOBS HAS SENT - unfinished program has sent its remaining data into cloud'],
             additional_subject=' an unfinished end')
 
-    elif exit == ERROR_EXIT:return
+    if work.qsize() != 0:
+        print('[ERROR] still work?!')
 
+        # dump unwanted works
+        while True:
+            try:work.get_nowait()
+            except Empty:break
+        
     assert work.qsize() == 0 
+    
+    # message the workers to terminate their job and merge for last time
+    for _ in workers:
+        work.put(None)
+        # message.put_nowait('MK')
+
+    # waiting for workers to die
+    for worker in workers:
+        worker.join()
+
+    # message global_pooler to terminate
+    merge.put('PK')
+    global_pooler.join()
+
+
+
+def test_process(queue:Queue):
+    while True:
+        item = queue.get()
+        print(type(item))
+        if item:continue
+        break
+
+
+if __name__ == '__main__':
+    # test
+    queue = Queue()
+    process1 = Process(target=test_process, args=(queue,))
+    process1.start()
