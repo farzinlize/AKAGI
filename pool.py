@@ -235,7 +235,6 @@ def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
     sequence_index = 0
     psum = 0
     nsum = 0
-    has_n = False
 
     while sequence_index < len(sequences_bundles):
 
@@ -245,13 +244,11 @@ def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
             foundlist_index += 1
         
         # - nscore
-        else:
-            has_n = True
-            nsum += sequences_bundles[sequence_index][P_VALUE]
+        else:nsum += sequences_bundles[sequence_index][P_VALUE]
 
         sequence_index += 1
 
-    if has_n:
+    if nsum != 0:
         nscore = (nsum/(len(sequences_bundles)-len(foundlist_seq_vector)))
     else:
         nscore = 0
