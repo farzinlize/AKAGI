@@ -15,6 +15,7 @@ from constants import APPDATA_PATH, CHECKPOINT_TAG, GOOGLE_CREDENTIALS_FILE, INT
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
+CLOUD_FILE_SIZE_LIMIT = 100 * (2**20)
 
 def connect_and_save_credentials():
     auth = GoogleAuth()
@@ -92,6 +93,12 @@ def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_object
             content = data.read()
             compressed += int_to_bytes(len(f)) + bytes(f, 'ascii')
             compressed += int_to_bytes(len(content)) + content
+
+    print(f'[CLOUD] compressing directory - total bytes count: {len(compressed)}')
+
+    if len(compressed) > CLOUD_FILE_SIZE_LIMIT:
+        print('[UPLOAD] WARNING: starting to upload a large file')
+        # TODO: several compressed file instead of only one if necessary 
 
     compressed_drive = drive.CreateFile({'title': protected_directory.split('/')[-2]+'.bin', "mimeType": "application/octet-stream"})
     compressed_drive.content = io.BytesIO(compressed)
