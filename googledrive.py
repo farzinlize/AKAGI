@@ -87,6 +87,8 @@ def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_object
 
     if only_objectfile:return
 
+    print('[CLOUD] number of protected files to be compressed: %d'%len(os.listdir(protected_directory)))
+
     compressed = b''
     for f in os.listdir(protected_directory):
         with open(protected_directory + f, 'rb') as data:
@@ -94,7 +96,7 @@ def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_object
             compressed += int_to_bytes(len(f)) + bytes(f, 'ascii')
             compressed += int_to_bytes(len(content)) + content
 
-    print(f'[CLOUD] compressing directory - total bytes count: {len(compressed)}')
+    print(f'[CLOUD] compressing directory - total bytes count: {len(compressed)} ({(len(compressed)/(1024*1024))} MB)')
 
     if len(compressed) > CLOUD_FILE_SIZE_LIMIT:
         print('[UPLOAD] WARNING: starting to upload a large file')
@@ -104,7 +106,7 @@ def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_object
     compressed_drive.content = io.BytesIO(compressed)
     compressed_drive.Upload()
     
-    print('\n[CLOUD] upload is done in %s time'%(datetime.now()-since))
+    print('[CLOUD] upload is done in %s'%(datetime.now()-since))
     return drive
 
 

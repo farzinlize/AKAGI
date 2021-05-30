@@ -28,3 +28,4 @@ akagi_2.fasta
 *.window
 test_argument.arg
 *.checkpoint
+/memechip/*

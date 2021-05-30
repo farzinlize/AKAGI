@@ -248,14 +248,25 @@ class ExtraPosition:
 #                 functions                  #
 # ########################################## #
 
+def GFF_to_fasta(gff_name, fasta_name):
+    with open(gff_name, 'r') as gff, open(fasta_name, 'w') as fasta:
+        _ = gff.readline() # gff version line
+        for line in gff:
+            for attribute in line.split()[8].split(';'):
+                if attribute.startswith('sequence='):
+                    fasta.write('>1\n%s\n'%attribute[9:])
+                    break
+
+
 def memechip_jaspar_evaluation(memehip_motif_sites, jaspar):
     sequences = read_fasta(memehip_motif_sites)
-    pwm = read_pfm_save_pwm(jaspar, reverse=True)
+    pwm, rpwm = read_pfm_save_pwm(jaspar)
     
     aggregated = 0
     for sequence in sequences:
         score, _ = pwm_score_sequence(sequence, pwm)
-        aggregated += score
+        r_score, _ = pwm_score_sequence(sequence, rpwm)
+        aggregated += max(score, r_score)
     
     print('jasper score of memechip motif -> %.2f'%(aggregated/len(sequences)))
     
@@ -876,7 +887,8 @@ def test_binary_add():
 if __name__ == "__main__":
     # test = read_pfm('./pfms/test2.pfm')
     # pwm = pfm_to_pwm(test)
-    memechip_jaspar_evaluation('./memechip/motif_1_fasta.txt', './pfms/MA0595.1.pfm')
+    memechip_jaspar_evaluation('./memechip/SRF.fasta', './pfms/MA0083.2.pfm')
+    # GFF_to_fasta('./memechip/SRF.gff', './memechip/SRF.fasta')
     # pwm_2 = read_pfm_save_pwm('./pfms/meme_my.pfm')
     # pwm_1 = read_meme_motif_to_pwm('./memechip/motif_3_counts.txt')
     # print(pwm_1)
