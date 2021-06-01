@@ -4,7 +4,7 @@ from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_PORTION, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk, bytes_to_int, int_to_bytes
 from TrieFind import ChainNode
@@ -197,17 +197,14 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
             for _ in range(int(estimated_size*HELP_PORTION)):
                 help_me_with.append(work.get())
 
-            try:
-                # uploading to drive
-                save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=True)
+            # uploading to drive
+            save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=HELP_CLOUD)
 
-                # inform by email
+            # inform by email
+            if HELP_CLOUD:
                 send_files_mail(
                     strings=['HELP HAS SENT - EXECUTION OF ANOTHER AKAGI INSTANCE IS REQUESTED'],
                     additional_subject=' HELP AKAGI')
-            except Exception:
-                print('[ERROR] something went wrong when sending help')
-                return ERROR_EXIT
     
     return END_EXIT
 

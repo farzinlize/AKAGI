@@ -171,6 +171,7 @@ SEND_FOR_HELP = True
 TIMER_HELP_HOURS = 4
 HELP_PORTION = 0.6
 NEED_HELP = 50000 # pathetic XD
+HELP_CLOUD = True
 
 PROCESS_REPORT_FILE = 'process_%d.report'
 PROCESS_REPORT_FILE_PATTERN = 'process_.*\.report'
