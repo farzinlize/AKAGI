@@ -8,7 +8,7 @@ from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, C
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk, bytes_to_int, int_to_bytes
 from TrieFind import ChainNode
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, cpu_count
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 from typing import List
@@ -211,6 +211,8 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
 
 def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:OnSequenceDistribution, dataset_dict, overlap, gap, q, network=False, initial_pool=None):
     
+    print(f'[CHAINING][MULTICORE] number of available cores: {cpu_count()}')
+
     # initializing synchronized queues
     work =    Queue()   # chaining jobs with type of chain nodes
     merge =   Queue()   # merging requests to a global pool
