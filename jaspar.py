@@ -1,3 +1,4 @@
+import os
 import requests
 
 def read_jaspar_formatted_pfm(pfm):raise NotImplementedError
@@ -13,7 +14,11 @@ def costume_table_jaspar(dataset_name):
     return table[dataset_name.split('/')[-1]]
 
 
-def download_jaspar_raw(jaspar):
+def get_jaspar_raw(jaspar):
+    # check local
+    if os.path.exists(f'pfms/{jaspar}.pfm'):
+        return f'pfms/{jaspar}.pfm'
+
     with open(f'pfms/{jaspar}.pfm', 'wb') as pfm:
         pfm.write(requests.get(f'http://jaspar.genereg.net/api/v1/matrix/{jaspar}.pfm').content)
 
