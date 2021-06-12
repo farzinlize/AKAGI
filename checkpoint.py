@@ -78,6 +78,18 @@ def unique_checkpoint_name():
     return checkpoint
 
 
+def query_resumable_checkpoints() -> str:
+    pass
+
+
+def remove_checkpoints(checkpoint):
+    pass
+
+
+def lock_checkpoint(checkpoint):
+    pass
+
+
 if __name__ == '__main__':
     name = observation_checkpoint_name('hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak', [3, 5], [0, 2], True)
 
