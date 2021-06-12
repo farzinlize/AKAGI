@@ -1,13 +1,6 @@
 # python libraries 
-from jaspar import costume_table_jaspar, download_jaspar_raw
-from peakseq import annotation_to_sequences
-from pause import resume_any_cloud
-from onSequence import OnSequenceDistribution
+from networking import connect_to_master, raise_helping_hand
 import os
-from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
-from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkpoint
-from TrieFind import ChainNode
-from multi import multicore_chaining_main
 from time import time as currentTime
 from time import strftime, gmtime
 from getopt import getopt
@@ -15,11 +8,19 @@ import sys
 
 # project imports
 from GKmerhood import DummyTree, GKmerhood, GKHoodTree
-from findmotif import find_motif_all_neighbours, motif_chain, multiple_layer_window_find_motif
+from findmotif import find_motif_all_neighbours, multiple_layer_window_find_motif
 from misc import brief_sequence, change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
-from report import motif_chain_report, FastaInstance, OnSequenceAnalysis, aPWM, Ranking, colored_neighbours_analysis
+from report import FastaInstance, OnSequenceAnalysis, aPWM, Ranking
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
+from jaspar import costume_table_jaspar, get_jaspar_raw
+from peakseq import annotation_to_sequences
+from pause import resume_any_cloud
+from onSequence import OnSequenceDistribution
+from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
+from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkpoint
+from TrieFind import ChainNode
+from multi import TIMESUP_EXIT, multicore_chaining_main
 
 # importing constants
 from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SAVE_THE_REST_CLOUD, SEQUENCES, SEQUENCE_BUNDLES
@@ -391,33 +392,52 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer):
     store_checkpoint_to_cloud(checkpoint, directory_name)
         
 
-def resume_chaining(cores, overlap, gap):
-    offline_checkpoints = [f for f in os.listdir() if f.endswith(CHECKPOINT_TAG) and f[0]=='R']
+def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
 
-    if offline_checkpoints:
-        checkpoint = offline_checkpoints[0]
+    if checkpoint_name:
+        # manual checkpoint input name
+        checkpoint = checkpoint_name
+
+    elif assist_network:
+        # download helping package of work
+        master = connect_to_master(assist_network, is_new=True)
+        checkpoint = master.get_jobs()
+
     else:
-        checkpoint = resume_any_cloud()
+        # auto-find resumable checkpoints local or cloud
+        offline_checkpoints = [f for f in os.listdir() if f.endswith(CHECKPOINT_TAG) and f[0]=='R']
+
+        if offline_checkpoints:
+            checkpoint = offline_checkpoints[0]
+        else:
+            checkpoint = resume_any_cloud()
     
     if checkpoint == None:
         print('[APP] found nothing to resume - end')
         return
 
     motifs, on_sequence, q, dataset_name = load_checkpoint(checkpoint, resumable=True)
-    pfm = download_jaspar_raw(costume_table_jaspar(dataset_name))
+    pfm = get_jaspar_raw(costume_table_jaspar(dataset_name))
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     # 
     # [AKAGI EXE] data prepartion for caught resumable checkpoint
-    annotation_to_sequences(dataset_name+'.cod', '2bits/hg18.2bit')
+    if not os.path.exists(f'{dataset_name}.fasta'): # or '.bundle'
+        annotation_to_sequences(dataset_name+'.cod', '2bits/hg18.2bit')
     sequences = read_fasta('%s.fasta'%(dataset_name))
     bundles = read_bundle('%s.bundle'%(dataset_name))
     pwm = read_pfm_save_pwm(pfm)
     #
     dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
-    multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+    finish_code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
     #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+    if assist_network:
+        master = connect_to_master(assist_network, is_new=False)
+        master.report_back('akagi.pool')
+        if finish_code == TIMESUP_EXIT:
+            master.send_rest()
 
 
 
@@ -445,17 +465,17 @@ if __name__ == "__main__":
     make_location(APPDATA_PATH)
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:k'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:kh:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
         'multi-layer', 'feature', 'megalexa=', 'separated=', 'change=', 'reference=', 'disable-chaining',
-        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point']
+        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
         'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False,
-        'multicore': False, 'ncores':1, 'jaspar':'', 'checkpoint':True}
+        'multicore': False, 'ncores':1, 'jaspar':'', 'checkpoint':True, 'name':None, 'assist':None}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -497,7 +517,9 @@ if __name__ == "__main__":
         elif o in ['-n', '--ncores']:args_dict.update({'ncores':int(a)})
         elif o in ['-j', '--jaspar']:args_dict.update({'jaspar':a})
         elif o in ['-a', '--arguments']:
-            with open(o, 'r') as arguments:opts += getopt(arguments.read().split(), shortopt, longopts)[0]
+            with open(a, 'r') as arguments:opts += getopt(arguments.read().split(), shortopt, longopts)[0]
+        elif o == '--name':args_dict.update({'name':a})
+        elif o in ['-h', '--assist']:args_dict.update({'assist':a})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -577,7 +599,9 @@ if __name__ == "__main__":
         resume_chaining(
             args_dict['ncores'], 
             args_dict['overlap'], 
-            args_dict['gap'])
+            args_dict['gap'],
+            args_dict['name'],
+            args_dict['assist'])
     elif command == 'NOP':
         pass
     else:

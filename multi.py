@@ -1,10 +1,12 @@
+from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoints
+from networking import listen_for_assistance, listen_for_helping_hands
 import os
 from report_email import send_files_mail
 from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOST_ADDRESS, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, HOST_ADDRESS, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk, bytes_to_int, int_to_bytes
 from TrieFind import ChainNode
@@ -18,7 +20,7 @@ TIMESUP_EXIT = -1
 END_EXIT = 0
 
 
-def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
+def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
 
     # local ranking pools
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
@@ -27,16 +29,22 @@ def chaining_thread_and_local_pool(work: Queue, merge: Queue, on_sequence: OnSeq
 
     while True:
 
+        # check for exit signal (higher priority queue check)
+        try:
+            signal = message.get(timeout=1)
+
+            # Merge and Finish
+            if signal == 'mf':
+                merge.put(local_pool)
+                with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
+                    last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+                return # exit
+
+        except Empty:pass
+
         # obtaining a job
         motif: ChainNode = work.get()
         jobs_done_by_me += 1
-
-        # check for exit signal
-        if not motif:
-            merge.put(local_pool)
-            with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
-                last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-            return # exit
 
         # evaluation the job (motif)
         good_enough = 0
@@ -190,23 +198,55 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
             return TIMESUP_EXIT
 
         # need for help check
-        estimated_size = work.qsize()
-        if estimated_size > NEED_HELP:
+        if HOPEFUL:
+            estimated_size = work.qsize()
+            if estimated_size > NEED_HELP:
 
-            help_me_with = []
-            for _ in range(int(estimated_size*HELP_PORTION)):
-                help_me_with.append(work.get())
+                help_me_with = []
+                for _ in range(int(estimated_size*HELP_PORTION)):
+                    help_me_with.append(work.get())
 
-            # uploading to drive
-            save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=HELP_CLOUD)
+                # uploading to drive
+                save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=HELP_CLOUD)
 
-            # inform by email
-            if HELP_CLOUD:
-                send_files_mail(
-                    strings=['HELP HAS SENT - EXECUTION OF ANOTHER AKAGI INSTANCE IS REQUESTED'],
-                    additional_subject=' HELP AKAGI')
+                # inform by email
+                if MAIL_SERVICE:
+                    send_files_mail(
+                        strings=['HELP HAS SENT - EXECUTION OF ANOTHER AKAGI INSTANCE IS REQUESTED'],
+                        additional_subject=' HELP AKAGI')
     
     return END_EXIT
+
+
+def network_handler(merge: Queue):
+
+    while True:
+
+        assistance = listen_for_assistance()
+
+        # send resumable checkpoints to new assistants
+        if assistance.isNew():
+            checkpoint = query_resumable_checkpoints()
+
+            if checkpoint:
+                assistance.copy_jobs(checkpoint)
+                lock_checkpoint(checkpoint)
+            else:
+                assistance.REFUSE('no need for help')
+                continue
+
+        # get reports from elder assistants
+        else:
+            working_checkpoint, report, finish_code = assistance.get_report()
+            merge.put(report)
+
+            if finish_code == TIMESUP_EXIT:
+                assistance.receive_rest()
+
+            remove_checkpoints(working_checkpoint)
+
+        
+# def assistance_main(gap, overlap)
 
 
 def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:OnSequenceDistribution, dataset_dict, overlap, gap, q, network=False, initial_pool=None):
@@ -216,7 +256,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     # initializing synchronized queues
     work =    Queue()   # chaining jobs with type of chain nodes
     merge =   Queue()   # merging requests to a global pool
-    # message = Queue()   # message box to terminate workers loop
+    message = Queue()   # message box to terminate workers loop (higher priority)
 
     for motif in initial_works:
         work.put_nowait(motif)
@@ -225,13 +265,16 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     disk_queue = QueueDisk(ChainNode)
 
     # initial threads
-    workers = [Process(target=chaining_thread_and_local_pool, args=(work,merge,on_sequence,dataset_dict,overlap,gap,q)) for _ in range(cores)]
+    workers = [Process(target=chaining_thread_and_local_pool, args=(message, work,merge,on_sequence,dataset_dict,overlap,gap,q)) for _ in range(cores)]
     global_pooler = Process(target=global_pool_thread, args=(merge,dataset_dict,initial_pool))
     for worker in workers:worker.start()
     global_pooler.start()
 
     # initial server listener (in case of network computing)
-    if network:raise NotImplementedError
+    if network:
+        nh = Process(target=network_handler, args=(merge,))
+        nh.start()
+        # raise NotImplementedError
 
     # parent also is a worker
     # [WARNING] may results in memory full
@@ -276,10 +319,34 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     if exit == ERROR_EXIT:
         for worker in workers:worker.kill()
         global_pooler.kill()
-        return
+        return exit
+    
+    # message the workers to terminate their job and merge for last time
+    for _ in worker:
+        message.put('mf')
 
-    # send rest of the jobs to cloud in case of timeout
-    elif exit == TIMESUP_EXIT:
+    is_there_alive = True
+    join_timeout = 30 # minutes
+
+    while is_there_alive and join_timeout:
+        
+        # 5 minute wait
+        sleep(60 * 5)
+        join_timeout -= 5
+
+        # assume all dead and check
+        is_there_alive = False
+        for worker in workers:
+            if worker.is_alive():is_there_alive = True
+
+    # kill whoever is alive ignoring its merge signal
+    for worker in workers:
+        if worker.is_alive():
+            print('[ERROR][PROCESS] worker (pid=%d) resist to die (killed by master)'%worker.pid)
+            worker.kill()
+
+    # save rest of the works if timesup
+    if exit == TIMESUP_EXIT:
 
         rest_work = []
         while True:
@@ -287,32 +354,26 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
             except Empty:break
         
         save_the_rest(rest_work, on_sequence, q, dataset_dict[DATASET_NAME], cloud=SAVE_THE_REST_CLOUD)
-        send_files_mail(
-            strings=['REST OF JOBS HAS SENT - unfinished program has sent its remaining data into cloud'],
-            additional_subject=' an unfinished end')
 
-    if work.qsize() != 0:
-        print('[ERROR] still work?!')
+        if MAIL_SERVICE:
+            send_files_mail(
+                strings=['REST OF JOBS HAS SENT - unfinished program has sent its remaining data into cloud'],
+                additional_subject=' an unfinished end')
 
-        # dump unwanted works
-        while True:
-            try:work.get_nowait()
-            except Empty:break
-        
-    assert work.qsize() == 0 
-    
-    # message the workers to terminate their job and merge for last time
-    for _ in workers:
-        work.put(None)
-        # message.put_nowait('MK')
-
-    # waiting for workers to die
-    for worker in workers:
-        worker.join()
+    # check work queue for any remaining job
+    # if work.qsize() != 0:
+    #     print('[ERROR] still work?!')
+    #     # dump unwanted works
+    #     while True:
+    #         try:work.get_nowait()
+    #         except Empty:break    
+    # assert work.qsize() == 0 
 
     # message global_pooler to terminate
     merge.put('PK')
     global_pooler.join()
+
+    return exit
 
 
 
