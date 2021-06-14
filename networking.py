@@ -2,7 +2,7 @@ import os
 from pool import AKAGIPool
 from misc import int_to_bytes, bytes_to_int, make_location
 from socket import socket, AF_INET, SOCK_STREAM, gethostname, gethostbyname
-from constants import SOCKET_BUFFSIZE, NETWORK_LOG, MASTER, ASSISTANT, INT_SIZE
+from constants import SOCKET_BUFFSIZE, NETWORK_LOG, MASTER, ASSISTANT, INT_SIZE, APPDATA_PATH
 
 class ConnectionInterface:
 
@@ -29,25 +29,25 @@ class ConnectionInterface:
 
     def get_jobs(self): # client (expect checkpoint name in return)
 
-        checkpoint = recvfile_socket(self.connection)
+        checkpoint = self.recvfile_socket()
 
         protected_directory = APPDATA_PATH + checkpoint.split('.')[0] + '/'
         make_location(protected_directory)
 
         for _ in range(bytes_to_int(self.read_nbytes(INT_SIZE))):
-            recvfile_socket(self.connection)
+            self.recvfile_socket()
     
 
     def copy_jobs(self, checkpoint): # server
 
-        sendfile_socket(checkpoint, self.connection)
+        self.sendfile_socket(checkpoint)
 
         protected_directory = APPDATA_PATH + checkpoint.split('.')[0] + '/'
         bytefiles = os.listdir(protected_directory)
 
         self.connection.sendall(int_to_bytes(len(bytefiles)))
         for f in bytefiles:
-            sendfile_socket(protected_directory + f, self.connection)
+            self.sendfile_socket(protected_directory + f)
             
 
 
@@ -57,6 +57,33 @@ class ConnectionInterface:
 
     def send_rest(self):pass   # client
     def receive_rest(self):pass # server
+
+
+    def sendfile_socket(self, filename):
+        self.connection.sendall(int_to_bytes(len(filename), int_size=1))
+        self.connection.sendall(filename.encode())
+
+        with open(filename, 'rb') as file:
+            while True:
+                chunk = file.read(SOCKET_BUFFSIZE)
+                self.connection.sendall(int_to_bytes(len(chunk), int_size=2))
+                if chunk:self.connection.sendall(chunk)
+                else    :break
+
+
+    def recvfile_socket(self):
+        length = bytes_to_int(self.read_nbytes(1))
+        filename = self.read_nbytes(length).decode()
+
+        with open(filename, 'wb') as file:
+            while True:
+                length = bytes_to_int(self.read_nbytes(2))
+                if length == 0:
+                    break # end of file signal
+                chunk = self.read_nbytes(length)
+                file.write(chunk)
+
+        return filename
 
 
 class AssistanceService:
@@ -71,9 +98,9 @@ class AssistanceService:
         assistant_socket, addr = self.server.accept()
 
         with open(NETWORK_LOG, 'a+') as logger:
-            logger.write('assistant connected from address: ', addr)
+            logger.write('assistant connected from address: ' + str(addr))
 
-        return ConnectionInterface(assistance_socket, master=True)
+        return ConnectionInterface(assistant_socket, master=True)
 
 
     @staticmethod 
@@ -86,25 +113,7 @@ class AssistanceService:
         # master.
 
 
-def sendfile_socket(filename, receiver:socket):
-    receiver.sendall(filename.encode())
-    with open(filename, 'rb') as file:
-        while True:
-            chunk = file.read(SOCKET_BUFFSIZE)
-            if chunk:receiver.sendall(chunk)
-            else    :break
 
-
-def recvfile_socket(sender:socket, extra_tag=''):
-    filename = sender.recv(SOCKET_BUFFSIZE)
-    print(filename)
-    filename = filename.decode()
-    with open(filename + extra_tag, 'wb') as file:
-        while True:
-            chunk = sender.recv(SOCKET_BUFFSIZE)
-            if chunk:file.write(chunk)
-            else    :break
-    return filename
 
 
 if __name__ == '__main__':
