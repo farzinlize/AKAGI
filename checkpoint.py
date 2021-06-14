@@ -3,7 +3,7 @@ import pickle
 import os
 from misc import ExtraPosition, make_location
 from FoundMap import FileMap
-from constants import APPDATA_PATH, CHECKPOINT_TAG
+from constants import APPDATA_PATH, CHECKPOINT_TAG, LOCK_PREFIX
 from TrieFind import ChainNode
 from typing import List
 
@@ -72,33 +72,51 @@ def observation_checkpoint_name(dataset: str, f, d, multilayer):
 
 # return a name based on time (with R suffix)
 def unique_checkpoint_name():
-    checkpoint = datetime.now().strftime(f"R%Y-%m-%d(%H:%M:%S){CHECKPOINT_TAG}")
+    checkpoint = datetime.now().strftime(f"R%Y-%m-%d(%H-%M-%S){CHECKPOINT_TAG}")
     while os.path.isfile(checkpoint):
-        checkpoint = datetime.now().strftime(f"R%Y-%m-%d(%H:%M:%S){CHECKPOINT_TAG}")
+        checkpoint = datetime.now().strftime(f"R%Y-%m-%d(%H-%M-%S){CHECKPOINT_TAG}")
     return checkpoint
 
 
 def query_resumable_checkpoints() -> str:
-    pass
+    return [checkpoint for checkpoint in os.listdir() if checkpoint.startswith('R') and checkpoint.endswith(CHECKPOINT_TAG)]
 
 
-def remove_checkpoints(checkpoint):
-    pass
+def remove_checkpoint(checkpoint:str, locked=False):
+    protected_directory = APPDATA_PATH + checkpoint.split('.')[0] + '/'
+
+    if locked:filename = os.remove(LOCK_PREFIX + checkpoint)
+    else     :filename = os.remove(checkpoint)
+
+    for data in os.listdir(protected_directory):os.remove(protected_directory+data)
+    os.removedirs(protected_directory)
 
 
 def lock_checkpoint(checkpoint):
-    pass
+    with open(checkpoint, 'rb') as data:
+        databytes = data.read()
+    with open(LOCK_PREFIX + checkpoint, 'wb') as locked:
+        locked.write(databytes)
+    os.remove(checkpoint)
 
 
 if __name__ == '__main__':
-    name = observation_checkpoint_name('hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak', [3, 5], [0, 2], True)
+    # name = observation_checkpoint_name('hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak', [3, 5], [0, 2], True)
+    a = query_resumable_checkpoints()
+    print(a)
+    name = a[0]
 
-    motif1 = ChainNode('ACTG', FileMap(initial=[[0, 1],[[ExtraPosition(5, 3)],[ExtraPosition(8, 9)]]]))
-    motif2 = ChainNode('ACTGGGT', FileMap(initial=[[0, 2],[[ExtraPosition(7, 1)],[ExtraPosition(3, 8)]]]))
+    # name = unique_checkpoint_name()
 
-    save_checkpoint([motif1, motif2], name)
+    # motif1 = ChainNode('ACTG', FileMap(initial=[[0, 1],[[ExtraPosition(5, 3)],[ExtraPosition(8, 9)]]]))
+    # motif2 = ChainNode('ACTGGGT', FileMap(initial=[[0, 2],[[ExtraPosition(7, 1)],[ExtraPosition(3, 8)]]]))
 
-    loaded_motifs = load_checkpoint(name)
+    # save_checkpoint([motif1, motif2], name)
+
+    lock_checkpoint(name)
+    remove_checkpoint(name, locked=True)
+
+    # loaded_motifs = load_checkpoint(name)
 
     # motifs = load_checkpoint('test.test')
     # print()

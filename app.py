@@ -1,5 +1,4 @@
 # python libraries 
-from networking import connect_to_master, raise_helping_hand
 import os
 from time import time as currentTime
 from time import strftime, gmtime
@@ -21,6 +20,7 @@ from googledrive import download_checkpoint_from_drive, query_download_checkpoin
 from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkpoint
 from TrieFind import ChainNode
 from multi import TIMESUP_EXIT, multicore_chaining_main
+from networking import AssistanceService
 
 # importing constants
 from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SAVE_THE_REST_CLOUD, SEQUENCES, SEQUENCE_BUNDLES
@@ -400,7 +400,7 @@ def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
 
     elif assist_network:
         # download helping package of work
-        master = connect_to_master(assist_network, is_new=True)
+        master = AssistanceService.connect_to_master(assist_network, is_new=True)
         checkpoint = master.get_jobs()
 
     else:
@@ -434,7 +434,7 @@ def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
     if assist_network:
-        master = connect_to_master(assist_network, is_new=False)
+        master = AssistanceService.connect_to_master(assist_network, is_new=False)
         master.report_back('akagi.pool')
         if finish_code == TIMESUP_EXIT:
             master.send_rest()

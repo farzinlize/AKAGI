@@ -184,3 +184,16 @@ PROCESS_ENDING_REPORT = \
 jobs done by me: %d
 chaining done by me: %d
 '''
+
+LOCK_PREFIX = 'LOCK'
+TEMP_POOL_LOCATION = 'akagi.pool'
+TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
+
+PC_NAME = 'Anakin'
+BEST_PATTERNS_POOL = '%s_%d.pool'
+
+SOCKET_BUFFSIZE = 4096
+NETWORK_LOG = 'network.log'
+MASTER = 'mas'
+ASSISTANT = 'ass'
+AKAGI_PORT = 1090

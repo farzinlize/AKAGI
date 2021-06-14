@@ -1,12 +1,12 @@
-from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoints
-from networking import listen_for_assistance, listen_for_helping_hands
+from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
+from networking import AssistanceService, listen_for_assistance, listen_for_helping_hands
 import os
 from report_email import send_files_mail
 from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, HOST_ADDRESS, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, REJECT_REQUEST, REQUEST_PORT, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, HOST_ADDRESS, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk, bytes_to_int, int_to_bytes
 from TrieFind import ChainNode
@@ -105,7 +105,7 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
         # merging
         merge_request: AKAGIPool = merge.get()
         if type(merge_request)==str and merge_request=='PK':
-            global_pool.savefile('akagi.pool')
+            global_pool.savefile(BEST_PATTERNS_POOL%(PC_NAME, os.getpid()))
             return
 
         global_pool.merge(merge_request)
@@ -220,15 +220,19 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
 
 def network_handler(merge: Queue):
 
+    # initial socket handeling (server socket)
+    service = AssistanceService()
+
     while True:
 
-        assistance = listen_for_assistance()
+        assistance = service.listen_for_assistance()
 
         # send resumable checkpoints to new assistants
         if assistance.isNew():
-            checkpoint = query_resumable_checkpoints()
+            checkpoints = query_resumable_checkpoints()
 
-            if checkpoint:
+            if checkpoints:
+                checkpoint = checkpoints[0] # send first one
                 assistance.copy_jobs(checkpoint)
                 lock_checkpoint(checkpoint)
             else:
@@ -243,7 +247,7 @@ def network_handler(merge: Queue):
             if finish_code == TIMESUP_EXIT:
                 assistance.receive_rest()
 
-            remove_checkpoints(working_checkpoint)
+            remove_checkpoint(working_checkpoint, locked=True)
 
         
 # def assistance_main(gap, overlap)
