@@ -1,7 +1,7 @@
 from FoundMap import FileMap
 import struct
 from typing import List
-from constants import APPDATA_PATH, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, INT_SIZE, POOL_LIMITED, POOL_SIZE, PWM, P_VALUE, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER
+from constants import APPDATA_PATH, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, INT_SIZE, PC_NAME, POOL_LIMITED, POOL_SIZE, PWM, P_VALUE, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLE_HEADER_KEY, TEMP_POOL_LOCATION, TEMP_POOL_PRD, TOP_TEN_REPORT_HEADER
 from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, make_location, pwm_score_sequence
 from TrieFind import ChainNode
 
@@ -140,25 +140,29 @@ class AKAGIPool:
     #            pool disk operations            #
     # ########################################## #
 
-    def savefile(self, filename='akagi.pool'):
-        protected_directory = APPDATA_PATH + 'akagipool/'
-        make_location(protected_directory)
+    def savefile(self, filename:str):
+        pooldata_directory = APPDATA_PATH + filename.split('.')[0]
+        make_location(pooldata_directory)
+
+        seen = []
         with open(filename, 'wb') as disk:
-            first = True # only first table instances must protect their data
             for table in self.tables:
                 disk.write(int_to_bytes(len(table)))
 
                 for entity in table:
+
+                    first = entity.data.label not in seen # TODO [WARNING] linear search 
+                    seen.append(entity.data.label)
+
                     scores_pack = struct.pack('d'*len(entity.scores), *entity.scores)
                     disk.write(
                         int_to_bytes(len(scores_pack)) +
                         scores_pack +
-                        entity.data.to_byte(protect=first, directory=protected_directory)
+                        entity.data.to_byte(protect=first, directory=pooldata_directory)
                     )
-                first = False
 
 
-    def readfile(self, filename='akagi.pool'):
+    def readfile(self, filename=TEMP_POOL_LOCATION):
         with open(filename, 'rb') as disk:
             for table_index in range(len(self.tables)):
                 table_len = bytes_to_int(disk.read(INT_SIZE))
