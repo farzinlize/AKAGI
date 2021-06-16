@@ -15,6 +15,8 @@ def save_the_rest(works, on_sequence:OnSequenceDistribution, q, dataset_name, cl
     # upload to cloud
     if cloud:store_checkpoint_to_cloud(checkpoint, directory)
 
+    return checkpoint
+
 
 def time_has_ended(since, hours):
     return (datetime.now() - since) > timedelta(hours=hours)
