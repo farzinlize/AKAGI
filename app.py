@@ -188,7 +188,7 @@ def motif_finding_chain(dataset_name,
     if multicore:
         dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
         last_time = currentTime()
-        multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+        rest, code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
     else:        
         # changes must be applied
         raise NotImplementedError
@@ -196,6 +196,8 @@ def motif_finding_chain(dataset_name,
         # chains = motif_chain(motifs, sequences, bundles, q, gap, overlap)
         
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
+    print('finish code:', code)
+    if rest: print('rest of the works are saved as <checkpoint> ', rest)
 
     # make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
 
