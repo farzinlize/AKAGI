@@ -3,14 +3,14 @@
 
 from io import BufferedWriter
 from typing import List
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_FOUNDMAP_MODE, CHAINING_REPORT_EACH, CHAINING_REPORT_PEND, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, FOUNDMAP_MEMO, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
+from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_FOUNDMAP_MODE, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
 from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
 from TrieFind import ChainNode, WatchNode, WatchNodeC
-from GKmerhood import GKmerhood, GKHoodTree
-from misc import QueueDisk, clear_screen, heap_encode, alphabet_to_dictionary, lap_time, read_bundle, read_fasta, Queue, make_location, ExtraPosition
+from GKmerhood import GKHoodTree
+from misc import QueueDisk, clear_screen, heap_encode, lap_time, read_fasta, make_location, ExtraPosition
 from onSequence import OnSequenceDistribution
 from time import gmtime, strftime, time as currentTime
-from report import location_histogram, motif_chain_report, report_print
+from report import motif_chain_report, report_print
 import sys
 
 '''

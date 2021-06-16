@@ -1,5 +1,5 @@
 from onSequence import OnSequenceDistribution
-from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud, store_single_file
+from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
 from checkpoint import save_checkpoint, unique_checkpoint_name
 from datetime import datetime, timedelta
 

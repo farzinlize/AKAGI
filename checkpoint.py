@@ -1,8 +1,7 @@
 from datetime import datetime
 import pickle
 import os
-from misc import ExtraPosition, make_location
-from FoundMap import FileMap
+from misc import make_location
 from constants import APPDATA_PATH, CHECKPOINT_TAG, LOCK_PREFIX
 from TrieFind import ChainNode
 from typing import List

@@ -1,14 +1,14 @@
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
-from networking import AssistanceService, listen_for_assistance, listen_for_helping_hands
+from networking import AssistanceService
 import os
 from report_email import send_files_mail
 from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, HOST_ADDRESS, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 from pool import AKAGIPool, get_AKAGI_pools_configuration
-from misc import QueueDisk, bytes_to_int, int_to_bytes
+from misc import QueueDisk
 from TrieFind import ChainNode
 from multiprocessing import Process, Queue, cpu_count
 from onSequence import OnSequenceDistribution
@@ -313,7 +313,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     
     # message the workers to terminate their job and merge for last time
     for _ in worker:
-        message.put('mf')
+        message.put(EXIT_SIGNAL)
 
     is_there_alive = True
     join_timeout = 30 # minutes
@@ -360,7 +360,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     # assert work.qsize() == 0 
 
     # message global_pooler to terminate
-    merge.put('PK')
+    merge.put(EXIT_SIGNAL)
     global_pooler.join()
 
     if rest_checkpoint: # equal to -> if exit == TIMESUP_EXIT

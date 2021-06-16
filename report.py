@@ -1,6 +1,5 @@
 from constants import CHAIN_REPORT_FILENAME, CHAIN_REPORT_LINE_LIMIT, CHAIN_REPORT_PRINT
-from numpy.lib.utils import _Deprecate
-from TrieFind import ChainNode, TrieNode
+from TrieFind import ChainNode
 from functools import reduce
 from matplotlib import pyplot
 from misc import Queue, make_location

@@ -1,8 +1,7 @@
 from random import randrange
-from ast import Str
 from io import BufferedReader
 from typing import List
-from misc import Bytable, ExtraPosition, get_random_free_path, get_random_path, binary_add, bytes_to_int, int_to_bytes, make_location
+from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
 import os, sys
 from constants import APPDATA_PATH, BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 

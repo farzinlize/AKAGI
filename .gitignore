@@ -29,3 +29,5 @@ akagi_2.fasta
 test_argument.arg
 *.checkpoint
 /memechip/*
+*.pool
+put.here

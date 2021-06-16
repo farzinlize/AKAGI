@@ -4,9 +4,8 @@ import os, platform, random, string
 from typing import Dict, List
 from time import time as currentTime
 from multiprocessing.synchronize import Lock
-from functools import reduce
 
-from constants import APPDATA_PATH, DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, FDR_SCORE, FOUNDMAP_DISK, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, BYTE_READ_INT_MODE, PSEUDOCOUNT, P_VALUE, QUEUE_NAMETAG, RANK, SUMMIT, TYPES_OF
+from constants import APPDATA_PATH, BYTE_READ_INT_MODE, DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, PSEUDOCOUNT, P_VALUE, RANK, SUMMIT, TYPES_OF
 
 
 # ########################################## #
@@ -725,12 +724,12 @@ def change_global_constant_py(variable_name: str, new_value: str):
 
 # functions consider unsigned integer if not mentioned
 def bytes_to_int(b :bytes, signed=False):
-    return int.from_bytes(b, 'big', signed=signed)
+    return int.from_bytes(b, BYTE_READ_INT_MODE, signed=signed)
 
 
 def int_to_bytes(i :int, int_size=INT_SIZE, signed=False):
     try:
-        return i.to_bytes(int_size, 'big', signed=signed)
+        return i.to_bytes(int_size, BYTE_READ_INT_MODE, signed=signed)
     except:
         print('[ERROR]', i, type(i), sep='\t')
 

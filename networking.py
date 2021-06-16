@@ -2,7 +2,7 @@ import os
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import int_to_bytes, bytes_to_int, make_location
 from socket import socket, AF_INET, SOCK_STREAM, gethostname, gethostbyname
-from constants import SOCKET_BUFFSIZE, NETWORK_LOG, MASTER, ASSISTANT, INT_SIZE, APPDATA_PATH
+from constants import SOCKET_BUFFSIZE, NETWORK_LOG, INT_SIZE, APPDATA_PATH
 
 class ConnectionInterface:
 

@@ -2,55 +2,52 @@
 # any change to one of these lists must be applied to another
 DATASET_TREES = [('', ''), ('gkhood56', 'cache56'), ('gkhood78', 'cache78')]
 
-# Global Variables
-HISTOGRAM_LOCATION = './results/figures/%s-f%s-d%s-q%d-g%d-o%d/'
+# ########################################## #
+#                locations                   #
+# ########################################## #
+
 RESULT_LOCATION = './results/'
 BINDING_SITE_LOCATION = './data/answers.fasta'
 TWOBIT_LOCATION = './2bits/'
+APPDATA_PATH = './appdata/'
+SECRET_FILE_ADDRESS = 'secret.json'
+AKAGI_PREDICTION_STATISTICAL = 'akagi_1.fasta'
+AKAGI_PREDICTION_EXPERIMENTAL = 'akagi_2.fasta'
+CHAIN_REPORT_FILENAME = 'reporting.temp'
+CR_FILE = 'chaining_report.window'
+PROCESS_REPORT_FILE = 'process_%d.report'
+GOOGLE_CREDENTIALS_FILE = 'cred.txt'
+TEMP_POOL_LOCATION = 'akagi.pool'
+TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
+NETWORK_LOG = 'network.log'
+BEST_PATTERNS_POOL = '%s_%d.pool'
 
-ARG_UNSET = -1
-FIND_MAX = -2
 
-DELIMETER = '-'
-DNA_ALPHABET = 'ATCG'
-BATCH_SIZE = 512
-PATH_LENGTH = 10
+# ########################################## #
+#                name tags                   #
+# ########################################## #
 
-# execution mode flags
-MULTICORE = False
-SERVER = False
-BRIEFING = True
-ON_SEQUENCE_ANALYSIS = True
+FOUNDMAP_NAMETAG = '.byte'
+QUEUE_NAMETAG = '.by2e'
+DISK_QUEUE_NAMETAG = '.dq'
+CHECKPOINT_TAG = '.checkpoint'
 
-# briefing values
-MAX_SEQUENCE_LENGTH = 400
-MAX_SEQUENCE_COUNT = 200
 
-# bytes streaming constants
+# ########################################## #
+#            string constants                #
+# ########################################## #
+
 STR = b'\xFF'
 DEL = b'\xDD'
 END = b'\xFF'
-INT_SIZE = 4
-BYTE_READ_INT_MODE = 'big'
 
+DNA_ALPHABET = 'ATCG'
+DELIMETER = '-'
+BYTE_READ_INT_MODE = 'big'
 FOUNDMAP_DISK = 'disk'
 FOUNDMAP_MEMO = 'memory'
-FOUNDMAP_NAMETAG = '.byte'
-APPDATA_PATH = './appdata/'
-
 QUEUE_DISK = 'qdisk'
 QUEUE_MEMO = 'qmemory'
-QUEUE_NAMETAG = '.by2e'
-
-# default found-map/queue mode
-FOUNDMAP_MODE = FOUNDMAP_DISK
-QUEUE_MODE = QUEUE_DISK
-CHAINING_FOUNDMAP_MODE = FOUNDMAP_MEMO
-
-SECRET_FILE_ADDRESS = 'secret.json'
-
-MAIL_SERVICE = True
-
 MAIL_SUBJECT = '[AKAGI][REPORT][AUTO-MAIL]'
 MAIL_HEADER = \
 '''
@@ -59,9 +56,104 @@ Automatic report-mail from AKAGI
 -> check attachments for additional files <-
 ##################
 '''
+CR_HEADER = '\n\tAKAGI - Chaining report window\n\n**details/warnings/errors**\n#######\n%s\n#######\n\n'
+CR_TABLE_HEADER_SSMART = '\n\t\tSSMART SCORE TABLE\n\n'
+CR_TABLE_HEADER_SUMMIT = '\n\t\tSUMMIT SCORE TABLE\n\n'
+CR_TABLE_HEADER_JASPAR = '\n\t\tJASPAR SCORE TABLE\n\n'
+TOP_TEN_REPORT_HEADER = '****** [AKAGI] TOP TEN REPORT ******\n'
+PROCESS_REPORT_FILE_PATTERN = 'process_.*\.report'
+PROCESS_ENDING_REPORT = \
+'''
+############ DONE ############
+jobs done by me: %d
+chaining done by me: %d
+'''
+LOCK_PREFIX = 'LOCK'
+CLASSIC_MODE = '> id%d\n%s\n'
+MEME_MODE = '>%d\n%s\n'
+
+
+# ########################################## #
+#              numeric values                #
+# ########################################## #
+
+BATCH_SIZE = 512
+PATH_LENGTH = 10
+MAX_SEQUENCE_LENGTH = 400
+MAX_SEQUENCE_COUNT = 200
+INT_SIZE = 4
+PSEUDOCOUNT = 1
+DISK_QUEUE_LIMIT = 1000
+AKAGI_PORT = 1090
+POOL_HIT_SCORE = 2
+CHAIN_REPORT_LINE_LIMIT = 15
+INT_SIZE_BIT = 32
+NEAR_FULL = 5000
+NEAR_EMPTY = 1000
+CHAINING_PERMITTED_SIZE = 30
+TIMER_CHAINING_HOURS = 8
+TIMER_HELP_HOURS = 4
+HELP_PORTION = 0.6
+NEED_HELP = 50000 # pathetic XD
+SOCKET_BUFFSIZE = 4096
+
+POOL_SIZE = 100
+GOOD_HIT_RATIO = 0.25
+GOOD_HIT = POOL_SIZE * GOOD_HIT_RATIO
+
+
+# ########################################## #
+#             execution flags                #
+#      and application configuration         #
+# ########################################## #
+
+MULTICORE = False
+SERVER = False
+BRIEFING = True
+ON_SEQUENCE_ANALYSIS = True
+MAIL_SERVICE = True
+LIVE_REPORT = True
+POOL_LIMITED = True
+SAVE_OBSERVATION_CLOUD = False
+SEND_FOR_HELP = True
+CHAIN_REPORT_PRINT = False
+MEME_FASTA_ID = True
+PIXELS_ANALYSIS = True
+PARENT_WORK = False
+SAVE_THE_REST_CLOUD = True
+HELP_CLOUD = True
+HOPEFUL = True
+
+FOUNDMAP_MODE = FOUNDMAP_DISK
+QUEUE_MODE = QUEUE_DISK
+CHAINING_FOUNDMAP_MODE = FOUNDMAP_MEMO
 
 EMAIL_ACCOUNT = 'fantastic.farzin@gmail.com'
 MAIL_TO = ['farzinlize@live.com', 'fmohammadi@ce.sharif.edu']
+PC_NAME = 'Anakin'
+
+
+# ########################################## #
+#                    enums                   #
+# ########################################## #
+
+ARG_UNSET = -1
+FIND_MAX = -2
+EXTRACT_KMER = 1
+EXTRACT_OBJ = 0
+FUNCTION_KEY = 0
+ARGUMENT_KEY = 1
+SIGN_KEY = 2
+TABLE_HEADER_KEY = 3
+RANK = 'rank'
+FDR_SCORE = 'FDR'
+P_VALUE = 'maxlog2FC'
+SUMMIT = 'summit'
+SEQUENCES = 'seq'
+SEQUENCE_BUNDLES = 'bundle'
+PWM = 'pwm'
+DATASET_NAME = 'name'
+EXIT_SIGNAL = 'ex'
 
 # encode column indexes
 ENCODE_RANK = 0
@@ -73,127 +165,10 @@ ENCODE_FRD = 6
 ENCODE_SUMMIT = 9
 ENCODE_P = 14
 
-# peak bundle
-RANK = 'rank'
-FDR_SCORE = 'FDR'
-P_VALUE = 'maxlog2FC'
-SUMMIT = 'summit'
-TYPES_OF = {RANK:int, FDR_SCORE:float, P_VALUE:float, SUMMIT:int}
-
-AKAGI_PREDICTION_STATISTICAL = 'akagi_1.fasta'
-AKAGI_PREDICTION_EXPERIMENTAL = 'akagi_2.fasta'
-
-# each file of DiskQueue contains fixed number of Byteable items
-DISK_QUEUE_LIMIT = 1000
-DISK_QUEUE_NAMETAG = '.dq'
-
-EXTRACT_KMER = 1
-EXTRACT_OBJ = 0
-
-# chaining report
-CONSOLE = '\r'
-REMOTE = '\n'
-CHAINING_REPORT_PEND = REMOTE
-
-CHAINING_REPORT_EACH = True
-
-# ranking pool values
-POOL_LIMITED = True
-POOL_SIZE = 100
-GOOD_HIT_RATIO = 0.25
-GOOD_HIT = POOL_SIZE * GOOD_HIT_RATIO
-POOL_HIT_SCORE = 2
-
-CHAIN_REPORT_PRINT = False
-CHAIN_REPORT_LINE_LIMIT = 15
-CHAIN_REPORT_FILENAME = 'reporting.temp'
-
-PIXELS_ANALYSIS = True
-
-# chaining report window
-CR_HEADER = '\n\tAKAGI - Chaining report window\n\n**details/warnings/errors**\n#######\n%s\n#######\n\n'
-CR_TABLE_HEADER_SSMART = '\n\t\tSSMART SCORE TABLE\n\n'
-CR_TABLE_HEADER_SUMMIT = '\n\t\tSUMMIT SCORE TABLE\n\n'
-CR_TABLE_HEADER_JASPAR = '\n\t\tJASPAR SCORE TABLE\n\n'
-CR_FILE = 'chaining_report.window'
-LIVE_REPORT = True
-
-# multicore values
-TRY_DELAY = 5 # second
-TRY_COUNT = 10 # times
-PARENT_WORK = False
-
 # picture values
 SEQUENCE_KEY = 0
 POSITION_KEY = 1
 MOTIF_KEY = 2
 MARGIN_KEY = 3
-INT_SIZE_BIT = 32
 
-# network
-HOST_ADDRESS = '127.0.0.1'
-REQUEST_PORT = 1250
-AGENTS_PORT_START = 1251
-AGENTS_MAXIMUM_COUNT = 10
-ACCEPT_REQUEST = b'\xAA'
-REJECT_REQUEST = b'\xBB'
-
-PSEUDOCOUNT = 1
-
-# dataset dictionary keys
-SEQUENCES = 'seq'
-SEQUENCE_BUNDLES = 'bundle'
-PWM = 'pwm'
-DATASET_NAME = 'name'
-
-NEAR_FULL = 5000
-NEAR_EMPTY = 1000
-
-CHAINING_PERMITTED_SIZE = 30
-
-FUNCTION_KEY = 0
-ARGUMENT_KEY = 1
-SIGN_KEY = 2
-TABLE_HEADER_KEY = 3
-
-TOP_TEN_REPORT_HEADER = '****** [AKAGI] TOP TEN REPORT ******\n'
-
-MEME_FASTA_ID = True
-CLASSIC_MODE = '> id%d\n%s\n'
-MEME_MODE = '>%d\n%s\n'
-
-CHECKPOINT_TAG = '.checkpoint'
-GOOGLE_CREDENTIALS_FILE = 'cred.txt'
-
-TIMER_CHAINING_HOURS = 8
-SAVE_THE_REST_CLOUD = True
-SAVE_OBSERVATION_CLOUD = False
-
-SEND_FOR_HELP = True
-TIMER_HELP_HOURS = 4
-HELP_PORTION = 0.6
-NEED_HELP = 50000 # pathetic XD
-HELP_CLOUD = True
-HOPEFUL = True
-
-PROCESS_REPORT_FILE = 'process_%d.report'
-PROCESS_REPORT_FILE_PATTERN = 'process_.*\.report'
-PROCESS_ENDING_REPORT = \
-'''
-############ DONE ############
-jobs done by me: %d
-chaining done by me: %d
-'''
-
-LOCK_PREFIX = 'LOCK'
-TEMP_POOL_LOCATION = 'akagi.pool'
-TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
-
-PC_NAME = 'Anakin'
-BEST_PATTERNS_POOL = '%s_%d.pool'
-
-SOCKET_BUFFSIZE = 4096
-NETWORK_LOG = 'network.log'
-MASTER = 'mas'
-ASSISTANT = 'ass'
-AKAGI_PORT = 1090
+TYPES_OF = {RANK:int, FDR_SCORE:float, P_VALUE:float, SUMMIT:int}

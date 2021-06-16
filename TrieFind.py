@@ -1,5 +1,5 @@
 from io import BufferedReader
-from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, INT_SIZE
+from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INT_SIZE
 from misc import Bytable, bytes_to_int, int_to_bytes
 from FoundMap import FileMap, FoundMap, get_foundmap
 from Nodmer import Nodmer

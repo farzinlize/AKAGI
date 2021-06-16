@@ -5,9 +5,7 @@
 '''
 
 import io
-import sys
 from datetime import datetime
-from typing import List
 from misc import bytes_to_int, int_to_bytes, make_location
 from pydrive.files import GoogleDriveFile
 import os

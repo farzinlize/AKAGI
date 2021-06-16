@@ -1,12 +1,9 @@
 import pickle
-from ast import Bytes
 from checkpoint import load_checkpoint
-from constants import BRIEFING, INT_SIZE
-from io import BufferedReader
-from socket import socket
+from constants import BRIEFING
 from typing import List
 from TrieFind import WatchNode
-from misc import ExtraPosition, brief_sequence, bytes_to_int, int_to_bytes, read_bundle, read_fasta
+from misc import ExtraPosition, brief_sequence, read_bundle, read_fasta
 
 
 '''
