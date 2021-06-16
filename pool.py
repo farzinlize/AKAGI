@@ -162,7 +162,7 @@ class AKAGIPool:
                     )
 
 
-    def readfile(self, filename=TEMP_POOL_LOCATION):
+    def readfile(self, filename:str):
         with open(filename, 'rb') as disk:
             for table_index in range(len(self.tables)):
                 table_len = bytes_to_int(disk.read(INT_SIZE))
@@ -337,7 +337,28 @@ def pwm_score(pattern: ChainNode, arg_bundle):
     return aggregated / count
 
 
-def get_AKAGI_pools_configuration(dataset_dict):
+def get_AKAGI_pools_configuration(dataset_dict=None):
+
+    if not dataset_dict:
+        return [ 
+                # ssmart table configuration
+                {FUNCTION_KEY:objective_function_pvalue, 
+                ARGUMENT_KEY:None, 
+                SIGN_KEY:-1, 
+                TABLE_HEADER_KEY:CR_TABLE_HEADER_SSMART}, 
+
+                # summit table configuration
+                {FUNCTION_KEY:distance_to_summit_score, 
+                ARGUMENT_KEY:None, 
+                SIGN_KEY:1, 
+                TABLE_HEADER_KEY:CR_TABLE_HEADER_SUMMIT}, 
+                
+                # jaspar table configuration
+                {FUNCTION_KEY:pwm_score, 
+                ARGUMENT_KEY:(None,None), 
+                SIGN_KEY:-1, 
+                TABLE_HEADER_KEY:CR_TABLE_HEADER_JASPAR}
+            ]
 
     # unpacking dataset dictionary
     sequences = dataset_dict[SEQUENCES]
