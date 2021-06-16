@@ -6,7 +6,7 @@ from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk
 from TrieFind import ChainNode
@@ -239,9 +239,22 @@ def network_handler(merge: Queue):
 # def assistance_main(gap, overlap)
 
 
-def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:OnSequenceDistribution, dataset_dict, overlap, gap, q, network=False, initial_pool=None):
+def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequence:OnSequenceDistribution, dataset_dict, overlap, gap, q, network=False, initial_pool=None):
     
-    print(f'[CHAINING][MULTICORE] number of available cores: {cpu_count()}')
+    try   :available_cores = len(os.sched_getaffinity(0))
+    except:available_cores = 'unknown'
+
+    print(f'[CHAINING][MULTICORE] number of available cores: {available_cores}')
+
+    # auto maximize core usage (1 worker per core)
+    if cores_order == MAX_CORE:
+        if available_cores == 'unknown':
+            print('[FATAL][ERROR] number of available cores are unknown')
+            return None, ERROR_EXIT
+        cores = available_cores - int(PARENT_WORK)
+
+    # order custom number of workers
+    else:cores = cores_order
 
     # initializing synchronized queues
     work =    Queue()   # chaining jobs with type of chain nodes
