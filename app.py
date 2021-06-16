@@ -23,7 +23,7 @@ from multi import TIMESUP_EXIT, multicore_chaining_main
 from networking import AssistanceService
 
 # importing constants
-from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SAVE_THE_REST_CLOUD, SEQUENCES, SEQUENCE_BUNDLES
+from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, RESULT_LOCATION, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SAVE_THE_REST_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -394,17 +394,17 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer):
 
 def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
 
+    # manual checkpoint input name
     if checkpoint_name:
-        # manual checkpoint input name
         checkpoint = checkpoint_name
 
+    # download helping package of work
     elif assist_network:
-        # download helping package of work
         master = AssistanceService.connect_to_master(assist_network, is_new=True)
-        checkpoint = master.get_jobs()
+        checkpoint = master.get_checkpoint(working_on_it=True)
 
+    # auto-find resumable checkpoints local or cloud
     else:
-        # auto-find resumable checkpoints local or cloud
         offline_checkpoints = [f for f in os.listdir() if f.endswith(CHECKPOINT_TAG) and f[0]=='R']
 
         if offline_checkpoints:
@@ -429,15 +429,16 @@ def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
     pwm = read_pfm_save_pwm(pfm)
     #
     dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
-    finish_code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+    rest_checkpoint, finish_code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
     #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+    # report back to the main application
     if assist_network:
         master = AssistanceService.connect_to_master(assist_network, is_new=False)
-        master.report_back('akagi.pool')
+        master.report_back(BEST_PATTERNS_POOL%(PC_NAME, os.getpid()), finish_code)
         if finish_code == TIMESUP_EXIT:
-            master.send_rest()
+            master.copy_checkpoint(rest_checkpoint)
 
 
 

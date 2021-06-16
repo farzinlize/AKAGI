@@ -6,7 +6,7 @@ from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, HOST_ADDRESS, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS
+from constants import ACCEPT_REQUEST, AGENTS_MAXIMUM_COUNT, AGENTS_PORT_START, BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, HOST_ADDRESS, MAIL_SERVICE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk, bytes_to_int, int_to_bytes
 from TrieFind import ChainNode
@@ -30,17 +30,18 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
     while True:
 
         # check for exit signal (higher priority queue check)
-        try:
-            signal = message.get(timeout=1)
+        try         :signal = message.get(timeout=1)
+        except Empty:signal = None
+
+        if signal:
 
             # Merge and Finish
-            if signal == 'mf':
+            if signal == EXIT_SIGNAL:
                 merge.put(local_pool)
                 with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
                     last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-                return # exit
 
-        except Empty:pass
+                return # exit
 
         # obtaining a job
         motif: ChainNode = work.get()
@@ -80,33 +81,22 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
             del next_motif
         
         chaining_done_by_me += 1
-
-        # try:
-        #     command = message.get_nowait()
-        #     if command == 'MK':
-        #         merge.put(local_pool)
-        #         with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
-        #             last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-        #         return # exit
-        # except Empty:pass
         
 
 def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
     
     report_count = 0
 
-    if initial_pool == None:
-        global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
-    else:
-        global_pool = initial_pool
+    if initial_pool :global_pool = initial_pool
+    else            :global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
 
     while True:
 
         # merging
         merge_request: AKAGIPool = merge.get()
-        if type(merge_request)==str and merge_request=='PK':
+        if type(merge_request)==str and merge_request==EXIT_SIGNAL:
             global_pool.savefile(BEST_PATTERNS_POOL%(PC_NAME, os.getpid()))
-            return
+            return # exit
 
         global_pool.merge(merge_request)
 
@@ -119,10 +109,6 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
 
             # table reports
             window.write(global_pool.top_ten_reports())
-
-            # best entity instances report
-            # for table in global_pool.tables:
-            #     if table:window.write('>\n' + table[0].data.instances_str(dataset_dict[SEQUENCES]))
 
 
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
@@ -206,7 +192,7 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
                 for _ in range(int(estimated_size*HELP_PORTION)):
                     help_me_with.append(work.get())
 
-                # uploading to drive
+                # saving rest of the work as checkpoint
                 save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=HELP_CLOUD)
 
                 # inform by email
@@ -233,7 +219,7 @@ def network_handler(merge: Queue):
 
             if checkpoints:
                 checkpoint = checkpoints[0] # send first one
-                assistance.copy_jobs(checkpoint)
+                assistance.copy_checkpoint(checkpoint)
                 lock_checkpoint(checkpoint)
             else:
                 assistance.REFUSE('no need for help')
@@ -245,7 +231,7 @@ def network_handler(merge: Queue):
             merge.put(report)
 
             if finish_code == TIMESUP_EXIT:
-                assistance.receive_rest()
+                assistance.get_checkpoint()
 
             remove_checkpoint(working_checkpoint, locked=True)
 
@@ -357,7 +343,7 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
             try:rest_work.append(work.get_nowait())
             except Empty:break
         
-        save_the_rest(rest_work, on_sequence, q, dataset_dict[DATASET_NAME], cloud=SAVE_THE_REST_CLOUD)
+        rest_checkpoint = save_the_rest(rest_work, on_sequence, q, dataset_dict[DATASET_NAME], cloud=SAVE_THE_REST_CLOUD)
 
         if MAIL_SERVICE:
             send_files_mail(
@@ -377,7 +363,9 @@ def multicore_chaining_main(cores, initial_works: List[ChainNode], on_sequence:O
     merge.put('PK')
     global_pooler.join()
 
-    return exit
+    if rest_checkpoint: # equal to -> if exit == TIMESUP_EXIT
+        return rest_checkpoint, exit
+    return None, exit
 
 
 

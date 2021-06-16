@@ -1,5 +1,5 @@
 import os
-from pool import AKAGIPool
+from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import int_to_bytes, bytes_to_int, make_location
 from socket import socket, AF_INET, SOCK_STREAM, gethostname, gethostbyname
 from constants import SOCKET_BUFFSIZE, NETWORK_LOG, MASTER, ASSISTANT, INT_SIZE, APPDATA_PATH
@@ -9,6 +9,7 @@ class ConnectionInterface:
     def __init__(self, connection: socket, master=False, is_new=True):
         self.temp = b''
         self.connection = connection
+        self.checkpoint = ''
 
         if master:self.is_new = bool(bytes_to_int(self.read_nbytes(1)))
         else:self.connection.sendall(int_to_bytes(int(is_new), int_size=1))
@@ -27,9 +28,13 @@ class ConnectionInterface:
     def isNew(self):
         return self.is_new
 
-    def get_jobs(self): # client (expect checkpoint name in return)
+    def get_checkpoint(self, working_on_it):
 
         checkpoint = self.recvfile_socket()
+        if not checkpoint:
+            return None # connection refused
+
+        if working_on_it:self.checkpoint = checkpoint
 
         protected_directory = APPDATA_PATH + checkpoint.split('.')[0] + '/'
         make_location(protected_directory)
@@ -38,7 +43,7 @@ class ConnectionInterface:
             self.recvfile_socket()
     
 
-    def copy_jobs(self, checkpoint): # server
+    def copy_checkpoint(self, checkpoint):
 
         self.sendfile_socket(checkpoint)
 
@@ -50,13 +55,44 @@ class ConnectionInterface:
             self.sendfile_socket(protected_directory + f)
             
 
+    # master.report_back(BEST_PATTERNS_POOL%(PC_NAME, os.getpid()))
+    def report_back(self, pool_file:str, finish_code:int): # client
 
-    def report_back(self, pool:AKAGIPool):pass # client
-    def get_report(self):pass  # server
-    def REFUSE(self):pass # server
+        # send pool data
+        self.copy_checkpoint(pool_file)
 
-    def send_rest(self):pass   # client
-    def receive_rest(self):pass # server
+        # send working checkpoint name
+        self.connection.sendall(int_to_bytes(len(self.checkpoint.encode()), int_size=1))
+        self.connection.sendall(self.checkpoint.encode())
+
+        # send finish code
+        self.connection.sendall(int_to_bytes(finish_code, int_size=1, signed=True))
+
+        
+
+    # working_checkpoint, report, finish_code = assistance.get_report()
+    def get_report(self): # server
+
+        # receive pool data
+        poolfile = self.get_checkpoint()
+        pool = AKAGIPool(get_AKAGI_pools_configuration())
+        pool.readfile(poolfile)
+
+        # receive working checkpoint name
+        length = bytes_to_int(self.read_nbytes(1))
+        working_checkpoint = self.read_nbytes(length).decode()
+
+        # receive finish code
+        finish_code = bytes_to_int(self.read_nbytes(1), signed=True)
+
+        return working_checkpoint, pool, finish_code
+
+
+    def REFUSE(self): # server
+        self.connection.sendall(int_to_bytes(0, int_size=1)) # send no file signal
+
+    # def send_rest(self):pass   # client
+    # def receive_rest(self):pass # server
 
 
     def sendfile_socket(self, filename):
@@ -73,6 +109,8 @@ class ConnectionInterface:
 
     def recvfile_socket(self):
         length = bytes_to_int(self.read_nbytes(1))
+        if length == 0:return None # no file to receive
+
         filename = self.read_nbytes(length).decode()
 
         with open(filename, 'wb') as file:
@@ -109,11 +147,6 @@ class AssistanceService:
         master.connect(addr)
 
         return ConnectionInterface(master, is_new=is_new)
-        # master.send(int_to_bytes(int(is_new), int_size=1))
-        # master.
-
-
-
 
 
 if __name__ == '__main__':
