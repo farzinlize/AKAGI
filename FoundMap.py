@@ -1,8 +1,8 @@
 from random import randrange
 from io import BufferedReader
 from typing import List
-from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
-import os, sys
+from misc import Bytable, ExtraPosition, ThatException, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
+import os, sys, random
 from constants import APPDATA_PATH, BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
@@ -335,13 +335,12 @@ class FileMap(FoundMap, Bytable):
         if self.virgin:
             self.dump()
 
-        return int_to_bytes(self.q) +\
-               int_to_bytes(len(self.path)) +\
-               bytes(self.path, encoding='ascii')
+        return int_to_bytes(self.q) + int_to_bytes(len(self.path)) + bytes(self.path, encoding='ascii')
+
 
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
-        q = buffer.read(INT_SIZE)
+        q = bytes_to_int(buffer.read(INT_SIZE))
         path = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), encoding='ascii')
         return FileMap(virgin=False, path=path, q=q)
 

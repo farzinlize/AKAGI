@@ -243,6 +243,11 @@ class ExtraPosition:
         return self.start_position + self.size
 
 
+class ThatException(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+
 # ########################################## #
 #                 functions                  #
 # ########################################## #
@@ -727,11 +732,11 @@ def bytes_to_int(b :bytes, signed=False):
     return int.from_bytes(b, BYTE_READ_INT_MODE, signed=signed)
 
 
-def int_to_bytes(i :int, int_size=INT_SIZE, signed=False):
+def int_to_bytes(i, int_size=INT_SIZE, signed=False, randomshit=0):
     try:
         return i.to_bytes(int_size, BYTE_READ_INT_MODE, signed=signed)
-    except:
-        print('[ERROR]', i, type(i), sep='\t')
+    except Exception as e:
+        print(f'[ERROR] {e}\n', i, type(i), randomshit, sep='\t')
 
 
 # ########################################## #

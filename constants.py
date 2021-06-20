@@ -107,15 +107,12 @@ GOOD_HIT = POOL_SIZE * GOOD_HIT_RATIO
 #      and application configuration         #
 # ########################################## #
 
-MULTICORE = False
-SERVER = False
 BRIEFING = True
 ON_SEQUENCE_ANALYSIS = True
 MAIL_SERVICE = True
 LIVE_REPORT = True
 POOL_LIMITED = True
 SAVE_OBSERVATION_CLOUD = False
-SEND_FOR_HELP = True
 CHAIN_REPORT_PRINT = False
 MEME_FASTA_ID = True
 PIXELS_ANALYSIS = True
