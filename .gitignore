@@ -31,3 +31,5 @@ test_argument.arg
 /memechip/*
 *.pool
 put.here
+app.build/
+app.dist/
