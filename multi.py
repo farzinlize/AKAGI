@@ -325,7 +325,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
         return exit
     
     # message the workers to terminate their job and merge for last time
-    for _ in worker:
+    for _ in workers:
         message.put(EXIT_SIGNAL)
 
     is_there_alive = True
