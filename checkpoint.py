@@ -13,10 +13,6 @@ from typing import List
 '''
 def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, on_sequence=None, q=None, dataset_name=None):
 
-    # creating protected directory
-    directory_name = APPDATA_PATH + objects_file.split('.')[0] + '/'
-    make_location(directory_name)
-
     # write objects and protect their data under directory
     with open(objects_file, 'wb') as f:
 
@@ -28,9 +24,7 @@ def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, o
 
         # save motifs
         for motif in motifs:
-            f.write(motif.to_byte(protect=True, directory=directory_name))
-
-    return directory_name
+            f.write(motif.to_byte(protect=True))
 
 
 def load_checkpoint(objects_file, resumable=False):
@@ -82,13 +76,9 @@ def query_resumable_checkpoints() -> str:
 
 
 def remove_checkpoint(checkpoint:str, locked=False):
-    protected_directory = APPDATA_PATH + checkpoint.split('.')[0] + '/'
-
     if locked:filename = os.remove(LOCK_PREFIX + checkpoint)
     else     :filename = os.remove(checkpoint)
 
-    for data in os.listdir(protected_directory):os.remove(protected_directory+data)
-    os.removedirs(protected_directory)
 
 
 def lock_checkpoint(checkpoint):

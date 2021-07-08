@@ -114,7 +114,8 @@ def motif_finding_chain(dataset_name,
         print('[lexicon] lexicon size = %d'%len(motifs))
 
         # only return label and foundmap for forthur use as chain node instead of watch node
-        return [ChainNode(motif.label, motif.foundmap) for motif in motifs]
+        # make foundmap read-only afterward
+        return [ChainNode(motif.label, motif.foundmap.readonly()) for motif in motifs]
 
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\

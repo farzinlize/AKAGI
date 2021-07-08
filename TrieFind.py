@@ -1,7 +1,7 @@
 from io import BufferedReader
 from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INT_SIZE
 from misc import Bytable, bytes_to_int, int_to_bytes
-from FoundMap import FileMap, FoundMap, get_foundmap
+from FoundMap import ReadOnlyMap, get_foundmap
 from Nodmer import Nodmer
 
 '''
@@ -139,7 +139,7 @@ class WatchNode(TrieNode):
             delete child attrubutes after extraction
             also return total number of nodes in tree
     '''
-    def extract_motifs_and_delete_childs(self, q, result_kmer=EXTRACT_KMER):
+    def extract_motifs_and_delete_childs(self, q, result_kmer=EXTRACT_KMER): 
         motifs = []
         tree_node_count = 1
         if hasattr(self, 'foundmap'):
@@ -213,8 +213,7 @@ class WatchNodeC(WatchNode):
 
 class ChainNode(Bytable):
 
-    def __init__(self, label, foundmap: FoundMap):
-        # self.chain_level = 0
+    def __init__(self, label, foundmap: ReadOnlyMap):
         self.foundmap = foundmap
         self.label = label
 
@@ -222,9 +221,9 @@ class ChainNode(Bytable):
     '''
         serialization methods for byte/object conversion 
     '''
-    def to_byte(self, protect=False, directory=''):
+    def to_byte(self, protect=False):
 
-        if protect:self.foundmap.protect(directory)
+        if protect:self.foundmap.protect()
 
         return int_to_bytes(len(self.label))    + \
             bytes(self.label, encoding='ascii') + \
@@ -236,17 +235,12 @@ class ChainNode(Bytable):
         first_read = buffer.read(INT_SIZE)
         if first_read:
             label = str(buffer.read(bytes_to_int(first_read)), 'ascii')
-            foundmap = FileMap.byte_to_object(buffer)
+            foundmap = ReadOnlyMap.byte_to_object(buffer)
             return ChainNode(label, foundmap)
             
         
-
     def instances_str(self, sequences):
         return self.foundmap.instances_to_string_fastalike(self.label, sequences)
-
-
-    def clear_foundmap(self):
-        self.foundmap.clear()
 
 
 # ########################################## #

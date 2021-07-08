@@ -77,7 +77,7 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         for next_motif in next_motifs:
             work.put(ChainNode(
                 motif.label + next_motif.label, 
-                next_motif.foundmap.turn_to_filemap()))
+                next_motif.foundmap.readonly()))
             del next_motif
         
         chaining_done_by_me += 1
@@ -171,7 +171,7 @@ def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistributi
         for next_motif in next_motifs:
             work.put(ChainNode(
                 motif.label + next_motif.label, 
-                next_motif.foundmap.turn_to_filemap()))
+                next_motif.foundmap.readonly()))
             del next_motif
         
         chaining_done_by_me += 1
@@ -339,8 +339,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
 
         # assume all dead and check
         is_there_alive = False
-        for worker in workers:
-            if worker.is_alive():is_there_alive = True
+        for worker in workers:is_there_alive |= worker.is_alive()
 
     # kill whoever is alive ignoring its merge signal
     for worker in workers:

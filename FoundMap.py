@@ -2,15 +2,8 @@ from random import randrange
 from io import BufferedReader
 from typing import List
 from misc import Bytable, ExtraPosition, ThatException, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
-import os, sys, random
+import os, sys, database
 from constants import APPDATA_PATH, BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
-
-
-# static foundmap choose based on global variable of FOUNDMAP_MODE
-def get_foundmap(batch_limit=BATCH_SIZE, foundmap_type=FOUNDMAP_MODE):
-    if foundmap_type == FOUNDMAP_DISK:return FileMap(batch_limit=batch_limit)
-    elif foundmap_type == FOUNDMAP_MEMO:return MemoryMap()
-    else:raise Exception('[FoundMap] FOUNDMAP_MODE variable unrecognized')
 
 
 '''
@@ -18,7 +11,7 @@ def get_foundmap(batch_limit=BATCH_SIZE, foundmap_type=FOUNDMAP_MODE):
         MemoryMap: saving data in python list structure (object version of found_list)
         FileMap: saving data in byte-file
 '''
-class FoundMap(Bytable):
+class FoundMap:
 
     # abstract functions
     def add_location(self, seq_id, position):raise NotImplementedError
@@ -27,32 +20,32 @@ class FoundMap(Bytable):
     def get_positions(self):raise NotImplementedError
     def get_list(self) -> List[List]:raise NotImplementedError
     def clone(self): raise NotImplementedError
-    def clear(self): pass
-    def protect(self, directory): raise NotImplementedError
+    def clear(self): raise NotImplementedError
+    def readonly(self): return ReadOnlyMap(initial_list=self.get_list())
 
 
     def instances_to_string_fastalike(self, label, sequences: List[str]):
-        try:
-            result = '>pattern\n%s\n>instances\n'%(label)
-            bundle = self.get_list()
-            for index, seq_id in enumerate(bundle[0]):
-                position: ExtraPosition
-                for position in bundle[1][index]:
-                    end_index = position.end_position()
-                    start_index = position.start_position
-                    # if len(position.chain) != 0:
-                    #     start_index = position.chain[0]
+        result = '>pattern\n%s\n>instances\n'%(label)
+        bundle = self.get_list()
+        for index, seq_id in enumerate(bundle[0]):
+            position: ExtraPosition
+            for position in bundle[1][index]:
+                end_index = position.end_position()
+                start_index = position.start_position
                 
-                    result += '%d,%d,%s,%d\n'%(
-                        seq_id, 
-                        (start_index-len(sequences[seq_id])), 
-                        sequences[seq_id][start_index:end_index], 
-                        (end_index-start_index))
-            return result
+                result += '%d,%d,%s,%d\n'%(
+                    seq_id, 
+                    (start_index-len(sequences[seq_id])), 
+                    sequences[seq_id][start_index:end_index], 
+                    (end_index-start_index))
+        return result
 
-        except NotImplementedError:
-            print('[ERROR][FOUNDMAP] not implemented for class:%s'%(str(self.__class__)))
 
+# static foundmap choose based on global variable of FOUNDMAP_MODE
+def get_foundmap(batch_limit=BATCH_SIZE, foundmap_type=FOUNDMAP_MODE) -> FoundMap:
+    if foundmap_type == FOUNDMAP_DISK:return FileMap(batch_limit=batch_limit)
+    elif foundmap_type == FOUNDMAP_MEMO:return MemoryMap()
+    else:raise Exception('[FoundMap] FOUNDMAP_MODE variable unrecognized')
 
 
 class MemoryMap(FoundMap):
@@ -387,6 +380,33 @@ class FileMap(FoundMap, Bytable):
         self.path = protected_path
 
 
+class ReadOnlyMap(FoundMap, Bytable):            
+
+    def __init__(self, address=None, initial_list=None):
+        
+        if address:self.address = address
+
+        if initial_list:
+            self.address = get_random_free_path('')
+            placed = database.initial_foundmap(self.address, initial_list)
+            while not placed:
+                self.address = get_random_free_path('')
+                placed = database.initial_foundmap(self.address, initial_list)
+
+
+    def to_byte(self):
+        return int_to_bytes(len(self.address)) + bytes(self.address, encoding='ascii')
+
+
+    def byte_to_object(buffer: BufferedReader):
+        return ReadOnlyMap(address=str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), encoding='ascii'))
+
+
+    def get_list(self):return database.read_list(self.address)
+    def clear(self):          database.clear_list(self.address)
+    def protect(self):        database.protect_list(self.address)
+
+
 # ########################################## #
 #                 functions                  #
 # ########################################## #
@@ -524,9 +544,22 @@ def test_hard():
     return bundle_mem, bundle_dis, map_manual
 
 
+def test_readonly():
+    mapA = MemoryMap()
+    mapA.add_location(0, ExtraPosition(0, 5))
+    mapA.add_location(0, ExtraPosition(3, 4))
+    mapA.add_location(1, ExtraPosition(0, 5))
+    mapA.add_location(2, ExtraPosition(8, 6))
+    mapA.add_location(3, ExtraPosition(13, 6))
+
+    rapA = mapA.readonly()
+    rapA.clear()
+    return rapA
+
+
 if __name__ == "__main__":
     # m, d, t = test_hard()
-    # test_main()
+    # r = test_readonly()
     if len(sys.argv) == 1:
         print('clearing FOUNDMAP/DISKQUEUE junks...')
         clear_disk(FOUNDMAP_NAMETAG)

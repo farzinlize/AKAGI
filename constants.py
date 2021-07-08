@@ -20,6 +20,7 @@ GOOGLE_CREDENTIALS_FILE = 'cred.txt'
 TEMP_POOL_LOCATION = 'akagi.pool'
 TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
 NETWORK_LOG = 'network.log'
+DATABASE_LOG = 'database.log'
 BEST_PATTERNS_POOL = '%s_%d.pool'
 
 
@@ -31,6 +32,7 @@ FOUNDMAP_NAMETAG = '.byte'
 QUEUE_NAMETAG = '.by2e'
 DISK_QUEUE_NAMETAG = '.dq'
 CHECKPOINT_TAG = '.checkpoint'
+DATABASEFILE_TAG = '.database'
 
 
 # ########################################## #
@@ -40,6 +42,7 @@ CHECKPOINT_TAG = '.checkpoint'
 STR = b'\xFF'
 DEL = b'\xDD'
 END = b'\xFF'
+PRT = b'\x00'
 
 DNA_ALPHABET = 'ATCG'
 DELIMETER = '-'
@@ -79,9 +82,11 @@ MEME_MODE = '>%d\n%s\n'
 
 BATCH_SIZE = 512
 PATH_LENGTH = 10
+TAG_LENGTH = 8
 MAX_SEQUENCE_LENGTH = 400
 MAX_SEQUENCE_COUNT = 200
 INT_SIZE = 4
+MINT_SIZE = 2
 PSEUDOCOUNT = 1
 DISK_QUEUE_LIMIT = 1000
 AKAGI_PORT = 1090
@@ -143,6 +148,9 @@ ARGUMENT_KEY = 1
 SIGN_KEY = 2
 TABLE_HEADER_KEY = 3
 MAX_CORE = -2
+DB_TAG = 0
+DB_LOCATION = 1
+DB_PRT = 2
 RANK = 'rank'
 FDR_SCORE = 'FDR'
 P_VALUE = 'maxlog2FC'
