@@ -33,3 +33,5 @@ test_argument.arg
 put.here
 app.build/
 app.dist/
+mongo/
+data/
