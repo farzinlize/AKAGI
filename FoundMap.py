@@ -1,9 +1,9 @@
 from random import randrange
 from io import BufferedReader
 from typing import List
-from misc import Bytable, ExtraPosition, ThatException, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
-import os, sys, database
-from constants import APPDATA_PATH, BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
+import os, sys, mongo
+from constants import APPDATA_PATH, BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 '''
@@ -382,29 +382,25 @@ class FileMap(FoundMap, Bytable):
 
 class ReadOnlyMap(FoundMap, Bytable):            
 
-    def __init__(self, address=None, initial_list=None):
-        
-        if address:self.address = address
-
-        if initial_list:
-            self.address = get_random_free_path('')
-            placed = database.initial_foundmap(self.address, initial_list)
-            while not placed:
-                self.address = get_random_free_path('')
-                placed = database.initial_foundmap(self.address, initial_list)
+    def __init__(self, collection, address:bytes):
+        self.collection = collection
+        self.address = address
 
 
     def to_byte(self):
-        return int_to_bytes(len(self.address)) + bytes(self.address, encoding='ascii')
+        return self.address
 
 
-    def byte_to_object(buffer: BufferedReader):
-        return ReadOnlyMap(address=str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), encoding='ascii'))
+    def byte_to_object(buffer: BufferedReader, collection):
+        address = buffer.read(ID_LENGTH)
+        return ReadOnlyMap(collection, address=address)
 
 
-    def get_list(self):return database.read_list(self.address)
-    def clear(self):          database.clear_list(self.address)
-    def protect(self):        database.protect_list(self.address)
+    def get_list(self):return mongo.read_list(self.address, collection=self.collection)
+    def clear(self):          mongo.clear_list(self.address)
+
+    def protect(self, collection):
+        mongo.protect_list(address=self.address, collection=collection)
 
 
 # ########################################## #

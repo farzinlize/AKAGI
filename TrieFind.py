@@ -1,5 +1,5 @@
 from io import BufferedReader
-from constants import EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INT_SIZE
+from constants import DEFAULT_COLLECTION, EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INT_SIZE
 from misc import Bytable, bytes_to_int, int_to_bytes
 from FoundMap import ReadOnlyMap, get_foundmap
 from Nodmer import Nodmer
@@ -221,9 +221,7 @@ class ChainNode(Bytable):
     '''
         serialization methods for byte/object conversion 
     '''
-    def to_byte(self, protect=False):
-
-        if protect:self.foundmap.protect()
+    def to_byte(self):
 
         return int_to_bytes(len(self.label))    + \
             bytes(self.label, encoding='ascii') + \
@@ -231,11 +229,11 @@ class ChainNode(Bytable):
 
 
     @staticmethod
-    def byte_to_object(buffer: BufferedReader):
+    def byte_to_object(buffer: BufferedReader, collection=DEFAULT_COLLECTION):
         first_read = buffer.read(INT_SIZE)
         if first_read:
             label = str(buffer.read(bytes_to_int(first_read)), 'ascii')
-            foundmap = ReadOnlyMap.byte_to_object(buffer)
+            foundmap = ReadOnlyMap.byte_to_object(buffer, collection)
             return ChainNode(label, foundmap)
             
         
