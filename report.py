@@ -279,6 +279,17 @@ def count_overlap(m: FastaInstance, b: FastaInstance):
     return min(b.length, m.length)
 
 
+def process_report_to_list(filename):
+    result = []
+    with open(filename, 'r') as process_report:
+        for line in process_report:
+            words = line.split()
+            insert_frame_count = int(words[2])
+            tree_size = int(words[10])
+            result.append(insert_frame_count + tree_size)
+    return result
+
+
 # ########################################## #
 #           main function section            #
 # ########################################## #
