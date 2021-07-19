@@ -17,7 +17,7 @@ def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, o
         newmaps = initial_readonlymaps([motif.foundmap for motif in motifs], objects_file.split('.')[0])
         for motif, newmap in zip(motifs, newmaps):
             motif.foundmap.clear()
-            motif.foundmap = newmaps
+            motif.foundmap = newmap
             
     # write objects and protect their data under directory
     with open(objects_file, 'wb') as f:
