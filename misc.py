@@ -71,8 +71,6 @@ class QueueDisk:
 
         queue = open(self.files[-1], 'ab')
         for item in items:
-            queue.write(item.to_byte())
-            self.counter += 1
 
             if self.counter == DISK_QUEUE_LIMIT:
                 self.files += [get_random_free_path(DISK_QUEUE_NAMETAG)]
@@ -80,13 +78,22 @@ class QueueDisk:
                 queue.close()
                 queue = open(self.files[-1], 'ab')
 
+            queue.write(item.to_byte())
+            self.counter += 1
+
         queue.close()
 
 
-    def pop(self, lock:Lock=None):
+    '''
+        pop one or many item from disk queue
+            - always return list of objects
+            - return objects as much as possible to match how_many but may return
+                a list less than how_many if queue gets empty
+    '''
+    def pop_many(self, lock:Lock=None, how_many=1):
 
         if not self.files:
-            raise QueueDisk.QueueEmpty
+            return None
 
         # thread profing
         if len(self.files) == 1 and lock:
@@ -96,11 +103,31 @@ class QueueDisk:
             locked = False
 
         # reading
-        with open(self.files[0], 'rb') as queue_read:
+        popy_list = []
+        queue_read = open(self.files[0], 'rb')
+        for _ in range(how_many):
             popy = self.item_class.byte_to_object(queue_read)
 
-            rest = queue_read.read()
-            
+            if not popy:
+                queue_read.close()
+                os.remove(os.path.join(self.files[0]))
+                self.files = self.files[1:]
+
+                # no more file (queue got empty)
+                if not self.files:
+                    return popy_list
+
+                queue_read = open(self.files[0])
+                popy = self.item_class.byte_to_object(queue_read)
+
+                # error checking
+                assert popy
+
+            popy_list.append(popy)
+        
+        rest = queue_read.read()    
+        queue_read.close()
+
         if rest:
             # writing modification
             with open(self.files[0], 'wb') as queue_write:
@@ -111,7 +138,7 @@ class QueueDisk:
 
         if locked: lock.release()
 
-        return popy
+        return popy_list
 
 
     def insert(self, item: Bytable, lock:Lock=None):
