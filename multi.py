@@ -6,15 +6,16 @@ from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import BEST_PATTERNS_POOL, CHAINING_PERMITTED_SIZE, CR_FILE, DATASET_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PC_NAME, POOL_HIT_SCORE, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, MEMORY_BALANCE_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk
 from TrieFind import ChainNode
-from multiprocessing import Process, Queue, cpu_count
+from multiprocessing import Process, Queue
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 from typing import List
 
+MANUAL_EXIT = -3
 ERROR_EXIT = -2
 TIMESUP_EXIT = -1
 END_EXIT = 0
@@ -95,7 +96,7 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
         # merging
         merge_request: AKAGIPool = merge.get()
         if type(merge_request)==str and merge_request==EXIT_SIGNAL:
-            global_pool.savefile(BEST_PATTERNS_POOL%(PC_NAME, os.getpid()))
+            global_pool.savefile(EXECUTION+POOL_TAG)
             return # exit
 
         global_pool.merge(merge_request)
@@ -246,6 +247,9 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
 
     print(f'[CHAINING][MULTICORE] number of available cores: {available_cores}')
 
+    # making status file
+    with open(CHAINING_EXECUTION_STATUS, 'w') as status:status.write('running')
+
     # auto maximize core usage (1 worker per core)
     if cores_order == MAX_CORE:
         if available_cores == 'unknown':
@@ -280,49 +284,55 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
         # raise NotImplementedError
 
     # parent also is a worker
-    # [WARNING] may results in memory full
+    # [WARNING] may results in memory overflow
     if PARENT_WORK:
-        exit = parent_chaining(work, merge, on_sequence, dataset_dict, overlap, gap, q)
+        exit_code = parent_chaining(work, merge, on_sequence, dataset_dict, overlap, gap, q)
 
     # parent is in charge of memory balancing 
     else:
-        exit = END_EXIT
+        exit_code = END_EXIT
         since = datetime.now()
-        # call_for_help = datetime.now()
-        counter = 0
 
+        counter = 0
         while counter <= 100:
+
+            # check for timeout
+            if time_has_ended(since, TIMER_CHAINING_HOURS):exit_code = TIMESUP_EXIT;break
+
+            # check for status
+            if not os.path.isfile(CHAINING_EXECUTION_STATUS):exit_code = MANUAL_EXIT;break
+
+            # queue memory balancing
             memory_balance = work.qsize()
+
+            # save memory
             if memory_balance > NEAR_FULL:
-                item: ChainNode = work.get()
-                disk_queue.insert(item)
+                items = []
+                for _ in range(MEMORY_BALANCE_CHUNK_SIZE):
+                    items.append(work.get())
+                disk_queue.insert_all(items)
+
+            # restore from disk
             elif memory_balance < NEAR_EMPTY:
-                try:
-                    item: ChainNode = disk_queue.pop()
-                    work.put(item)
-                except QueueDisk.QueueEmpty:
+                items = disk_queue.pop_many(how_many=MEMORY_BALANCE_CHUNK_SIZE)
+                if items:
+                    for item in items:work.put(item)
+                
+                # there was no work on disk
+                else:
                     if memory_balance == 0:counter += 1
                     else:counter = 0
-                    sleep(5)
-            else:
-                sleep(10)
 
-            # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-            # TODO: send for help policy when parent is in charge of memory balancing
-            # challenge: jobs are both in disk and memory -> send disk jobs for help
-            #
-            # if time_has_ended(call_for_help, TIMER_HELP_HOURS) and memory_balance:
-            #     help_jobs = []
-            #     for _ in range(memory_balance*HELP_PORTION):
-            #         try:help_jobs.append(work.get(timeout=5))
+            # just wait for next check round
+            sleep(CHECK_TIME_INTERVAL)
 
-            if time_has_ended(since, TIMER_CHAINING_HOURS):exit = TIMESUP_EXIT;break
+    ############### end of processing #######################
 
     # IN CASE OF ERROR, KILL EVERYONE AND LEAVE
-    if exit == ERROR_EXIT:
+    if exit_code == ERROR_EXIT:
         for worker in workers:worker.kill()
         global_pooler.kill()
-        return exit
+        return exit_code
     
     # message the workers to terminate their job and merge for last time
     for _ in workers:
@@ -347,8 +357,13 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             print('[ERROR][PROCESS] worker (pid=%d) resist to die (killed by master)'%worker.pid)
             worker.kill()
 
+    ########### all working process are dead #############
+    # message global_pooler to terminate
+    merge.put(EXIT_SIGNAL)
+    global_pooler.join()
+
     # save rest of the works if timesup
-    if exit == TIMESUP_EXIT:
+    if exit_code == TIMESUP_EXIT or exit_code == MANUAL_EXIT:
 
         rest_work = []
         while True:
@@ -362,22 +377,9 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
                 strings=['REST OF JOBS HAS SENT - unfinished program has sent its remaining data into cloud'],
                 additional_subject=' an unfinished end')
 
-    # check work queue for any remaining job
-    # if work.qsize() != 0:
-    #     print('[ERROR] still work?!')
-    #     # dump unwanted works
-    #     while True:
-    #         try:work.get_nowait()
-    #         except Empty:break    
-    # assert work.qsize() == 0 
-
-    # message global_pooler to terminate
-    merge.put(EXIT_SIGNAL)
-    global_pooler.join()
-
     if rest_checkpoint: # equal to -> if exit == TIMESUP_EXIT
-        return rest_checkpoint, exit
-    return None, exit
+        return rest_checkpoint, exit_code
+    return None, exit_code
 
 
 

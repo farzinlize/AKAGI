@@ -21,9 +21,10 @@ from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkp
 from TrieFind import ChainNode
 from multi import TIMESUP_EXIT, multicore_chaining_main
 from networking import AssistanceService
+from mongo import initial_readonlymaps
 
 # importing constants
-from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
+from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -76,7 +77,7 @@ def motif_finding_chain(dataset_name,
                         checkpoint=None,
                         cloud=SAVE_OBSERVATION_CLOUD):
 
-    def observation(q):
+    def observation(q, save_collection=DEFAULT_COLLECTION):
 
         if multilayer:
             assert isinstance(gkhood_index, list) and isinstance(d, list) and isinstance(frame_size, list)
@@ -115,7 +116,8 @@ def motif_finding_chain(dataset_name,
 
         # only return label and foundmap for forthur use as chain node instead of watch node
         # make foundmap read-only afterward
-        return [ChainNode(motif.label, motif.foundmap.readonly()) for motif in motifs]
+        inserted_maps = initial_readonlymaps([motif.foundmap for motif in motifs], save_collection)
+        return [ChainNode(motif.label, foundmap) for motif, foundmap in zip(motifs, inserted_maps)]
 
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
@@ -165,9 +167,9 @@ def motif_finding_chain(dataset_name,
 
         # run and save observation data
         if motifs == None:
-            motifs = observation(q)
-            protected_directory = save_checkpoint(motifs, checkpoint_file)
-            if cloud:store_checkpoint_to_cloud(checkpoint_file, protected_directory)
+            motifs = observation(q, save_collection=checkpoint_file.split('.')[0])
+            save_checkpoint(motifs, checkpoint_file)
+            # if cloud:store_checkpoint_to_cloud(checkpoint_file, protected_collection) #TODO: not working with mongo
     
     # run observation without checkpoint check
     else:
@@ -182,7 +184,7 @@ def motif_finding_chain(dataset_name,
         print('[CHAINING] chaining is disabled - end of process')
         return
 
-    on_sequence = OnSequenceDistribution(motifs,  sequences)
+    on_sequence = OnSequenceDistribution(motifs, sequences)
     # reports for analysis
     if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
 
