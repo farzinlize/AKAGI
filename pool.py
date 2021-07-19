@@ -141,8 +141,7 @@ class AKAGIPool:
     # ########################################## #
 
     def savefile(self, filename:str):
-        pooldata_directory = APPDATA_PATH + filename.split('.')[0]
-        make_location(pooldata_directory)
+        pool_collection = filename.split('.')[0]
 
         seen = []
         with open(filename, 'wb') as disk:
@@ -152,17 +151,19 @@ class AKAGIPool:
                 for entity in table:
 
                     first = entity.data.label not in seen # TODO [WARNING] linear search 
-                    seen.append(entity.data.label)
+                    if first:seen.append(entity.data.label)
 
                     scores_pack = struct.pack('d'*len(entity.scores), *entity.scores)
                     disk.write(
                         int_to_bytes(len(scores_pack)) +
                         scores_pack +
-                        entity.data.to_byte(protect=first, directory=pooldata_directory)
+                        entity.data.to_byte(protect=first, directory=pool_collection)
                     )
 
 
     def readfile(self, filename:str):
+        pool_collection = filename.split('.')[0]
+
         with open(filename, 'rb') as disk:
             for table_index in range(len(self.tables)):
                 table_len = bytes_to_int(disk.read(INT_SIZE))
@@ -170,7 +171,7 @@ class AKAGIPool:
                 for _ in range(table_len):
                     pack_len = bytes_to_int(disk.read(INT_SIZE))
                     scores = list(struct.unpack('d'*len(self.descriptions), disk.read(pack_len)))
-                    pattern = ChainNode.byte_to_object(disk)
+                    pattern = ChainNode.byte_to_object(disk, collection=pool_collection)
                     self.tables[table_index].append(AKAGIPool.Entity(pattern, scores))
 
 
