@@ -21,8 +21,7 @@ TEMP_POOL_LOCATION = 'akagi.pool'
 TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
 NETWORK_LOG = 'network.log'
 DATABASE_LOG = 'database.log'
-BEST_PATTERNS_POOL = '%s_%d.pool'
-
+CHAINING_EXECUTION_STATUS = 'status.report'
 
 # ########################################## #
 #                name tags                   #
@@ -33,6 +32,7 @@ QUEUE_NAMETAG = '.by2e'
 DISK_QUEUE_NAMETAG = '.dq'
 CHECKPOINT_TAG = '.checkpoint'
 DATABASEFILE_TAG = '.database'
+POOL_TAG = '.pool'
 
 
 # ########################################## #
@@ -77,6 +77,18 @@ MEME_MODE = '>%d\n%s\n'
 
 
 # ########################################## #
+#              database mongo                #
+# ########################################## #
+
+DATABASE_ADDRESS = 'localhost'
+DEFAULT_COLLECTION = 'working'
+DATABASE_NAME = 'akagidb'
+MONGO_ID = '_id'
+BINARY_DATA = 'data'
+ID_LENGTH = 12
+
+
+# ########################################## #
 #              numeric values                #
 # ########################################## #
 
@@ -88,18 +100,20 @@ MAX_SEQUENCE_COUNT = 200
 INT_SIZE = 4
 MINT_SIZE = 2
 PSEUDOCOUNT = 1
-DISK_QUEUE_LIMIT = 1000
 AKAGI_PORT = 1090
 POOL_HIT_SCORE = 2
 CHAIN_REPORT_LINE_LIMIT = 15
 INT_SIZE_BIT = 32
-NEAR_FULL = 5000
+DISK_QUEUE_LIMIT = 100000
+NEAR_FULL = 50000
 NEAR_EMPTY = 1000
+MEMORY_BALANCE_CHUNK_SIZE = 100
 CHAINING_PERMITTED_SIZE = 30
 TIMER_CHAINING_HOURS = 8
+CHECK_TIME_INTERVAL = 5
 TIMER_HELP_HOURS = 4
 HELP_PORTION = 0.6
-NEED_HELP = 50000 # pathetic XD
+NEED_HELP = 50000
 SOCKET_BUFFSIZE = 4096
 
 POOL_SIZE = 100
@@ -133,6 +147,7 @@ CHAINING_FOUNDMAP_MODE = FOUNDMAP_MEMO
 EMAIL_ACCOUNT = 'fantastic.farzin@gmail.com'
 MAIL_TO = ['farzinlize@live.com', 'fmohammadi@ce.sharif.edu']
 PC_NAME = 'Anakin'
+EXECUTION = 'unnamed'
 
 
 # ########################################## #
