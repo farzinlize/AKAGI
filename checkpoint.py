@@ -5,14 +5,20 @@ from misc import make_location
 from constants import APPDATA_PATH, CHECKPOINT_TAG, LOCK_PREFIX
 from TrieFind import ChainNode
 from typing import List
+from mongo import initial_readonlymaps
 
 '''
     saving motifs using their serialization methode AND on_sequence object using pickle
-    motif data on disk will be protected under a directory at:
-        APPDATA_PATH/(object_file without dot tag)/
+        UPDATE: motifs foundmap are considered to be stored at a collection with the same name as object_file
 '''
-def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, on_sequence=None, q=None, dataset_name=None):
+def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, on_sequence=None, q=None, dataset_name=None, change_collection=False):
 
+    if change_collection:
+        newmaps = initial_readonlymaps([motif.foundmap for motif in motifs], objects_file.split('.')[0])
+        for motif, newmap in zip(motifs, newmaps):
+            motif.foundmap.clear()
+            motif.foundmap = newmaps
+            
     # write objects and protect their data under directory
     with open(objects_file, 'wb') as f:
 
@@ -24,14 +30,16 @@ def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, o
 
         # save motifs
         for motif in motifs:
-            f.write(motif.to_byte(protect=True))
+            f.write(motif.to_byte())
 
 
-def load_checkpoint(objects_file, resumable=False):
+def load_checkpoint(objects_file:str, resumable=False):
     
     if not os.path.isfile(objects_file):
         print("[CHECK-POINT] checkpoint doesn't exist")
         return None
+
+    collection_name = objects_file.split('.')[0]
 
     motifs=[]
     with open(objects_file, 'rb') as f:
@@ -41,10 +49,10 @@ def load_checkpoint(objects_file, resumable=False):
             q =             pickle.load(f)
             dataset_name =  pickle.load(f)
 
-        item = ChainNode.byte_to_object(f)
+        item = ChainNode.byte_to_object(f, collection_name)
         while item:
             motifs.append(item)
-            item = ChainNode.byte_to_object(f)
+            item = ChainNode.byte_to_object(f, collection_name)
 
     if resumable:
         return motifs, on_sequence, q, dataset_name

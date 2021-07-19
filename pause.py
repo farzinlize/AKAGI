@@ -10,7 +10,7 @@ def save_the_rest(works, on_sequence:OnSequenceDistribution, q, dataset_name, cl
     checkpoint = unique_checkpoint_name()
 
     # store objects and protect their data under directory
-    directory = save_checkpoint(works, checkpoint, resumable=True, on_sequence=on_sequence, q=q, dataset_name=dataset_name)
+    directory = save_checkpoint(works, checkpoint, resumable=True, on_sequence=on_sequence, q=q, dataset_name=dataset_name, change_collection=True)
 
     # upload to cloud
     if cloud:store_checkpoint_to_cloud(checkpoint, directory)
