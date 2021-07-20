@@ -1,3 +1,5 @@
+from mongo import get_client
+from FoundMap import initial_readonlymaps
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
 import os
@@ -6,7 +8,7 @@ from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, MEMORY_BALANCE_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, MEMORY_BALANCE_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk
 from TrieFind import ChainNode
@@ -27,11 +29,12 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
     jobs_done_by_me = 0
     chaining_done_by_me = 0
+    client = get_client(connect=True)
 
     while True:
 
         # check for exit signal (higher priority queue check)
-        try         :signal = message.get(timeout=1)
+        try         :signal = message.get_nowait()
         except Empty:signal = None
 
         if signal:
@@ -68,19 +71,26 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         report = open(PROCESS_REPORT_FILE%(os.getpid()), 'a+')
 
         # chaining
+        last_time = datetime.now()
         next_motifs, used_nodes = next_chain(motif, on_sequence, overlap, gap, q, report=report, chain_id=chaining_done_by_me)
+        report.write(f'CHAINING({datetime.now() - last_time}) | ')
 
         # report and close
-        report.write('USED NODES COUNT %d\n'%used_nodes)
-        report.close()
+        report.write('USED NODES COUNT %d |'%used_nodes)
+
+        # mongoDB insertion
+        last_time = datetime.now()
+        inserted_maps = initial_readonlymaps([motif.foundmap for motif in next_motifs], DEFAULT_COLLECTION, client=client)
+        report.write(f'MONGO({datetime.now() - last_time}) | ')
 
         # insert next generation jobs
-        for next_motif in next_motifs:
-            work.put(ChainNode(
-                motif.label + next_motif.label, 
-                next_motif.foundmap.readonly()))
+        last_time = datetime.now()
+        for next_motif, foundmap in zip(next_motifs, inserted_maps):
+            work.put(ChainNode(motif.label + next_motif.label, foundmap))
             del next_motif
-        
+        report.write(f'NEW GENERATION({datetime.now() - last_time})\n')
+        report.close()
+
         chaining_done_by_me += 1
         
 
