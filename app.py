@@ -140,7 +140,8 @@ def motif_finding_chain(dataset_name,
     # reading sequences and its attachment including rank and summit
     sequences = read_fasta('%s.fasta'%(dataset_name))
     bundles = read_bundle('%s.bundle'%(dataset_name))
-    pwm = read_pfm_save_pwm(pfm)
+    if not chaining_disable:
+        pwm = read_pfm_save_pwm(pfm)
     # bundle_name = dataset_name.split('/')[-1]
 
 
