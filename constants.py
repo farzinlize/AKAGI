@@ -23,6 +23,7 @@ TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
 NETWORK_LOG = 'network.log'
 DATABASE_LOG = 'database.log'
 CHAINING_EXECUTION_STATUS = 'status.report'
+BEST_PATTERNS_POOL = '%s_%d.pool'
 
 # ########################################## #
 #                name tags                   #
