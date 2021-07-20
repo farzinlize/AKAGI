@@ -397,11 +397,11 @@ class ReadOnlyMap(FoundMap, Bytable):
         return ReadOnlyMap(collection, address=address)
 
 
-    def get_list(self):return mongo.read_list(self.address, collection=self.collection)
-    def clear(self):          mongo.clear_list(self.address)
+    def get_list(self):return mongo.read_list(self.address, collection_name=self.collection)
+    def clear(self):          mongo.clear_list(self.address, collection_name=self.collection)
 
     def protect(self, collection):
-        mongo.protect_list(address=self.address, collection=collection)
+        mongo.protect_list(address=self.address, collection_name=collection)
 
 
 # ########################################## #
@@ -566,14 +566,21 @@ def test_readonly():
     mapA.add_location(2, ExtraPosition(8, 6))
     mapA.add_location(3, ExtraPosition(13, 6))
 
-    rapA = mapA.readonly()
-    rapA.clear()
-    return rapA
+    mapB = MemoryMap()
+    mapB.add_location(0, ExtraPosition(0, 9))
+    mapB.add_location(1, ExtraPosition(1, 4))
+    mapB.add_location(1, ExtraPosition(0, 8))
+    mapB.add_location(2, ExtraPosition(6, 6))
+    mapB.add_location(2, ExtraPosition(3, 16))
+
+    raps = initial_readonlymaps([mapA, mapB], 'testy')
+
+    return raps
 
 
 if __name__ == "__main__":
     # m, d, t = test_hard()
-    # r = test_readonly()
+    rs = test_readonly()
     if len(sys.argv) == 1:
         print('clearing FOUNDMAP/DISKQUEUE junks...')
         clear_disk(FOUNDMAP_NAMETAG)
