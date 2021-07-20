@@ -1,12 +1,18 @@
-from FoundMap import FoundMap, ReadOnlyMap
 from misc import ExtraPosition, bytes_to_int, int_to_bytes
-from constants import BINARY_DATA, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, END, INT_SIZE, MONGO_ID, STR
+from constants import BINARY_DATA, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, END, INT_SIZE, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR
 from io import BytesIO
-from pymongo.mongo_client import MongoClient
+from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 
-def get_client():return MongoClient(DATABASE_ADDRESS)
+def mongo_secret_password():
+    with open(MONGO_SECRET_ADDRESS, 'r') as secret:
+        pwd = secret.read().split(',')[1]
+        return pwd[pwd.find('"')+1:pwd.rfind('"')]
+
+
+def get_client(connect=None):
+    return MongoClient(DATABASE_ADDRESS%(MONGO_USERNAME, mongo_secret_password()), connect=connect)
     
 
 def binary_to_list(reader:BytesIO):
@@ -100,21 +106,8 @@ def clear_list(address:bytes, collection_name, client:MongoClient=None):
 def protect_list(address:bytes, collection_name, client:MongoClient=None):
     
     if not client:client = get_client()
+    raise NotImplementedError
 
 
-def initial_readonlymaps(foundmaps:list[FoundMap], collection_name, client:MongoClient=None)->list[ReadOnlyMap]:
-    
-    if not client:client = get_client()
-    
-    order = []      # list of dictionaries for mongod process 
-    objects = []    # return result objects of ReadOnlyMap
-    collection = client[DATABASE_NAME][collection_name]
-    
-    for foundmap in foundmaps:
-        readonlymap = ReadOnlyMap(collection_name, ObjectId())
-        order.append({MONGO_ID:readonlymap.address, BINARY_DATA:list_to_binary(foundmap.get_list())})
-        objects.append(readonlymap)
-
-    collection.insert_many(order, ordered=False)
-    return objects
-
+if __name__ == '__main__':
+    client = get_client()

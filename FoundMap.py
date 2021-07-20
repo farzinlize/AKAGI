@@ -1,9 +1,11 @@
 from random import randrange
 from io import BufferedReader
 from typing import List
+from pymongo import MongoClient
+from bson.objectid import ObjectId
 from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
 import os, sys, mongo
-from constants import APPDATA_PATH, BATCH_SIZE, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, MONGO_ID, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 '''
@@ -21,7 +23,6 @@ class FoundMap:
     def get_list(self) -> List[List]:raise NotImplementedError
     def clone(self): raise NotImplementedError
     def clear(self): raise NotImplementedError
-    def readonly(self): return ReadOnlyMap(initial_list=self.get_list())
 
 
     def instances_to_string_fastalike(self, label, sequences: List[str]):
@@ -406,6 +407,23 @@ class ReadOnlyMap(FoundMap, Bytable):
 # ########################################## #
 #                 functions                  #
 # ########################################## #
+
+def initial_readonlymaps(foundmaps:list[FoundMap], collection_name, client:MongoClient=None)->list[ReadOnlyMap]:
+    
+    if not client:client = mongo.get_client()
+    
+    order = []      # list of dictionaries for mongod process 
+    objects = []    # return result objects of ReadOnlyMap
+    collection = client[DATABASE_NAME][collection_name]
+    
+    for foundmap in foundmaps:
+        readonlymap = ReadOnlyMap(collection_name, ObjectId())
+        order.append({MONGO_ID:readonlymap.address, BINARY_DATA:mongo.list_to_binary(foundmap.get_list())})
+        objects.append(readonlymap)
+
+    collection.insert_many(order, ordered=False)
+    return objects
+
 
 def binary_special_add(found_list, seq_id, position):
     start = 0

@@ -1,11 +1,10 @@
 from datetime import datetime
 import pickle
 import os
-from misc import make_location
-from constants import APPDATA_PATH, CHECKPOINT_TAG, LOCK_PREFIX
+from constants import CHECKPOINT_TAG, LOCK_PREFIX
 from TrieFind import ChainNode
 from typing import List
-from mongo import initial_readonlymaps
+from FoundMap import initial_readonlymaps
 
 '''
     saving motifs using their serialization methode AND on_sequence object using pickle

@@ -11,6 +11,7 @@ BINDING_SITE_LOCATION = './data/answers.fasta'
 TWOBIT_LOCATION = './2bits/'
 APPDATA_PATH = './appdata/'
 SECRET_FILE_ADDRESS = 'secret.json'
+MONGO_SECRET_ADDRESS = 'mongo.secret'
 AKAGI_PREDICTION_STATISTICAL = 'akagi_1.fasta'
 AKAGI_PREDICTION_EXPERIMENTAL = 'akagi_2.fasta'
 CHAIN_REPORT_FILENAME = 'reporting.temp'
@@ -80,9 +81,10 @@ MEME_MODE = '>%d\n%s\n'
 #              database mongo                #
 # ########################################## #
 
-DATABASE_ADDRESS = 'localhost'
-DEFAULT_COLLECTION = 'working'
 DATABASE_NAME = 'akagidb'
+DATABASE_ADDRESS = 'mongodb://%s:%s@localhost/?authSource=' + DATABASE_NAME
+MONGO_USERNAME = 'akagi'
+DEFAULT_COLLECTION = 'working'
 MONGO_ID = '_id'
 BINARY_DATA = 'data'
 ID_LENGTH = 12

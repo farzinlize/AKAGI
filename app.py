@@ -6,6 +6,7 @@ from getopt import getopt
 import sys
 
 # project imports
+from FoundMap import initial_readonlymaps
 from GKmerhood import DummyTree, GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, multiple_layer_window_find_motif
 from misc import brief_sequence, change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
@@ -21,7 +22,6 @@ from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkp
 from TrieFind import ChainNode
 from multi import TIMESUP_EXIT, multicore_chaining_main
 from networking import AssistanceService
-from mongo import initial_readonlymaps
 
 # importing constants
 from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
