@@ -408,7 +408,7 @@ class ReadOnlyMap(FoundMap, Bytable):
 #                 functions                  #
 # ########################################## #
 
-def initial_readonlymaps(foundmaps:list[FoundMap], collection_name, client:MongoClient=None)->list[ReadOnlyMap]:
+def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:MongoClient=None)->List[ReadOnlyMap]:
     
     if not client:client = mongo.get_client()
     
@@ -573,7 +573,7 @@ def test_readonly():
     mapB.add_location(2, ExtraPosition(6, 6))
     mapB.add_location(2, ExtraPosition(3, 16))
 
-    raps = initial_readonlymaps([mapA, mapB], 'testy')
+    raps = initial_readonlymaps([mapA, mapB], 'file_f4-5_d1-1.checkpoint')
 
     return raps
 
