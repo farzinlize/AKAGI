@@ -5,7 +5,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
 import os, sys, mongo
-from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, MONGO_ID, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, MAXIMUM_ORDER_SIZE, MONGO_ID, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 '''
@@ -417,6 +417,12 @@ def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:Mongo
     collection = client[DATABASE_NAME][collection_name]
     
     for foundmap in foundmaps:
+
+        # check for order size limit
+        if len(order) == MAXIMUM_ORDER_SIZE:
+            collection.insert_many(order, ordered=False)
+            order = []
+
         readonlymap = ReadOnlyMap(collection_name, ObjectId())
         order.append({MONGO_ID:readonlymap.address, BINARY_DATA:mongo.list_to_binary(foundmap.get_list())})
         objects.append(readonlymap)

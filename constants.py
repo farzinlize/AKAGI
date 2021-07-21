@@ -23,7 +23,9 @@ TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
 NETWORK_LOG = 'network.log'
 DATABASE_LOG = 'database.log'
 CHAINING_EXECUTION_STATUS = 'status.report'
+MANUAL_EXIT_STATUS = 'MANUAL.EXIT'
 BEST_PATTERNS_POOL = '%s_%d.pool'
+
 
 # ########################################## #
 #                name tags                   #
@@ -89,6 +91,7 @@ DEFAULT_COLLECTION = 'working'
 MONGO_ID = '_id'
 BINARY_DATA = 'data'
 ID_LENGTH = 12
+MAXIMUM_ORDER_SIZE = 10000
 
 
 # ########################################## #
