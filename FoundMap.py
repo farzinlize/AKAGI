@@ -423,7 +423,7 @@ def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:Mongo
             collection.insert_many(order, ordered=False)
             order = []
 
-        readonlymap = ReadOnlyMap(collection_name, ObjectId())
+        readonlymap = ReadOnlyMap(collection_name, ObjectId().binary)
         order.append({MONGO_ID:readonlymap.address, BINARY_DATA:mongo.list_to_binary(foundmap.get_list())})
         objects.append(readonlymap)
 
@@ -586,7 +586,7 @@ def test_readonly():
 
 if __name__ == "__main__":
     # m, d, t = test_hard()
-    rs = test_readonly()
+    # rs = test_readonly()
     if len(sys.argv) == 1:
         print('clearing FOUNDMAP/DISKQUEUE junks...')
         clear_disk(FOUNDMAP_NAMETAG)
