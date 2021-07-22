@@ -25,6 +25,7 @@ DATABASE_LOG = 'database.log'
 CHAINING_EXECUTION_STATUS = 'status.report'
 MANUAL_EXIT_STATUS = 'MANUAL.EXIT'
 BEST_PATTERNS_POOL = '%s_%d.pool'
+MEMORY_BALANCING_REPORT = 'queue.report'
 
 
 # ########################################## #

@@ -8,7 +8,7 @@ from pause import save_the_rest, time_has_ended
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, MEMORY_BALANCE_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, MEMORY_BALANCE_CHUNK_SIZE, MEMORY_BALANCING_REPORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk
 from TrieFind import ChainNode
@@ -314,24 +314,38 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
 
             # queue memory balancing
             memory_balance = work.qsize()
+            message_report = ''
 
             # save memory
             if memory_balance > NEAR_FULL:
                 items = []
                 for _ in range(MEMORY_BALANCE_CHUNK_SIZE):
-                    items.append(work.get())
+                    get_one:ChainNode = work.get()
+
+                    # avoid adding works that are not in working collection (first generation motifs)
+                    if get_one.foundmap.collection != DEFAULT_COLLECTION:work.put(get_one)
+                    else                                                :items.append(get_one)
+
+                message_report += 'stored a chunk into disk\n'
                 disk_queue.insert_all(items)
 
             # restore from disk
             elif memory_balance < NEAR_EMPTY:
                 items = disk_queue.pop_many(how_many=MEMORY_BALANCE_CHUNK_SIZE)
+
                 if items:
+                    message_report += 'restored a chunk from disk (size=%d)\n'%(len(items))
                     for item in items:work.put(item)
                 
                 # there was no work on disk
                 else:
                     if memory_balance == 0:counter += 1
                     else:counter = 0
+                    message_report += 'failed to load work from disk (exit counter => %d)\n'%counter
+
+            # queue size report
+            with open(MEMORY_BALANCING_REPORT, 'w') as report:
+                report.write("work => %d\nmerge => %d\n%s"%(work.qsize(), merge.qsize(), message_report))
 
             # just wait for next check round
             sleep(CHECK_TIME_INTERVAL)
