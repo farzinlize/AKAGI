@@ -739,15 +739,15 @@ def change_global_constant_py(variable_name: str, new_value: str):
                 f.write(line)
                 continue
 
-            if len(list_line) > 2:
-                raise Exception('[CHANGE][ERROR] constant file line contains more than one assignment chr "="')
+            if len(list_line) > 2:rest_of_the_line = "=".join(list_line[1:])
+            else                 :rest_of_the_line = list_line[1]
             
             f.write(list_line[0] + '=')
 
             if "".join(list_line[0].split()) == variable_name:
                 f.write(' ' + new_value + '\n')
             else:
-                f.write(list_line[1])
+                f.write(rest_of_the_line)
 
 
 # ########################################## #
@@ -918,7 +918,8 @@ def test_binary_add():
 if __name__ == "__main__":
     # test = read_pfm('./pfms/test2.pfm')
     # pwm = pfm_to_pwm(test)
-    memechip_jaspar_evaluation('./memechip/SRF.fasta', './pfms/MA0083.2.pfm')
+    change_global_constant_py('SEQUENCE_KEY', '56')
+    # memechip_jaspar_evaluation('./memechip/SRF.fasta', './pfms/MA0083.2.pfm')
     # GFF_to_fasta('./memechip/SRF.gff', './memechip/SRF.fasta')
     # pwm_2 = read_pfm_save_pwm('./pfms/meme_my.pfm')
     # pwm_1 = read_meme_motif_to_pwm('./memechip/motif_3_counts.txt')
