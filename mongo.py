@@ -84,7 +84,7 @@ def read_list(address:bytes, collection_name, client:MongoClient=None):
     item = collection.find_one({MONGO_ID:address})
 
     if not item:
-        with open(DATABASE_LOG, 'a+') as log:log.write(f'[MONGO][READ] not found! address: {address}\n')
+        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][READ] not found! address: {address}\n')
         return None
     
     reader = BytesIO(item[BINARY_DATA])
@@ -100,7 +100,7 @@ def clear_list(address:bytes, collection_name, client:MongoClient=None):
     deleted = collection.delete_one({MONGO_ID:address}).deleted_count
 
     if not deleted:
-        with open(DATABASE_LOG, 'a+') as log:log.write(f'[MONGO][CLEAR] not found! address: {address}\n')
+        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][CLEAR] not found! address: {address}\n')
 
 
 def protect_list(address:bytes, collection_name, client:MongoClient=None):

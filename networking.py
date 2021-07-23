@@ -135,8 +135,8 @@ class AssistanceService:
     def listen_for_assistance(self) -> ConnectionInterface: # server
         assistant_socket, addr = self.server.accept()
 
-        with open(NETWORK_LOG, 'a+') as logger:
-            logger.write('assistant connected from address: ' + str(addr))
+        with open(NETWORK_LOG, 'a') as logger:
+            logger.write('assistant connected from address: ' + str(addr) + '\n')
 
         return ConnectionInterface(assistant_socket, master=True)
 

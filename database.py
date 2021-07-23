@@ -20,7 +20,7 @@ def initial_foundmap(address, initial_list):
     # check for coalition
     for row in table:
         if row[DB_TAG] == tag:
-            with open(DATABASE_LOG, 'a+') as log:log.write('COALITION OCCURRED')
+            with open(DATABASE_LOG, 'a') as log:log.write('COALITION OCCURRED\n')
             return False # not placed
 
     # update table
@@ -63,7 +63,7 @@ def read_list(address)->list[list]:
         
         # check for existence XD
         if read_location == -1:
-            with open(DATABASE_LOG, 'a+') as log:log.write('tag not found - READ FAIL')
+            with open(DATABASE_LOG, 'a') as log:log.write('tag not found - READ FAIL\n')
             return
 
         # goto data on file
@@ -108,7 +108,7 @@ def clear_list(address):
             has_more = (index != len(table)-1)
 
     if hit_row == -1:
-        with open(DATABASE_LOG, 'a+') as log:log.write('tag not found - CLEAR FAIL')
+        with open(DATABASE_LOG, 'a') as log:log.write('tag not found - CLEAR FAIL\n')
         return
 
     table = table[:index] + table[index+1:]
@@ -134,7 +134,7 @@ def protect_list(address):
                 return True
 
     # not found!    
-    with open(DATABASE_LOG, 'a+') as log:log.write('not found - [protect]')
+    with open(DATABASE_LOG, 'a+') as log:log.write('not found - [protect]\n')
     return False
 
 
