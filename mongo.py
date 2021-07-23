@@ -1,8 +1,10 @@
 from misc import ExtraPosition, bytes_to_int, int_to_bytes
-from constants import BINARY_DATA, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, END, INT_SIZE, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR
+from constants import BINARY_DATA, CLEAR, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, END, FIND_ONE, INSERT_MANY, INT_SIZE, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR
 from io import BytesIO
 from pymongo import MongoClient
-from bson.objectid import ObjectId
+from pymongo.collection import Collection
+from pymongo.errors import ServerSelectionTimeoutError
+from pymongo.results import DeleteResult
 
 
 def mongo_secret_password():
@@ -76,20 +78,34 @@ def list_to_binary(found_list):
     return writer.getvalue()
 
 
+def safe_operation(collection:Collection, command, order):
+    try:
+        if   command == INSERT_MANY :collection.insert_many(order, ordered=False)
+        elif command == FIND_ONE    :return collection.find_one(order)
+        elif command == CLEAR       :return collection.delete_one(order)
+    except ServerSelectionTimeoutError as server_down:
+        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO] server down\n{server_down}\n')
+        return server_down
+    except Exception as any_error:
+        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO] database error\n{any_error, type(any_error)}\n')
+        return any_error
+
+
 def read_list(address:bytes, collection_name, client:MongoClient=None):
 
     if not client:client = get_client()
     
     collection = client[DATABASE_NAME][collection_name]
-    item = collection.find_one({MONGO_ID:address})
+    item_or_error = safe_operation(collection, FIND_ONE, {MONGO_ID:address})
 
-    if not item:
+    if not item_or_error:
         with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][READ] not found! address: {address}\n')
         return None
-    
-    reader = BytesIO(item[BINARY_DATA])
+    elif not isinstance(item_or_error, dict):
+        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][READ] error: {item_or_error}\n')
+        return item_or_error
 
-    return binary_to_list(reader)
+    return binary_to_list(BytesIO(item_or_error[BINARY_DATA]))
 
 
 def clear_list(address:bytes, collection_name, client:MongoClient=None):
@@ -97,16 +113,18 @@ def clear_list(address:bytes, collection_name, client:MongoClient=None):
     if not client:client = get_client()
 
     collection = client[DATABASE_NAME][collection_name]
-    deleted = collection.delete_one({MONGO_ID:address}).deleted_count
+    result = safe_operation(collection, CLEAR, {MONGO_ID:address})
 
-    if not deleted:
+    if not isinstance(result, DeleteResult):
+        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][CLEAR] error: {result}\n')
+    elif not result.deleted_count:
         with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][CLEAR] not found! address: {address}\n')
 
 
-def protect_list(address:bytes, collection_name, client:MongoClient=None):
+# def protect_list(address:bytes, collection_name, client:MongoClient=None):
     
-    if not client:client = get_client()
-    raise NotImplementedError
+#     if not client:client = get_client()
+#     raise NotImplementedError
 
 
 if __name__ == '__main__':

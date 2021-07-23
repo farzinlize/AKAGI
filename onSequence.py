@@ -2,7 +2,7 @@ import pickle
 from checkpoint import load_checkpoint
 from constants import BRIEFING
 from typing import List
-from TrieFind import WatchNode
+from TrieFind import ChainNode
 from misc import ExtraPosition, brief_sequence, read_bundle, read_fasta
 
 
@@ -15,10 +15,6 @@ from misc import ExtraPosition, brief_sequence, read_bundle, read_fasta
 '''
 class OnSequenceDistribution:
 
-    # class Entry:
-    #     def __init__(self, label):
-    #         self.label = label
-
     def __init__(self, motifs=None, sequences=None, struct=None):
         if struct:
             self.struct = struct
@@ -26,57 +22,26 @@ class OnSequenceDistribution:
             assert motifs and sequences
             self.generate_list(motifs, sequences)
 
-    def generate_list(self, motifs: List[WatchNode], sequences):
+
+    def generate_list(self, motifs: List[ChainNode], sequences):
         self.struct = [[[] for _ in range(len(sequence))] for sequence in sequences] 
-        # self.margins = [[[] for _ in range(len(sequence))] for sequence in sequences] # TODO: WHY MARGIN?
         for motif in motifs:
             bundle = motif.foundmap.get_list()
+
+            if not isinstance(bundle, list):
+                if bundle:raise bundle
+                raise Exception(f'no data was found for motif address -> {motif.foundmap.address}')
+
             for index, seq_id in enumerate(bundle[0]):
                 position: ExtraPosition
                 for position in bundle[1][index]:
                     try:
                         self.struct[seq_id][position.start_position] += [motif.label]
-                        # self.margins[seq_id][position.start_position] += [position.size]
                     except IndexError:
                         print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d'%(
                             seq_id, position.start_position, len(sequences[index])
                         ))
-
-
-    # def to_byte(self):
-    #     result = int_to_bytes(len(self.struct))
-    #     print('size of struct %d'%len(self.struct))
-    #     for sequence in self.struct:
-    #         result += int_to_bytes(len(sequence))
-    #         print('size of sequence array %d'%len(sequence))
-    #         for position in sequence:
-    #             result += int_to_bytes(len(position))
-    #             for label in position:
-    #                 result += int_to_bytes(len(label))
-    #                 result += bytes(label, encoding='ascii')
-    #                 print('(motif label: %s)'%label, end='')
-    #         print('\n', end='')
-    #     return result
-
-
-    # @staticmethod
-    # def byte_to_object(buffer:BufferedReader):
-    #     struct_size = bytes_to_int(buffer.read(INT_SIZE))
-    #     struct = []
-    #     for _ in range(struct_size):
-    #         len_sequence = bytes_to_int(buffer.read(INT_SIZE))
-    #         sequence = []
-    #         for _ in range(len_sequence):
-    #             len_position = bytes_to_int(buffer.read(INT_SIZE))
-    #             position = []
-    #             for _ in range(len_position):
-    #                 label = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), encoding='ascii')
-    #                 position.append(label)
-    #             sequence.append(position[:])
-    #         struct.append(sequence[:])
-    #     return OnSequenceDistribution(struct=struct)
                 
-
 
     def analysis(self):
         result = '[OnSequence][Analysis] id -> sequence id | z -> number of motifs in positions vector\n'

@@ -3,6 +3,8 @@ import os
 from time import time as currentTime
 from time import strftime, gmtime
 from getopt import getopt
+from typing import List
+from pymongo.errors import ServerSelectionTimeoutError
 import sys
 
 # project imports
@@ -20,11 +22,11 @@ from onSequence import OnSequenceDistribution
 from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
 from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkpoint
 from TrieFind import ChainNode
-from multi import TIMESUP_EXIT, multicore_chaining_main
+from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from networking import AssistanceService
 
 # importing constants
-from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
+from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, LUCKY_SHOT, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -116,7 +118,14 @@ def motif_finding_chain(dataset_name,
 
         # only return label and foundmap for forthur use as chain node instead of watch node
         # make foundmap read-only afterward
-        inserted_maps = initial_readonlymaps([motif.foundmap for motif in motifs], save_collection)
+        # may failed due to database operation but if its not about server being down, so it will just file another shot for luck
+        may_fail = LUCKY_SHOT
+        while may_fail:
+            inserted_maps = initial_readonlymaps([motif.foundmap for motif in motifs], save_collection)
+            if isinstance(inserted_maps, ServerSelectionTimeoutError):return
+            if not isinstance(inserted_maps, list):may_fail -= 1
+
+        if not isinstance(inserted_maps, list):return
         return [ChainNode(motif.label, foundmap) for motif, foundmap in zip(motifs, inserted_maps)]
 
 
@@ -181,11 +190,12 @@ def motif_finding_chain(dataset_name,
     # chaining procedure required chain nodes instead of watch nodes 
     # zero_chain_nodes = [ChainNode(motif.label, motif.foundmap) for motif in motifs]
 
-    if chaining_disable:
-        print('[CHAINING] chaining is disabled - end of process')
-        return
+    if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
+    if not motifs:print('[FATAL][ERROR] no observation data is available (error)');return
 
-    on_sequence = OnSequenceDistribution(motifs, sequences)
+    try                      :on_sequence = OnSequenceDistribution(motifs, sequences)
+    except Exception as error:print(f'[FATAL][ERROR] cant make OnSequence {error}');return
+
     # reports for analysis
     if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
 
@@ -201,7 +211,9 @@ def motif_finding_chain(dataset_name,
         
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
     print('finish code:', code)
-    if rest: print('rest of the works are saved as <checkpoint> ', rest)
+    if   code == TIMESUP_EXIT:print(f'timsup for chaining - rest is saved at {rest}')
+    elif code == ERROR_EXIT  :print(f'something bad happened -> error was {rest}')
+    elif code == END_EXIT    :print('all jobs done')
 
     # make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
 

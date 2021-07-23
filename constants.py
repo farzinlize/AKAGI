@@ -18,12 +18,10 @@ CHAIN_REPORT_FILENAME = 'reporting.temp'
 CR_FILE = 'chaining_report.window'
 PROCESS_REPORT_FILE = 'process_%d.report'
 GOOGLE_CREDENTIALS_FILE = 'cred.txt'
-TEMP_POOL_LOCATION = 'akagi.pool'
-TEMP_POOL_PRD = APPDATA_PATH + 'akagipool/'
 NETWORK_LOG = 'network.log'
 DATABASE_LOG = 'database.log'
+IMPORTANT_LOG = 'IMPORTANTE.log'
 CHAINING_EXECUTION_STATUS = 'status.report'
-MANUAL_EXIT_STATUS = 'MANUAL.EXIT'
 BEST_PATTERNS_POOL = '%s_%d.pool'
 MEMORY_BALANCING_REPORT = 'queue.report'
 
@@ -94,6 +92,11 @@ BINARY_DATA = 'data'
 ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
 
+# commands
+FIND_ONE = 'find'
+CLEAR = 'clear'
+INSERT_MANY = 'insert'
+
 
 # ########################################## #
 #              numeric values                #
@@ -122,6 +125,7 @@ TIMER_HELP_HOURS = 4
 HELP_PORTION = 0.6
 NEED_HELP = 50000
 SOCKET_BUFFSIZE = 4096
+LUCKY_SHOT = 1
 
 POOL_SIZE = 100
 GOOD_HIT_RATIO = 0.25

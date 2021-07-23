@@ -1,6 +1,7 @@
+from functools import reduce
 from mongo import get_client
 from FoundMap import initial_readonlymaps
-from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
+from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint, save_checkpoint, unique_checkpoint_name
 from networking import AssistanceService
 import os
 from report_email import send_files_mail
@@ -31,6 +32,9 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
     chaining_done_by_me = 0
     client = get_client(connect=True)
 
+    # open process report file
+    report = open(PROCESS_REPORT_FILE%(os.getpid()), 'w')
+
     while True:
 
         # check for exit signal (higher priority queue check)
@@ -42,9 +46,8 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
             # Merge and Finish
             if signal == EXIT_SIGNAL:
                 merge.put(local_pool)
-                with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
-                    last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-
+                report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+                report.close()
                 return # exit
 
         # obtaining a job
@@ -67,31 +70,41 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         # ignouring low rank motifs
         if good_enough <= POOL_HIT_SCORE:continue
 
-        # open process report file
-        report = open(PROCESS_REPORT_FILE%(os.getpid()), 'a+')
-
         # chaining
         last_time = datetime.now()
-        next_motifs, used_nodes = next_chain(motif, on_sequence, overlap, gap, q, report=report, chain_id=chaining_done_by_me)
+        next_motifs, used_nodes_or_error = next_chain(motif, on_sequence, overlap, gap, q, report=report, chain_id=chaining_done_by_me, client=client)
         report.write(f'CHAINING({datetime.now() - last_time}) | ')
 
+        # check for database error
+        if not next_motifs:
+            merge.put(local_pool)
+            report.write('EXIT ON FAILURE\n')
+            report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+            report.close()
+            raise used_nodes_or_error
+
         # report and close
-        report.write('USED NODES COUNT %d |'%used_nodes)
+        report.write('USED NODES COUNT %d | '%used_nodes_or_error)
 
         # mongoDB insertion
         last_time = datetime.now()
         inserted_maps = initial_readonlymaps([motif.foundmap for motif in next_motifs], DEFAULT_COLLECTION, client=client)
+        if not isinstance(inserted_maps, list):
+            merge.put(local_pool)
+            report.write('EXIT ON FAILURE\n')
+            report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+            report.close()
+            raise inserted_maps
+
         report.write(f'MONGO({datetime.now() - last_time}) | ')
 
         # insert next generation jobs
-        last_time = datetime.now()
         for next_motif, foundmap in zip(next_motifs, inserted_maps):
             work.put(ChainNode(motif.label + next_motif.label, foundmap))
             del next_motif
-        report.write(f'NEW GENERATION({datetime.now() - last_time})\n')
-        report.close()
 
         chaining_done_by_me += 1
+        report.flush()
         
 
 def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
@@ -307,10 +320,16 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
         while counter <= 100:
 
             # check for timeout
-            if time_has_ended(since, TIMER_CHAINING_HOURS):exit_code = TIMESUP_EXIT;break
+            if time_has_ended(since, TIMER_CHAINING_HOURS):
+                exit_code = TIMESUP_EXIT;break
 
             # check for status
-            if not os.path.isfile(CHAINING_EXECUTION_STATUS):exit_code = MANUAL_EXIT;break
+            if not os.path.isfile(CHAINING_EXECUTION_STATUS):
+                exit_code = MANUAL_EXIT;break
+
+            # check for processes activity
+            if not reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers]):
+                exit_code = ERROR_EXIT;break
 
             # queue memory balancing
             memory_balance = work.qsize()
@@ -319,7 +338,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # save memory
             if memory_balance > NEAR_FULL:
                 items = []
-                for _ in range(MEMORY_BALANCE_CHUNK_SIZE):
+                while len(items) == MEMORY_BALANCE_CHUNK_SIZE:
                     get_one:ChainNode = work.get()
 
                     # avoid adding works that are not in working collection (first generation motifs)
@@ -353,27 +372,26 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
     ############### end of processing #######################
 
     # IN CASE OF ERROR, KILL EVERYONE AND LEAVE
-    if exit_code == ERROR_EXIT:
-        for worker in workers:worker.kill()
-        global_pooler.kill()
-        return exit_code
+    # if exit_code == ERROR_EXIT:
+    #     for worker in workers:worker.kill()
+    #     global_pooler.kill()
+    #     return exit_code
     
     # message the workers to terminate their job and merge for last time
     for _ in workers:
         message.put(EXIT_SIGNAL)
 
-    is_there_alive = True
+    is_there_alive = reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers])
     join_timeout = 30 # minutes
 
+    # should wait on workers but in limited time
     while is_there_alive and join_timeout:
         
         # 5 minute wait
         sleep(60 * 5)
         join_timeout -= 5
 
-        # assume all dead and check
-        is_there_alive = False
-        for worker in workers:is_there_alive |= worker.is_alive()
+        is_there_alive = reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers])
 
     # kill whoever is alive ignoring its merge signal
     for worker in workers:
@@ -386,24 +404,35 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
     merge.put(EXIT_SIGNAL)
     global_pooler.join()
 
-    # save rest of the works if timesup
-    if exit_code == TIMESUP_EXIT or exit_code == MANUAL_EXIT:
+    rest_checkpoint = None
+
+    # save rest of the works if not end
+    if exit_code != END_EXIT:
 
         rest_work = []
         while True:
             try:rest_work.append(work.get_nowait())
             except Empty:break
         
-        rest_checkpoint = save_the_rest(rest_work, on_sequence, q, dataset_dict[DATASET_NAME], cloud=SAVE_THE_REST_CLOUD)
+        rest_checkpoint = save_the_rest(rest_work, on_sequence, q, dataset_dict[DATASET_NAME])
+        # save_checkpoint(rest_work,
+        #     unique_checkpoint_name(), 
+        #     resumable=True, 
+        #     on_sequence=on_sequence, 
+        #     q=q, 
+        #     dataset_name=dataset_dict[DATASET_NAME],
+        #     change_collection=False)
+
+        # save rest of the works only on files
+        if not isinstance(rest_checkpoint, str):
+            exit_code = ERROR_EXIT
 
         if MAIL_SERVICE:
             send_files_mail(
-                strings=['REST OF JOBS HAS SENT - unfinished program has sent its remaining data into cloud'],
+                strings=['REST OF JOBS HAS SENT - unfinished jobs has been saved'],
                 additional_subject=' an unfinished end')
 
-    if rest_checkpoint: # equal to -> if exit == TIMESUP_EXIT
-        return rest_checkpoint, exit_code
-    return None, exit_code
+    return rest_checkpoint, exit_code
 
 
 

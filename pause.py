@@ -3,18 +3,15 @@ from googledrive import download_checkpoint_from_drive, query_download_checkpoin
 from checkpoint import save_checkpoint, unique_checkpoint_name
 from datetime import datetime, timedelta
 
-
-def save_the_rest(works, on_sequence:OnSequenceDistribution, q, dataset_name, cloud=True):
+def save_the_rest(works, on_sequence:OnSequenceDistribution, q, dataset_name):
 
     # grant a free name for checkpoint
     checkpoint = unique_checkpoint_name()
 
     # store objects and protect their data under directory
-    directory = save_checkpoint(works, checkpoint, resumable=True, on_sequence=on_sequence, q=q, dataset_name=dataset_name, change_collection=True)
+    error = save_checkpoint(works, checkpoint, resumable=True, on_sequence=on_sequence, q=q, dataset_name=dataset_name, change_collection=True)
 
-    # upload to cloud
-    if cloud:store_checkpoint_to_cloud(checkpoint, directory)
-
+    if error:return error
     return checkpoint
 
 

@@ -235,9 +235,14 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
     [WARNING] procedure uses in memory dataset to store foundmaps
         motifs should convert their foundmap to disk mode for furthur use 
 '''
-def next_chain(motif: ChainNode, on_sequence, overlap, gap, q, report:BufferedWriter, chain_id):
+def next_chain(motif: ChainNode, on_sequence, overlap, gap, q, report:BufferedWriter, chain_id, client=None):
     observation_size = 0
-    bundle = motif.foundmap.get_list()
+    bundle = motif.foundmap.get_list(client=client)
+
+    if not isinstance(bundle, list):
+        report.write('CHAIN_ID %d | ERROR | ')
+        return None, bundle
+
     next_tree = WatchNodeC(custom_foundmap_type=CHAINING_FOUNDMAP_MODE)
     for index, seq_id in enumerate(bundle[0]):
         position: ExtraPosition

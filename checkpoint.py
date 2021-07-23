@@ -14,6 +14,7 @@ def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, o
 
     if change_collection:
         newmaps = initial_readonlymaps([motif.foundmap for motif in motifs], objects_file.split('.')[0])
+        if not isinstance(newmaps, list):return newmaps
         for motif, newmap in zip(motifs, newmaps):
             motif.foundmap.clear()
             motif.foundmap = newmap

@@ -2,10 +2,11 @@ from random import randrange
 from io import BufferedReader
 from typing import List
 from pymongo import MongoClient
+from pymongo.errors import ServerSelectionTimeoutError
 from bson.objectid import ObjectId
 from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
 import os, sys, mongo
-from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, MAXIMUM_ORDER_SIZE, MONGO_ID, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_LOG, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, INSERT_MANY, MAXIMUM_ORDER_SIZE, MONGO_ID, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 '''
@@ -397,11 +398,11 @@ class ReadOnlyMap(FoundMap, Bytable):
         return ReadOnlyMap(collection, address=address)
 
 
-    def get_list(self):return mongo.read_list(self.address, collection_name=self.collection)
-    def clear(self):          mongo.clear_list(self.address, collection_name=self.collection)
+    def get_list(self, client=None):return mongo.read_list(self.address, collection_name=self.collection, client=client)
+    def clear(self,    client=None):       mongo.clear_list(self.address, collection_name=self.collection, client=client)
 
-    def protect(self, collection):
-        mongo.protect_list(address=self.address, collection_name=collection)
+    # def protect(self, collection):
+    #     mongo.protect_list(address=self.address, collection_name=collection)
 
 
 # ########################################## #
@@ -409,7 +410,7 @@ class ReadOnlyMap(FoundMap, Bytable):
 # ########################################## #
 
 def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:MongoClient=None)->List[ReadOnlyMap]:
-    
+
     if not client:client = mongo.get_client()
     
     order = []      # list of dictionaries for mongod process 
@@ -420,15 +421,17 @@ def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:Mongo
 
         # check for order size limit
         if len(order) == MAXIMUM_ORDER_SIZE:
-            collection.insert_many(order, ordered=False)
-            order = []
+            error = mongo.safe_operation(collection, INSERT_MANY, order)
+            if error:return error
+            else    :order = []
 
         readonlymap = ReadOnlyMap(collection_name, ObjectId().binary)
         order.append({MONGO_ID:readonlymap.address, BINARY_DATA:mongo.list_to_binary(foundmap.get_list())})
         objects.append(readonlymap)
 
-    collection.insert_many(order, ordered=False)
-    return objects
+    error = mongo.safe_operation(collection, INSERT_MANY, order)
+    if error:return error
+    else    :return objects
 
 
 def binary_special_add(found_list, seq_id, position):

@@ -72,6 +72,7 @@ def download_checkpoint_from_drive(checkpoint_drive:GoogleDriveFile, drive=None,
     return name
 
 
+# TODO: changes must applied
 def store_checkpoint_to_cloud(objects_file, protected_directory:str, only_objectfile=False, drive=None):
 
     if drive == None:
