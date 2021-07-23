@@ -1,8 +1,8 @@
-from FoundMap import FileMap
 import struct
 from typing import List
-from constants import APPDATA_PATH, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, INT_SIZE, POOL_LIMITED, POOL_SIZE, PWM, P_VALUE, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER
-from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, make_location, pwm_score_sequence
+from FoundMap import FileMap, ReadOnlyMap, initial_readonlymaps
+from constants import CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, IMPORTANT_LOG, INT_SIZE, POOL_LIMITED, POOL_SIZE, PWM, P_VALUE, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER
+from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, pwm_score_sequence
 from TrieFind import ChainNode
 
 class AKAGIPool:
@@ -140,29 +140,53 @@ class AKAGIPool:
     #            pool disk operations            #
     # ########################################## #
 
-    def savefile(self, filename:str):
-        pool_collection = filename.split('.')[0]
+    def savefile(self, filename:str, mongo_client=None):
 
+        # first try to put entities data on separate collection
+        # to preserve data from cleaning 
+        pool_collection = filename.split('.')[0]
+        collected_maps:List[ReadOnlyMap] = []
         seen = []
+
+        for table in self.tables:
+            for entity in table:
+                first = entity.data.label not in seen
+                if first:
+                    seen.append(entity.data.label)
+                    collected_maps.append(entity.data.foundmap)
+        newmaps = initial_readonlymaps(collected_maps, pool_collection, client=mongo_client)
+
+        # again but this time put those maps instead of the older ones and save objects
+        seen = []
+
+        # - if database failed there will be no replacement of foundmaps 
+        #   [WARNING] preserve default collection data in order to object file to be valid
+        if not isinstance(newmaps, list):
+            newmaps = collected_maps
+            with open(IMPORTANT_LOG, 'a') as log:
+                log.write(f'[WARNING][POOL] preserve default collection data in order to {filename} to be valid\n')
+            
+        newmaps_iterator = iter(newmaps)
+
         with open(filename, 'wb') as disk:
             for table in self.tables:
                 disk.write(int_to_bytes(len(table)))
-
                 for entity in table:
-
                     first = entity.data.label not in seen # TODO [WARNING] linear search 
-                    if first:seen.append(entity.data.label)
+                    if first:
+                        seen.append(entity.data.label)
+                        entity.data.foundmap = next(newmaps_iterator)
 
+                    # save object with its score in object file
                     scores_pack = struct.pack('d'*len(entity.scores), *entity.scores)
                     disk.write(
                         int_to_bytes(len(scores_pack)) +
                         scores_pack +
-                        entity.data.to_byte(protect=first, directory=pool_collection)
+                        entity.data.to_byte()
                     )
 
 
-    def readfile(self, filename:str):
-        pool_collection = filename.split('.')[0]
+    def readfile(self, filename:str, pool_collection):
 
         with open(filename, 'rb') as disk:
             for table_index in range(len(self.tables)):
