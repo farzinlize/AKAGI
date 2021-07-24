@@ -35,7 +35,11 @@ class AKAGIPool:
         # calculating pattern scores
         scores = []
         for description in self.descriptions:
-            scores.append(description[FUNCTION_KEY](pattern, description[ARGUMENT_KEY]) * description[SIGN_KEY])
+                new_score = description[FUNCTION_KEY](pattern, description[ARGUMENT_KEY]) * description[SIGN_KEY]
+                if not isinstance(new_score, float):
+                    with open(IMPORTANT_LOG, 'a') as log:log.write(f'[JUDGE] error was occurred while judging pattern:{pattern.label}\n')
+                    return new_score # as error
+                scores.append(new_score)
 
         # inserting the pattern to each sorted table for each score
         ranks = []
@@ -291,7 +295,11 @@ class RankingPool:
 
 
 def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
-    foundlist_seq_vector = pattern.foundmap.get_list()[0]
+
+    # error handeling
+    try:foundlist_seq_vector = pattern.foundmap.get_list()[0]
+    except Exception as e:return e
+
     foundlist_index = 0
     sequence_index = 0
     psum = 0
@@ -318,7 +326,11 @@ def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
 
 
 def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
-    pattern_foundlist = pattern.foundmap.get_list()
+
+    # error handeling
+    try:pattern_foundlist = pattern.foundmap.get_list()
+    except Exception as e:return e
+
     sum_distances = 0
     num_instances = 0
     for index, seq_id in enumerate(pattern_foundlist[0]):
@@ -348,7 +360,11 @@ def pwm_score(pattern: ChainNode, arg_bundle):
     
     aggregated = 0
     count = 0
-    bundle = pattern.foundmap.get_list()
+
+    # error handeling
+    try:bundle = pattern.foundmap.get_list()
+    except Exception as e:return e
+    
     for index, seq_id in enumerate(bundle[0]):
         position: ExtraPosition
         for position in bundle[1][index]:
