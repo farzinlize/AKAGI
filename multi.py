@@ -1,22 +1,27 @@
-from functools import reduce
-from mongo import get_client
-from FoundMap import initial_readonlymaps
-from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint, save_checkpoint, unique_checkpoint_name
-from networking import AssistanceService
+# python libraries 
 import os
-from report_email import send_files_mail
-from pause import save_the_rest, time_has_ended
+from functools import reduce
 from queue import Empty
 from time import sleep
 from datetime import datetime
-from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, MAIL_SERVICE, MAX_CORE, MEMORY_BALANCE_CHUNK_SIZE, MEMORY_BALANCING_REPORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_THE_REST_CLOUD, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from multiprocessing import Process, Queue
+from typing import List
+
+# project modules
+from mongo import get_client
+from FoundMap import initial_readonlymaps
+from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
+from networking import AssistanceService
+from report_email import send_files_mail
+from pause import save_the_rest, time_has_ended
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk
 from TrieFind import ChainNode
-from multiprocessing import Process, Queue
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
-from typing import List
+
+# settings and global variables
+from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 
 MANUAL_EXIT = -3
 ERROR_EXIT = -2
@@ -25,6 +30,12 @@ END_EXIT = 0
 
 
 def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
+
+    def error_exit(error):
+        merge.put(local_pool)
+        report.write('EXIT ON FAILURE\n' + PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+        report.close()
+        raise error
 
     # local ranking pools
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
@@ -57,7 +68,12 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         # evaluation the job (motif)
         good_enough = 0
         go_merge = False
-        for rank, multiplier in zip(local_pool.judge(motif), [1, 1, 2]):
+        judge_decision = local_pool.judge(motif)
+
+        # check for error
+        if not isinstance(judge_decision, list):error_exit(judge_decision)
+        
+        for rank, multiplier in zip(judge_decision, [1, 1, 2]):
             good_enough += int(rank <= GOOD_HIT)*multiplier
 
             # merge request policy
@@ -76,25 +92,15 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         report.write(f'CHAINING({datetime.now() - last_time}) | ')
 
         # check for database error
-        if not next_motifs:
-            merge.put(local_pool)
-            report.write('EXIT ON FAILURE\n')
-            report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-            report.close()
-            raise used_nodes_or_error
+        if not next_motifs:error_exit(used_nodes_or_error)
 
         # report and close
         report.write('USED NODES COUNT %d | '%used_nodes_or_error)
 
-        # mongoDB insertion
+        # mongoDB insertion and checking for error
         last_time = datetime.now()
         inserted_maps = initial_readonlymaps([motif.foundmap for motif in next_motifs], DEFAULT_COLLECTION, client=client)
-        if not isinstance(inserted_maps, list):
-            merge.put(local_pool)
-            report.write('EXIT ON FAILURE\n')
-            report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-            report.close()
-            raise inserted_maps
+        if not isinstance(inserted_maps, list):error_exit(inserted_maps)
 
         report.write(f'MONGO({datetime.now() - last_time}) | ')
 
@@ -260,9 +266,6 @@ def network_handler(merge: Queue):
             remove_checkpoint(working_checkpoint, locked=True)
 
         
-# def assistance_main(gap, overlap)
-
-
 def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequence:OnSequenceDistribution, dataset_dict, overlap, gap, q, network=False, initial_pool=None):
     
     try   :available_cores = len(os.sched_getaffinity(0))
@@ -315,9 +318,18 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
     else:
         exit_code = END_EXIT
         since = datetime.now()
+        m = (MAXIMUM_MEMORY_BALANCE - MINIMUM_CHUNK_SIZE)/(MAXIMUM_MEMORY_BALANCE - NEAR_FULL)
+        allow_restore_from_disk = False
 
         counter = 0
         while counter <= 100:
+
+            # just wait for next check round
+            sleep(CHECK_TIME_INTERVAL)
+
+            # queue size report
+            with open(MEMORY_BALANCING_REPORT, 'w') as report:
+                report.write("work => %d\nmerge => %d\n%s"%(work.qsize(), merge.qsize(), message_report))
 
             # check for timeout
             if time_has_ended(since, TIMER_CHAINING_HOURS):
@@ -338,7 +350,15 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # save memory
             if memory_balance > NEAR_FULL:
                 items = []
-                while len(items) == MEMORY_BALANCE_CHUNK_SIZE:
+                how_much = int(m * (memory_balance - MAXIMUM_MEMORY_BALANCE) + MAXIMUM_MEMORY_BALANCE)
+
+                # warning for high memory usage
+                if memory_balance > MAXIMUM_MEMORY_BALANCE:
+                    with open(IMPORTANT_LOG, 'a') as log:log.write(f'[WARNING] more than {MAXIMUM_MEMORY_BALANCE} units are on memory!\n')
+                    how_much = MAXIMUM_MEMORY_BALANCE
+                    allow_restore_from_disk = False
+
+                while len(items) == how_much:
                     get_one:ChainNode = work.get()
 
                     # avoid adding works that are not in working collection (first generation motifs)
@@ -350,7 +370,12 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
 
             # restore from disk
             elif memory_balance < NEAR_EMPTY:
-                items = disk_queue.pop_many(how_many=MEMORY_BALANCE_CHUNK_SIZE)
+                
+                if not allow_restore_from_disk:
+                    allow_restore_from_disk = True
+                    continue
+
+                items = disk_queue.pop_many(how_many=MINIMUM_CHUNK_SIZE)
 
                 if items:
                     message_report += 'restored a chunk from disk (size=%d)\n'%(len(items))
@@ -361,13 +386,6 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
                     if memory_balance == 0:counter += 1
                     else:counter = 0
                     message_report += 'failed to load work from disk (exit counter => %d)\n'%counter
-
-            # queue size report
-            with open(MEMORY_BALANCING_REPORT, 'w') as report:
-                report.write("work => %d\nmerge => %d\n%s"%(work.qsize(), merge.qsize(), message_report))
-
-            # just wait for next check round
-            sleep(CHECK_TIME_INTERVAL)
 
     ############### end of processing #######################
 
