@@ -351,6 +351,8 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # just wait for next check round
             sleep(CHECK_TIME_INTERVAL)
 
+            ############## PHASE ONE: CHECKING ##############
+
             # check for timeout
             if time_has_ended(since, TIMER_CHAINING_HOURS):
                 exit_code = TIMESUP_EXIT;break
@@ -369,6 +371,8 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # check for processes activity
             if not reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers]):
                 exit_code = ERROR_EXIT;break
+
+            ############## PHASE TWO: BALANCING ##############
 
             # queue memory balancing
             memory_balance = work.qsize()
