@@ -35,3 +35,9 @@ app.build/
 app.dist/
 mongo/
 data/
+*.report
+quickreport
+totalchain
+/akagi/*
+*.png
+mprofile*
