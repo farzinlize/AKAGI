@@ -30,12 +30,12 @@ class AKAGIPool:
         for _ in pool_descriptions:self.tables.append([])
 
     
-    def judge(self, pattern:ChainNode):
+    def judge(self, pattern:ChainNode, mongo_client=None):
 
         # calculating pattern scores
         scores = []
         for description in self.descriptions:
-                new_score = description[FUNCTION_KEY](pattern, description[ARGUMENT_KEY]) * description[SIGN_KEY]
+                new_score = description[FUNCTION_KEY](pattern, description[ARGUMENT_KEY], mongo_client) * description[SIGN_KEY]
                 if not isinstance(new_score, float):
                     with open(IMPORTANT_LOG, 'a') as log:log.write(f'[JUDGE] error was occurred while judging pattern:{pattern.label}\n')
                     return new_score # as error
@@ -294,10 +294,10 @@ class RankingPool:
         self.pool = merged
 
 
-def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
+def objective_function_pvalue(pattern: ChainNode, sequences_bundles, mongo_client):
 
     # error handeling
-    try:foundlist_seq_vector = pattern.foundmap.get_list()[0]
+    try:foundlist_seq_vector = pattern.foundmap.get_list(client=mongo_client)[0]
     except Exception as e:return e
 
     foundlist_index = 0
@@ -325,10 +325,10 @@ def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
     return (psum/len(foundlist_seq_vector)) - nscore
 
 
-def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
+def distance_to_summit_score(pattern: ChainNode, sequences_bundles, mongo_client):
 
     # error handeling
-    try:pattern_foundlist = pattern.foundmap.get_list()
+    try:pattern_foundlist = pattern.foundmap.get_list(client=mongo_client)
     except Exception as e:return e
 
     sum_distances = 0
@@ -351,7 +351,7 @@ def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
     return sum_distances / num_instances
     
 
-def pwm_score(pattern: ChainNode, arg_bundle):
+def pwm_score(pattern: ChainNode, arg_bundle, mongo_client):
 
     # unpacking arguments
     sequences = arg_bundle[0]
@@ -362,7 +362,7 @@ def pwm_score(pattern: ChainNode, arg_bundle):
     count = 0
 
     # error handeling
-    try:bundle = pattern.foundmap.get_list()
+    try:bundle = pattern.foundmap.get_list(client=mongo_client)
     except Exception as e:return e
     
     for index, seq_id in enumerate(bundle[0]):

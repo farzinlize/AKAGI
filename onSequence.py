@@ -1,3 +1,4 @@
+from mongo import get_client
 import pickle
 from checkpoint import load_checkpoint
 from constants import BRIEFING
@@ -24,9 +25,10 @@ class OnSequenceDistribution:
 
 
     def generate_list(self, motifs: List[ChainNode], sequences):
+        client = get_client()
         self.struct = [[[] for _ in range(len(sequence))] for sequence in sequences] 
         for motif in motifs:
-            bundle = motif.foundmap.get_list()
+            bundle = motif.foundmap.get_list(client=client)
 
             if not isinstance(bundle, list):
                 if bundle:raise bundle

@@ -92,7 +92,7 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         # evaluation the job (motif)
         good_enough = 0
         go_merge = False
-        judge_decision = local_pool.judge(motif)
+        judge_decision = local_pool.judge(motif, mongo_client=client)
 
         # check for error
         if not isinstance(judge_decision, list):error_handler(judge_decision);continue
