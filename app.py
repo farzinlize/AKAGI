@@ -24,9 +24,10 @@ from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkp
 from TrieFind import ChainNode
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from networking import AssistanceService
+from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, LUCKY_SHOT, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
+from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, LUCKY_SHOT, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -153,6 +154,7 @@ def motif_finding_chain(dataset_name,
         pwm = read_pfm_save_pwm(pfm)
     # bundle_name = dataset_name.split('/')[-1]
 
+    if AUTO_DATABASE_SETUP:run_mongod_server()
 
     # make sequences shorter and ignore low score sequences for lower computations
     if BRIEFING:

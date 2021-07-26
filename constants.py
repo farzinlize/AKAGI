@@ -84,13 +84,15 @@ MEME_MODE = '>%d\n%s\n'
 # ########################################## #
 
 DATABASE_NAME = 'akagidb'
-DATABASE_ADDRESS = 'mongodb://%s:%s@localhost/?authSource=' + DATABASE_NAME
 MONGO_USERNAME = 'akagi'
 DEFAULT_COLLECTION = 'working'
 MONGO_ID = '_id'
 BINARY_DATA = 'data'
+MONGO_PORT = 2090
 ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
+DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
+MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath ~/database/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
 
 # commands
 FIND_ONE = 'find'
@@ -151,6 +153,7 @@ PARENT_WORK = False
 SAVE_THE_REST_CLOUD = True
 HELP_CLOUD = True
 HOPEFUL = True
+AUTO_DATABASE_SETUP = True
 
 FOUNDMAP_MODE = FOUNDMAP_DISK
 QUEUE_MODE = QUEUE_DISK
@@ -187,6 +190,9 @@ SEQUENCE_BUNDLES = 'bundle'
 PWM = 'pwm'
 DATASET_NAME = 'name'
 EXIT_SIGNAL = 'ex'
+CONTINUE_SIGNAL = 'co'
+STATUS_RUNNING = 'running'
+STATUS_SUSSPENDED = 'sus'
 
 # encode column indexes
 ENCODE_RANK = 0

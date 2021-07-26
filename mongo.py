@@ -1,5 +1,6 @@
+import os
 from misc import ExtraPosition, bytes_to_int, int_to_bytes
-from constants import BINARY_DATA, CLEAR, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, END, FIND_ONE, INSERT_MANY, INT_SIZE, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR
+from constants import BINARY_DATA, CLEAR, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, END, FIND_ONE, INSERT_MANY, INT_SIZE, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR
 from io import BytesIO
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -121,6 +122,19 @@ def clear_list(address:bytes, collection_name, client:MongoClient=None):
         with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][CLEAR] not found! address: {address}\n')
 
 
+# [WARNING] only works for linux (because of --fork option)
+def run_mongod_server():
+    stream = os.popen(MONGOD_RUN_SERVER_COMMAND_LINUX)
+    output = stream.read()
+    with open(DATABASE_LOG, 'a') as log:log.write('[MONGO][SERVER] running server via python:\n' + output)
+    if output.split('\n')[2].startswith('ERROR'):raise Exception(f'cant run mongo server check {DATABASE_LOG}')
+    
+    # return_code = os.system(MONGOD_RUN_SERVER_COMMAND_LINUX)
+    # if return_code != 0:
+    #     with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][SERVER] running server failed (check python interpreter output) {return_code}\n')
+    #     raise Exception('cant run mongo server')
+    
+
 # def protect_list(address:bytes, collection_name, client:MongoClient=None):
     
 #     if not client:client = get_client()
@@ -128,4 +142,5 @@ def clear_list(address:bytes, collection_name, client:MongoClient=None):
 
 
 if __name__ == '__main__':
+    run_mongod_server()
     client = get_client()

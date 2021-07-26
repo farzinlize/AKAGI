@@ -6,9 +6,10 @@ from time import sleep
 from datetime import datetime
 from multiprocessing import Process, Queue
 from typing import List
+from pymongo.errors import ServerSelectionTimeoutError
 
 # project modules
-from mongo import get_client
+from mongo import get_client, run_mongod_server
 from FoundMap import initial_readonlymaps
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
@@ -21,7 +22,7 @@ from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 
 MANUAL_EXIT = -3
 ERROR_EXIT = -2
@@ -31,11 +32,34 @@ END_EXIT = 0
 
 def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
 
-    def error_exit(error):
-        merge.put(local_pool)
-        report.write('EXIT ON FAILURE\n' + PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-        report.close()
-        raise error
+    def error_handler(error):
+
+        # restore the working motif back to jobs
+        work.put(motif)
+
+        # in case of database server down -> susspend and wait for signal in message
+        if isinstance(error, ServerSelectionTimeoutError):
+            with open(CHAINING_EXECUTION_STATUS, 'w') as status:status.write(STATUS_SUSSPENDED)
+            signal = message.get()
+
+            # exit signal
+            if signal == EXIT_SIGNAL:
+                merge.put(local_pool)
+                report.write('EXIT ON FAILURE\n' + PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+                report.close()
+                raise error
+            
+            # back to normal (but with an initial wait)
+            # wait for all processes to get their messages and then go
+            elif signal == CONTINUE_SIGNAL:sleep(5);return
+
+        # cant handle that shit I guess
+        else:
+            merge.put(local_pool)
+            report.write('EXIT ON FAILURE\n' + PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+            report.close()
+            raise error
+
 
     # local ranking pools
     local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
@@ -71,7 +95,7 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         judge_decision = local_pool.judge(motif)
 
         # check for error
-        if not isinstance(judge_decision, list):error_exit(judge_decision)
+        if not isinstance(judge_decision, list):error_handler(judge_decision);continue
         
         for rank, multiplier in zip(judge_decision, [1, 1, 2]):
             good_enough += int(rank <= GOOD_HIT)*multiplier
@@ -92,7 +116,7 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         report.write(f'CHAINING({datetime.now() - last_time}) | ')
 
         # check for database error
-        if not next_motifs:error_exit(used_nodes_or_error)
+        if not next_motifs:error_handler(used_nodes_or_error);continue
 
         # report and close
         report.write('USED NODES COUNT %d | '%used_nodes_or_error)
@@ -100,9 +124,9 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
         # mongoDB insertion and checking for error
         last_time = datetime.now()
         inserted_maps = initial_readonlymaps([motif.foundmap for motif in next_motifs], DEFAULT_COLLECTION, client=client)
-        if not isinstance(inserted_maps, list):error_exit(inserted_maps)
+        if not isinstance(inserted_maps, list):error_handler(inserted_maps);continue
 
-        report.write(f'MONGO({datetime.now() - last_time}) | ')
+        report.write(f'MONGO({datetime.now() - last_time})\n')
 
         # insert next generation jobs
         for next_motif, foundmap in zip(next_motifs, inserted_maps):
@@ -274,7 +298,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
     print(f'[CHAINING][MULTICORE] number of available cores: {available_cores}')
 
     # making status file
-    with open(CHAINING_EXECUTION_STATUS, 'w') as status:status.write('running')
+    with open(CHAINING_EXECUTION_STATUS, 'w') as status:status.write(STATUS_RUNNING)
 
     # auto maximize core usage (1 worker per core)
     if cores_order == MAX_CORE:
@@ -327,10 +351,6 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # just wait for next check round
             sleep(CHECK_TIME_INTERVAL)
 
-            # queue size report
-            with open(MEMORY_BALANCING_REPORT, 'w') as report:
-                report.write("work => %d\nmerge => %d\n%s"%(work.qsize(), merge.qsize(), message_report))
-
             # check for timeout
             if time_has_ended(since, TIMER_CHAINING_HOURS):
                 exit_code = TIMESUP_EXIT;break
@@ -338,6 +358,13 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # check for status
             if not os.path.isfile(CHAINING_EXECUTION_STATUS):
                 exit_code = MANUAL_EXIT;break
+
+            # check for processes status (auto recovery from database server down)
+            with open(CHAINING_EXECUTION_STATUS) as status:
+                if status.read() != STATUS_RUNNING:
+                    try   :run_mongod_server()
+                    except:exit_code = ERROR_EXIT;break
+                    else  :[message.put(CONTINUE_SIGNAL) for _ in workers]
 
             # check for processes activity
             if not reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers]):
@@ -386,6 +413,10 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
                     if memory_balance == 0:counter += 1
                     else:counter = 0
                     message_report += 'failed to load work from disk (exit counter => %d)\n'%counter
+
+            # queue size report
+            with open(MEMORY_BALANCING_REPORT, 'w') as report:
+                report.write("work => %d\nmerge => %d\n%s"%(work.qsize(), merge.qsize(), message_report))
 
     ############### end of processing #######################
 
