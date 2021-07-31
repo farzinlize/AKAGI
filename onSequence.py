@@ -1,6 +1,5 @@
 from mongo import get_client
 import pickle
-from checkpoint import load_checkpoint
 from constants import BRIEFING
 from typing import List
 from TrieFind import ChainNode
@@ -60,42 +59,41 @@ class OnSequenceDistribution:
 
 def test():
     checkpoint = 'ENCODE_HAIB_GM12878_SRF_peak_f5-6_d1-1.checkpoint'
-    dataset_name = 'hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak'
-    motifs = load_checkpoint(checkpoint)
-    sequences = read_fasta('%s.fasta'%(dataset_name))
-    bundles = read_bundle('%s.bundle'%(dataset_name))
+    # dataset_name = 'hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak'
+    # sequences = read_fasta('%s.fasta'%(dataset_name))
+    # bundles = read_bundle('%s.bundle'%(dataset_name))
 
-    if BRIEFING:
-        sequences, bundles = brief_sequence(sequences, bundles)
-        assert len(sequences) == len(bundles)
-        print('[BRIEFING] number of sequences = %d'%len(sequences))
+    # if BRIEFING:
+    #     sequences, bundles = brief_sequence(sequences, bundles)
+    #     assert len(sequences) == len(bundles)
+    #     print('[BRIEFING] number of sequences = %d'%len(sequences))
 
-    on_sequence = OnSequenceDistribution(motifs, sequences)
-    print('on sequence ready')
+    # on_sequence = OnSequenceDistribution(motifs, sequences)
+    # print('on sequence ready')
 
-    # print('start to write', end='... ')
-    # with open('test.byte', 'wb') as f:
-    #     f.write(on_sequence.to_byte())
-    # print('writing is done')
+    # # print('start to write', end='... ')
+    # # with open('test.byte', 'wb') as f:
+    # #     f.write(on_sequence.to_byte())
+    # # print('writing is done')
 
-    # with open('test.byte', 'rb') as f:
-    #     loaded_on_sequence = OnSequenceDistribution.byte_to_object(f)
+    # # with open('test.byte', 'rb') as f:
+    # #     loaded_on_sequence = OnSequenceDistribution.byte_to_object(f)
 
-    with open('test.pickle', 'wb') as f:
-        pickle.dump(398, f)
-        pickle.dump('salam', f)
-        pickle.dump(on_sequence, f)
-        f.write(b'\xff\xaa')
-    with open('test.pickle', 'rb') as f:
-        numq = pickle.load(f)
-        test = pickle.load(f)
-        assert test == 'salam'
-        assert numq == 398
-        on_pickled = pickle.load(f)
-        assert f.read(1) == b'\xff'
-        assert f.read(1) == b'\xaa'
+    # with open('test.pickle', 'wb') as f:
+    #     pickle.dump(398, f)
+    #     pickle.dump('salam', f)
+    #     pickle.dump(on_sequence, f)
+    #     f.write(b'\xff\xaa')
+    # with open('test.pickle', 'rb') as f:
+    #     numq = pickle.load(f)
+    #     test = pickle.load(f)
+    #     assert test == 'salam'
+    #     assert numq == 398
+    #     on_pickled = pickle.load(f)
+    #     assert f.read(1) == b'\xff'
+    #     assert f.read(1) == b'\xaa'
 
-    return on_sequence, on_pickled#, loaded_on_sequence
+    # return on_sequence, on_pickled#, loaded_on_sequence
 
 
 if __name__ == '__main__':
