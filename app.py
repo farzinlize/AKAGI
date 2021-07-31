@@ -3,12 +3,9 @@ import os
 from time import time as currentTime
 from time import strftime, gmtime
 from getopt import getopt
-from typing import List
-from pymongo.errors import ServerSelectionTimeoutError
 import sys
 
 # project imports
-from FoundMap import initial_readonlymaps
 from GKmerhood import DummyTree, GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, multiple_layer_window_find_motif
 from misc import brief_sequence, change_global_constant_py, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
@@ -20,14 +17,14 @@ from peakseq import annotation_to_sequences
 from pause import resume_any_cloud
 from onSequence import OnSequenceDistribution
 from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
-from checkpoint import load_checkpoint, observation_checkpoint_name, save_checkpoint
-from TrieFind import ChainNode
+from checkpoint import load_checkpoint_file, load_collection, observation_checkpoint_name
+from TrieFind import initial_chainNodes
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from networking import AssistanceService
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, LUCKY_SHOT, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
+from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -120,14 +117,19 @@ def motif_finding_chain(dataset_name,
         # only return label and foundmap for forthur use as chain node instead of watch node
         # make foundmap read-only afterward
         # may failed due to database operation but if its not about server being down, so it will just file another shot for luck
-        may_fail = LUCKY_SHOT
-        while may_fail:
-            inserted_maps = initial_readonlymaps([motif.foundmap for motif in motifs], save_collection)
-            if isinstance(inserted_maps, ServerSelectionTimeoutError):return
-            if not isinstance(inserted_maps, list):may_fail -= 1
+        
+        #     inserted_maps = initial_readonlymaps([motif.foundmap for motif in motifs], save_collection)
+        #     if isinstance(inserted_maps, ServerSelectionTimeoutError):return
+        #     if not isinstance(inserted_maps, list):may_fail -= 1
 
-        if not isinstance(inserted_maps, list):return
-        return [ChainNode(motif.label, foundmap) for motif, foundmap in zip(motifs, inserted_maps)]
+        # if not isinstance(inserted_maps, list):return
+
+        # may_fail = LUCKY_SHOT
+        # while may_fail:
+        initial_jobs = initial_chainNodes([(motif.label, motif.foundmap) for motif in motifs], collection_name=save_collection)
+        if not isinstance(initial_jobs, list):raise initial_jobs
+        return initial_jobs
+        # return [ChainNode(motif.label, foundmap) for motif, foundmap in zip(motifs, inserted_maps)]
 
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
@@ -175,12 +177,12 @@ def motif_finding_chain(dataset_name,
     # search for observation checkpoint
     if checkpoint:
         checkpoint_file = observation_checkpoint_name(dataset_name, frame_size, d, multilayer)
-        motifs = load_checkpoint(checkpoint_file, resumable=False)
+        motifs = load_collection(checkpoint_file.split('.')[0])
 
         # run and save observation data
-        if motifs == None:
+        if not motifs:
             motifs = observation(q, save_collection=checkpoint_file.split('.')[0])
-            save_checkpoint(motifs, checkpoint_file)
+            # save_checkpoint(motifs, checkpoint_file)
             # if cloud:store_checkpoint_to_cloud(checkpoint_file, protected_collection) #TODO: not working with mongo
     
     # run observation without checkpoint check
@@ -399,7 +401,7 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer):
 
     checkpoint = observation_checkpoint_name(dataset_name, f, d, multilayer)
 
-    motifs = load_checkpoint(checkpoint)
+    motifs = load_collection(checkpoint.split('.')[0])
 
     # check for offline check-points
     if motifs == None:
@@ -436,7 +438,7 @@ def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
         print('[APP] found nothing to resume - end')
         return
 
-    motifs, on_sequence, q, dataset_name = load_checkpoint(checkpoint, resumable=True)
+    motifs, on_sequence, q, dataset_name = load_checkpoint_file(checkpoint)
     pfm = get_jaspar_raw(costume_table_jaspar(dataset_name))
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 

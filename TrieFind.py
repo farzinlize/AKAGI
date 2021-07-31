@@ -1,8 +1,14 @@
 from io import BufferedReader
-from constants import DEFAULT_COLLECTION, EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INT_SIZE
+from typing import List, Tuple
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+
+import mongo
 from misc import Bytable, bytes_to_int, int_to_bytes
-from FoundMap import ReadOnlyMap, get_foundmap
+from FoundMap import FoundMap, ReadOnlyMap, get_foundmap
 from Nodmer import Nodmer
+
+from constants import BINARY_DATA, DATABASE_NAME, DEFAULT_COLLECTION, EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INSERT_MANY, INT_SIZE, LABEL, MAXIMUM_ORDER_SIZE, MONGO_ID
 
 '''
     Trie node object -> two purposed object for <searching> and <saving> kmers
@@ -239,6 +245,34 @@ class ChainNode(Bytable):
         
     def instances_str(self, sequences):
         return self.foundmap.instances_to_string_fastalike(self.label, sequences)
+
+
+def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, client:MongoClient=None)->List[ChainNode]:
+
+    if not client:client = mongo.get_client()
+    
+    order = []      # list of dictionaries for mongod process 
+    objects = []    # return result objects of ReadOnlyMap
+    collection = client[DATABASE_NAME][collection_name]
+    
+    for label, foundmap in tuples:
+
+        # check for order size limit
+        if len(order) == MAXIMUM_ORDER_SIZE:
+            error = mongo.safe_operation(collection, INSERT_MANY, order)
+            if error:return error
+            else    :order = []
+
+        readonlymap = ReadOnlyMap(collection_name, ObjectId().binary)
+        chain_node = ChainNode(label=label, foundmap=readonlymap)
+        order.append({MONGO_ID   :readonlymap.address, 
+                      BINARY_DATA:mongo.list_to_binary(foundmap.get_list()),
+                      LABEL:label})
+        objects.append(chain_node)
+
+    error = mongo.safe_operation(collection, INSERT_MANY, order)
+    if error:return error
+    else    :return objects
 
 
 # ########################################## #

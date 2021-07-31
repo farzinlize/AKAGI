@@ -1,29 +1,43 @@
 from datetime import datetime
 import pickle
-import os
-from constants import CHECKPOINT_TAG, LOCK_PREFIX
-from TrieFind import ChainNode
 from typing import List
-from FoundMap import initial_readonlymaps
+from pymongo import MongoClient
+import os, mongo
+from FoundMap import ReadOnlyMap
+from TrieFind import ChainNode, initial_chainNodes
+from constants import CHECKPOINT_TAG, COLLECTION, DATABASE_LOG, DATABASE_NAME, LABEL, LOCK_PREFIX, MONGO_ID
 
 '''
     saving motifs using their serialization methode AND on_sequence object using pickle
         UPDATE: motifs foundmap are considered to be stored at a collection with the same name as object_file
+        
+        flags --/
+            change_collection=True: moving each foundmap of motifs to another collection name
+            resumable=True: creating checkpoint file to recover motifs and additional data compact ready for resuming
+                additional argument -> on_sequence, q, dataset_name
+        --/
 '''
-def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, on_sequence=None, q=None, dataset_name=None, change_collection=False):
+def save_checkpoint(motifs:List[ChainNode], 
+                    objects_file:str, 
+                    change_collection=False, 
+                    resumable=False, 
+                    on_sequence=None, 
+                    q=None, 
+                    dataset_name=None, 
+                    mongo_client=None):
 
     if change_collection:
-        newmaps = initial_readonlymaps([motif.foundmap for motif in motifs], objects_file.split('.')[0])
-        if not isinstance(newmaps, list):return newmaps
-        for motif, newmap in zip(motifs, newmaps):
+        newchainnodes = initial_chainNodes([(motif.label, motif.foundmap) for motif in motifs], objects_file.split('.')[0], mongo_client)
+        if not isinstance(newchainnodes, list):return newchainnodes
+        for motif, newmotif in zip(motifs, newchainnodes):
             motif.foundmap.clear()
-            motif.foundmap = newmap
+            motif.foundmap = newmotif.foundmap
+            del newmotif
             
-    # write objects and protect their data under directory
-    with open(objects_file, 'wb') as f:
+    if resumable:
 
         # save data needed for resuming
-        if resumable:
+        with open(objects_file, 'wb') as f:
             pickle.dump(on_sequence, f)
             pickle.dump(q, f) 
             pickle.dump(dataset_name, f)
@@ -33,7 +47,8 @@ def save_checkpoint(motifs:List[ChainNode], objects_file:str, resumable=False, o
             f.write(motif.to_byte())
 
 
-def load_checkpoint(objects_file:str, resumable=False):
+# resumable files containing motifs plus additional data
+def load_checkpoint_file(objects_file:str):
     
     if not os.path.isfile(objects_file):
         print("[CHECK-POINT] checkpoint doesn't exist")
@@ -44,19 +59,16 @@ def load_checkpoint(objects_file:str, resumable=False):
     motifs=[]
     with open(objects_file, 'rb') as f:
 
-        if resumable:
-            on_sequence =   pickle.load(f)
-            q =             pickle.load(f)
-            dataset_name =  pickle.load(f)
+        on_sequence =   pickle.load(f)
+        q =             pickle.load(f)
+        dataset_name =  pickle.load(f)
 
         item = ChainNode.byte_to_object(f, collection_name)
         while item:
             motifs.append(item)
             item = ChainNode.byte_to_object(f, collection_name)
 
-    if resumable:
-        return motifs, on_sequence, q, dataset_name
-    return motifs
+    return motifs, on_sequence, q, dataset_name
 
 
 def observation_checkpoint_name(dataset: str, f, d, multilayer):
@@ -95,6 +107,20 @@ def lock_checkpoint(checkpoint):
     with open(LOCK_PREFIX + checkpoint, 'wb') as locked:
         locked.write(databytes)
     os.remove(checkpoint)
+
+
+def load_collection(collection_name, client:MongoClient=None) -> List[ChainNode]:
+
+    if not client:client = mongo.get_client()
+
+    collection = client[DATABASE_NAME][collection_name]
+    items_or_error = mongo.safe_operation(collection, COLLECTION)
+
+    if not isinstance(items_or_error, list):
+        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][LOAD] error: {items_or_error}\n')
+        return items_or_error
+    
+    return [ChainNode(item[LABEL], ReadOnlyMap(collection_name, item[MONGO_ID])) for item in items_or_error]
 
 
 if __name__ == '__main__':

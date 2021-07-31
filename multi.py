@@ -10,20 +10,20 @@ from pymongo.errors import ServerSelectionTimeoutError
 
 # project modules
 from mongo import get_client, run_mongod_server
-from FoundMap import initial_readonlymaps
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
 from report_email import send_files_mail
 from pause import save_the_rest, time_has_ended
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from misc import QueueDisk
-from TrieFind import ChainNode
+from TrieFind import ChainNode, initial_chainNodes
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 
+# global multi variables
 MANUAL_EXIT = -3
 ERROR_EXIT = -2
 TIMESUP_EXIT = -1
@@ -123,14 +123,14 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
 
         # mongoDB insertion and checking for error
         last_time = datetime.now()
-        inserted_maps = initial_readonlymaps([motif.foundmap for motif in next_motifs], DEFAULT_COLLECTION, client=client)
-        if not isinstance(inserted_maps, list):error_handler(inserted_maps);continue
+        next_patterns = initial_chainNodes([(motif.label, motif.foundmap) for motif in next_motifs], DEFAULT_COLLECTION, client)
+        if not isinstance(next_patterns, list):error_handler(next_patterns);continue
 
         report.write(f'MONGO({datetime.now() - last_time})\n')
 
-        # insert next generation jobs
-        for next_motif, foundmap in zip(next_motifs, inserted_maps):
-            work.put(ChainNode(motif.label + next_motif.label, foundmap))
+        # insert next generation jobs and delete
+        for next_motif, job in zip(next_motifs, next_patterns):
+            work.put(job)
             del next_motif
 
         chaining_done_by_me += 1
@@ -140,21 +140,21 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
 def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
     
     report_count = 0
+    client = get_client(connect=True)
 
     if initial_pool :global_pool = initial_pool
-    else            :global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
+    else            :global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict), collection_name='-'.join([EXECUTION, GLOBAL_POOL_NAME]))
 
     while True:
 
-        # merging
+        # check for exit signal
         merge_request: AKAGIPool = merge.get()
-        if type(merge_request)==str and merge_request==EXIT_SIGNAL:
-            global_pool.savefile(EXECUTION+POOL_TAG)
-            return # exit
+        if isinstance(merge_request, str) and merge_request==EXIT_SIGNAL:return
 
+        # merging
         global_pool.merge(merge_request)
 
-        # reporting
+        # top ten report in window file
         with open(CR_FILE, 'w') as window:
 
             # time stamp
@@ -163,6 +163,9 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
 
             # table reports
             window.write(global_pool.top_ten_reports())
+
+        # saving in database
+        global_pool.save(mongo_client=client)
 
 
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
@@ -344,6 +347,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
         since = datetime.now()
         m = (MAXIMUM_MEMORY_BALANCE - MINIMUM_CHUNK_SIZE)/(MAXIMUM_MEMORY_BALANCE - NEAR_FULL)
         allow_restore_from_disk = False
+        permit_count = PERMIT_RESTORE_AFTER
 
         counter = 0
         while counter <= 100:
@@ -388,6 +392,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
                     with open(IMPORTANT_LOG, 'a') as log:log.write(f'[WARNING] more than {MAXIMUM_MEMORY_BALANCE} units are on memory!\n')
                     how_much = MAXIMUM_MEMORY_BALANCE
                     allow_restore_from_disk = False
+                    permit_count = PERMIT_RESTORE_AFTER
 
                 while len(items) == how_much:
                     get_one:ChainNode = work.get()
@@ -403,7 +408,8 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             elif memory_balance < NEAR_EMPTY:
                 
                 if not allow_restore_from_disk:
-                    allow_restore_from_disk = True
+                    if permit_count == 0:allow_restore_from_disk = True
+                    else:permit_count -= 1
                     continue
 
                 items = disk_queue.pop_many(how_many=MINIMUM_CHUNK_SIZE)

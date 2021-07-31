@@ -1,17 +1,22 @@
+from io import BytesIO
+from mongo import get_client, safe_operation
 import struct
 from typing import List
 from FoundMap import FileMap, ReadOnlyMap, initial_readonlymaps
-from constants import CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, IMPORTANT_LOG, INT_SIZE, POOL_LIMITED, POOL_SIZE, PWM, P_VALUE, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER
+from constants import BYTE_PATTERN, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, DATABASE_NAME, DROP, FIND_ONE, IMPORTANT_LOG, INSERT_ONE, INT_SIZE, POOLS_COLLECTION, POOL_LIMITED, POOL_NAME, POOL_SIZE, POOL_TAG, PWM, P_VALUE, SCORES, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLES, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER, UPDATE
 from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, pwm_score_sequence
-from TrieFind import ChainNode
+from TrieFind import ChainNode, initial_chainNodes
 
 class AKAGIPool:
 
     class Entity:
-        def __init__(self, data:ChainNode, scores):
-            self.data = data
-            self.scores = scores
-            self.sorted_by = None
+        def __init__(self, data:ChainNode=None, scores=None, document=None, collection_name=None):
+            if document:
+                self.read_document(document, collection_name)
+            else:
+                self.data = data
+                self.scores = scores
+                self.sorted_by = None
 
         def __eq__(self, other):
             if self.sorted_by != None:
@@ -23,10 +28,18 @@ class AKAGIPool:
                 return self.scores[self.sorted_by] < other.scores[self.sorted_by]
             else:raise Exception('sorted by is not configured for comparison')
 
+        def documented(self):
+            return {BYTE_PATTERN:self.data.to_byte(), SCORES:self.scores}
 
-    def __init__(self, pool_descriptions):
+        def read_document(self, document, collection_name):
+            self.data = ChainNode.byte_to_object(BytesIO(document[BYTE_PATTERN]), collection=collection_name)
+            self.scores = document[SCORES]
+
+
+    def __init__(self, pool_descriptions, collection_name='default_pool'):
         self.descriptions = pool_descriptions
         self.tables: list[list[AKAGIPool.Entity]] = []
+        self.collection_name = collection_name
         for _ in pool_descriptions:self.tables.append([])
 
     
@@ -144,12 +157,44 @@ class AKAGIPool:
     #            pool disk operations            #
     # ########################################## #
 
-    def savefile(self, filename:str, mongo_client=None):
+    def to_document(self):
+        document = {POOL_NAME:self.collection_name}
 
-        # first try to put entities data on separate collection
+        documented_tables = []
+        for table in self.tables:
+            documented_tables.append([entity.documented() for entity in table])
+
+        document.update({TABLES:documented_tables})
+        return document
+
+
+    '''
+    create a snap-shot of all current pool data including ChainNode objects
+        can restore object capable of restoring patterns foundmap and their calculated scores
+
+        TASKS:
+            1. preserve data to locate all pattern appearances (foundmaps) in seperated collection
+                - first drop the related collection if exist then initial gathered unique chain nodes on that collection
+            2. save object in pool collection
+            3. save object in file with byte conversion (redundant backup to recover data from chaotic working collection)
+    '''
+    def save(self, mongo_client=None):
+
+        if not mongo_client:mongo_client = get_client()
+
+        # # # # # #    TASK.1   # # # # # #
+        #         preserve data           #
+        # # # # # # # # # # # # # # # # # #
+
+        collection = mongo_client[DATABASE_NAME][self.collection_name]
+
+        error = safe_operation(collection, DROP)
+        if error:
+            with open(IMPORTANT_LOG, 'a') as log:log.write(f'[POOL][DROP] error: {error}\n')
+
+        # gather data
         # to preserve data from cleaning 
-        pool_collection = filename.split('.')[0]
-        collected_maps:List[ReadOnlyMap] = []
+        collected_patterns:List[ChainNode] = []
         seen = []
 
         for table in self.tables:
@@ -157,29 +202,43 @@ class AKAGIPool:
                 first = entity.data.label not in seen
                 if first:
                     seen.append(entity.data.label)
-                    collected_maps.append(entity.data.foundmap)
-        newmaps = initial_readonlymaps(collected_maps, pool_collection, client=mongo_client)
+                    collected_patterns.append(entity.data)
+
+        new_patterns = initial_chainNodes([(pattern.label, pattern.foundmap) for pattern in collected_patterns], 
+                                            self.collection_name, 
+                                            client=mongo_client)
+
+        # - if database failed there will be no replacement of chain_nodes
+        #   [WARNING] preserve default collection data in order to object file to be valid
+        if not isinstance(new_patterns, list):
+            new_patterns = collected_patterns
+            with open(IMPORTANT_LOG, 'a') as log:
+                log.write(f'[WARNING][POOL] preserve default collection data in order to {self.collection_name+POOL_TAG} to be valid\n')
+
+        # # # # # #    TASK.3   # # # # # #
+        #      saving pool in file        #
+        # # # # # # # # # # # # # # # # # #
 
         # again but this time put those maps instead of the older ones and save objects
-        seen = []
+        seen = [] 
+        newdata_iterator = iter(new_patterns)
 
-        # - if database failed there will be no replacement of foundmaps 
-        #   [WARNING] preserve default collection data in order to object file to be valid
-        if not isinstance(newmaps, list):
-            newmaps = collected_maps
-            with open(IMPORTANT_LOG, 'a') as log:
-                log.write(f'[WARNING][POOL] preserve default collection data in order to {filename} to be valid\n')
-            
-        newmaps_iterator = iter(newmaps)
-
-        with open(filename, 'wb') as disk:
+        with open(self.collection_name+POOL_TAG, 'wb') as disk:
             for table in self.tables:
                 disk.write(int_to_bytes(len(table)))
                 for entity in table:
                     first = entity.data.label not in seen # TODO [WARNING] linear search 
                     if first:
+                        newdata = next(newdata_iterator)
+
+                        # check for algorithm error (can be removed in future)
+                        if entity.data.label != newdata.label:
+                            with open(IMPORTANT_LOG, 'a') as log:
+                                log.write(f'[POOL][ERROR] gathered data in contrast of new data\n{entity.data.label} != {newdata.label}\n')
+                            raise Exception('can not sort data as it should')
+
                         seen.append(entity.data.label)
-                        entity.data.foundmap = next(newmaps_iterator)
+                        entity.data = newdata
 
                     # save object with its score in object file
                     scores_pack = struct.pack('d'*len(entity.scores), *entity.scores)
@@ -189,18 +248,46 @@ class AKAGIPool:
                         entity.data.to_byte()
                     )
 
+        # # # # # #    TASK.2   # # # # # #
+        #     saving pool document        #
+        # # # # # # # # # # # # # # # # # #
 
-    def readfile(self, filename:str, pool_collection):
+        pool_collection = mongo_client[DATABASE_NAME][POOLS_COLLECTION]
+        error = safe_operation(pool_collection, UPDATE, order_filter={POOL_NAME:self.collection_name}, order={'$set':self.to_document()})
+        if error:
+            with open(IMPORTANT_LOG, 'a') as log:log.write(f'[POOL][INSERT] error: {error}\n')
 
-        with open(filename, 'rb') as disk:
+
+    def readfile(self):
+
+        with open(self.collection_name+POOL_TAG, 'rb') as disk:
             for table_index in range(len(self.tables)):
                 table_len = bytes_to_int(disk.read(INT_SIZE))
 
                 for _ in range(table_len):
                     pack_len = bytes_to_int(disk.read(INT_SIZE))
                     scores = list(struct.unpack('d'*len(self.descriptions), disk.read(pack_len)))
-                    pattern = ChainNode.byte_to_object(disk, collection=pool_collection)
+                    pattern = ChainNode.byte_to_object(disk, collection=self.collection_name)
                     self.tables[table_index].append(AKAGIPool.Entity(pattern, scores))
+
+
+    def read_document(self, mongo_client=None):
+
+        if not mongo_client:mongo_client = get_client()
+        pools_collection = mongo_client[DATABASE_NAME][POOLS_COLLECTION]
+
+        item_or_error = safe_operation(pools_collection, FIND_ONE, {POOL_NAME:self.collection_name})
+
+        if not item_or_error:
+            with open(IMPORTANT_LOG, 'a') as log:log.write(f'[POOL] pool object not found | name: {self.collection_name}\n')
+        elif not isinstance(item_or_error, dict):
+            with open(IMPORTANT_LOG, 'a') as log:log.write(f'[POOL][ERROR] error: {item_or_error}\n')
+
+        self.tables = []
+        documented = item_or_error[TABLES]
+        for table in documented:
+            new_table = [self.Entity(document=document, collection_name=self.collection_name) for document in table]
+            self.tables.append(new_table[:])
 
 
 class RankingPool:
@@ -429,6 +516,7 @@ def get_AKAGI_pools_configuration(dataset_dict=None):
 
 if __name__ == '__main__':
     pooly = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}))
+    pooly.collection_name = 'pooly'
 
     a = FileMap()
     a.add_location(0, ExtraPosition(6, 4))
@@ -460,7 +548,10 @@ if __name__ == '__main__':
     pooly.tables[1].append(eb)
     pooly.tables[2].append(eb)
 
-    pooly.savefile()
+    pooly.save()
 
-    pooly_disk = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}))
-    pooly_disk.readfile()
+    disk = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
+    disk.readfile()
+    mon = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
+    mon.read_document()
+    # pooly_disk.readfile()

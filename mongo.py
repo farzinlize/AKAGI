@@ -1,7 +1,8 @@
+from typing import List
 import os
-from misc import ExtraPosition, bytes_to_int, int_to_bytes
-from constants import BINARY_DATA, CLEAR, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, END, FIND_ONE, INSERT_MANY, INT_SIZE, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR
 from io import BytesIO
+from misc import ExtraPosition, bytes_to_int, int_to_bytes
+from constants import BINARY_DATA, CLEAR, COLLECTION, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, DROP, END, FIND_ONE, INSERT_MANY, INSERT_ONE, INT_SIZE, LABEL, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR, UPDATE
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import ServerSelectionTimeoutError
@@ -79,11 +80,15 @@ def list_to_binary(found_list):
     return writer.getvalue()
 
 
-def safe_operation(collection:Collection, command, order):
+def safe_operation(collection:Collection, command, order=None, order_filter=None):
     try:
         if   command == INSERT_MANY :collection.insert_many(order, ordered=False)
         elif command == FIND_ONE    :return collection.find_one(order)
+        elif command == COLLECTION  :return [item for item in collection.find()]
         elif command == CLEAR       :return collection.delete_one(order)
+        elif command == DROP        :collection.drop()
+        elif command == INSERT_ONE  :collection.insert_one(order)
+        elif command == UPDATE      :collection.find_one_and_update(filter=order_filter, update=order, upsert=True)
     except ServerSelectionTimeoutError as server_down:
         with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO] server down\n{server_down}\n')
         return server_down

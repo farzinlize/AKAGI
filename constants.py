@@ -77,6 +77,7 @@ chaining done by me: %d
 LOCK_PREFIX = 'LOCK'
 CLASSIC_MODE = '> id%d\n%s\n'
 MEME_MODE = '>%d\n%s\n'
+GLOBAL_POOL_NAME = 'global'
 
 
 # ########################################## #
@@ -86,18 +87,30 @@ MEME_MODE = '>%d\n%s\n'
 DATABASE_NAME = 'akagidb'
 MONGO_USERNAME = 'akagi'
 DEFAULT_COLLECTION = 'working'
-MONGO_ID = '_id'
-BINARY_DATA = 'data'
+POOLS_COLLECTION = 'pools'
 MONGO_PORT = 2090
 ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
 DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
 MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath ~/database/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
 
+# document enums
+MONGO_ID = '_id'
+BINARY_DATA = 'data'
+LABEL = 'l'
+POOL_NAME = 'name'
+TABLES = 'tables'
+BYTE_PATTERN = 'pattern'
+SCORES = 'scores'
+
 # commands
 FIND_ONE = 'find'
 CLEAR = 'clear'
 INSERT_MANY = 'insert'
+INSERT_ONE = 'ione'
+UPDATE = 'up'
+COLLECTION = 'load'
+DROP = 'drop'
 
 
 # ########################################## #
@@ -120,6 +133,7 @@ DISK_QUEUE_LIMIT = 100000
 MAXIMUM_MEMORY_BALANCE = 5000000
 NEAR_FULL = 50000
 NEAR_EMPTY = 1000
+PERMIT_RESTORE_AFTER = 5
 MINIMUM_CHUNK_SIZE = 100
 CHAINING_PERMITTED_SIZE = 30
 TIMER_CHAINING_HOURS = 8
