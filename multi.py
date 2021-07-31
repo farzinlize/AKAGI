@@ -364,13 +364,14 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # check for status
             if not os.path.isfile(CHAINING_EXECUTION_STATUS):
                 exit_code = MANUAL_EXIT;break
-
+                
             # check for processes status (auto recovery from database server down)
-            with open(CHAINING_EXECUTION_STATUS) as status:
-                if status.read() != STATUS_RUNNING:
-                    try   :run_mongod_server()
-                    except:exit_code = ERROR_EXIT;break
-                    else  :[message.put(CONTINUE_SIGNAL) for _ in workers]
+            else:
+                with open(CHAINING_EXECUTION_STATUS) as status:
+                    if status.read() != STATUS_RUNNING:
+                        try   :run_mongod_server()
+                        except:exit_code = ERROR_EXIT;break
+                        else  :[message.put(CONTINUE_SIGNAL) for _ in workers]
 
             # check for processes activity
             if not reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers]):
