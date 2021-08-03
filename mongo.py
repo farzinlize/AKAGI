@@ -99,10 +99,12 @@ def safe_operation(collection:Collection, command, order=None, order_filter=None
 
 def read_list(address:bytes, collection_name, client:MongoClient=None):
 
-    if not client:client = get_client()
+    if not client:client = get_client();should_close = True
+    else                               :should_close = False
     
     collection = client[DATABASE_NAME][collection_name]
     item_or_error = safe_operation(collection, FIND_ONE, {MONGO_ID:address})
+    if should_close:client.close()
 
     if not item_or_error:
         with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][READ] not found! address: {address}\n')
@@ -116,10 +118,12 @@ def read_list(address:bytes, collection_name, client:MongoClient=None):
 
 def clear_list(address:bytes, collection_name, client:MongoClient=None):
 
-    if not client:client = get_client()
+    if not client:client = get_client();should_close = True
+    else                               :should_close = False
 
     collection = client[DATABASE_NAME][collection_name]
     result = safe_operation(collection, CLEAR, {MONGO_ID:address})
+    if should_close:client.close()
 
     if not isinstance(result, DeleteResult):
         with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][CLEAR] error: {result}\n')

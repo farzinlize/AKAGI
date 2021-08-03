@@ -411,7 +411,8 @@ class ReadOnlyMap(FoundMap, Bytable):
 
 def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:MongoClient=None)->List[ReadOnlyMap]:
 
-    if not client:client = mongo.get_client()
+    if not client:client = mongo.get_client();should_close = True
+    else                                     :should_close = False
     
     order = []      # list of dictionaries for mongod process 
     objects = []    # return result objects of ReadOnlyMap
@@ -422,14 +423,17 @@ def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:Mongo
         # check for order size limit
         if len(order) == MAXIMUM_ORDER_SIZE:
             error = mongo.safe_operation(collection, INSERT_MANY, order)
-            if error:return error
-            else    :order = []
+            if error:
+                if should_close:client.close()
+                return error
+            else:order = []
 
         readonlymap = ReadOnlyMap(collection_name, ObjectId().binary)
         order.append({MONGO_ID:readonlymap.address, BINARY_DATA:mongo.list_to_binary(foundmap.get_list())})
         objects.append(readonlymap)
 
     error = mongo.safe_operation(collection, INSERT_MANY, order)
+    if should_close:client.close()
     if error:return error
     else    :return objects
 

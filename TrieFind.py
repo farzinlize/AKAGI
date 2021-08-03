@@ -249,7 +249,8 @@ class ChainNode(Bytable):
 
 def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, client:MongoClient=None)->List[ChainNode]:
 
-    if not client:client = mongo.get_client()
+    if not client:client = mongo.get_client();should_close = True
+    else                                     :should_close = False
     
     order = []      # list of dictionaries for mongod process 
     objects = []    # return result objects of ReadOnlyMap
@@ -260,8 +261,10 @@ def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, clien
         # check for order size limit
         if len(order) == MAXIMUM_ORDER_SIZE:
             error = mongo.safe_operation(collection, INSERT_MANY, order)
-            if error:return error
-            else    :order = []
+            if error:
+                if should_close:client.close()
+                return error
+            else:order = []
 
         readonlymap = ReadOnlyMap(collection_name, ObjectId().binary)
         chain_node = ChainNode(label=label, foundmap=readonlymap)
@@ -271,6 +274,7 @@ def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, clien
         objects.append(chain_node)
 
     error = mongo.safe_operation(collection, INSERT_MANY, order)
+    if should_close:client.close()
     if error:return error
     else    :return objects
 

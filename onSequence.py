@@ -42,6 +42,7 @@ class OnSequenceDistribution:
                         print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d'%(
                             seq_id, position.start_position, len(sequences[index])
                         ))
+        client.close()
                 
 
     def analysis(self):

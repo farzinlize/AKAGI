@@ -42,9 +42,8 @@ def save_checkpoint(motifs:List[ChainNode],
             pickle.dump(q, f) 
             pickle.dump(dataset_name, f)
 
-        # save motifs
-        for motif in motifs:
-            f.write(motif.to_byte())
+            # save motifs in file
+            for motif in motifs:f.write(motif.to_byte())
 
 
 # resumable files containing motifs plus additional data
@@ -111,10 +110,12 @@ def lock_checkpoint(checkpoint):
 
 def load_collection(collection_name, client:MongoClient=None) -> List[ChainNode]:
 
-    if not client:client = mongo.get_client()
+    if not client:client = mongo.get_client();should_close = True
+    else                                     :should_close = False
 
     collection = client[DATABASE_NAME][collection_name]
     items_or_error = mongo.safe_operation(collection, COLLECTION)
+    if should_close:client.close()
 
     if not isinstance(items_or_error, list):
         with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO][LOAD] error: {items_or_error}\n')
