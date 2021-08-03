@@ -15,13 +15,13 @@ from networking import AssistanceService
 from report_email import send_files_mail
 from pause import save_the_rest, time_has_ended
 from pool import AKAGIPool, get_AKAGI_pools_configuration
-from misc import QueueDisk
+from misc import QueueDisk, log_it
 from TrieFind import ChainNode, initial_chainNodes
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -140,16 +140,21 @@ def chaining_thread_and_local_pool(message: Queue, work: Queue, merge: Queue, on
 def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
     
     report_count = 0
-    client = get_client(connect=True)
+    # client = get_client(connect=True)
 
     if initial_pool :global_pool = initial_pool
     else            :global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict), collection_name='-'.join([EXECUTION, GLOBAL_POOL_NAME]))
 
     while True:
 
-        # check for exit signal
         merge_request: AKAGIPool = merge.get()
-        if isinstance(merge_request, str) and merge_request==EXIT_SIGNAL:return
+
+        # check for message
+        if isinstance(merge_request, str):
+
+            global_pool.save()
+            if   merge_request==EXIT_SIGNAL:return
+            elif merge_request==SAVE_SIGNAL:continue
 
         # merging
         global_pool.merge(merge_request)
@@ -165,7 +170,7 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
             window.write(global_pool.top_ten_reports())
 
         # saving in database
-        global_pool.save(mongo_client=client)
+        # global_pool.save(mongo_client=client)
 
 
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
@@ -377,6 +382,21 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             if not reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers]):
                 exit_code = ERROR_EXIT;break
 
+            # check for commands while chaining
+            if os.path.isfile(COMMAND_WHILE_CHAINING):
+                with open(COMMAND_WHILE_CHAINING, 'r') as commands:
+                    for command in commands:
+
+                        # manually command to save global pool
+                        if command == SAVE_SIGNAL:
+                            merge.put(SAVE_SIGNAL)
+
+                        # ignore and log wrong commands
+                        else:log_it(IMPORTANT_LOG, f'[PARENT] command not recognized {command}')
+
+                # delete executed commands
+                os.remove(COMMAND_WHILE_CHAINING)
+
             ############## PHASE TWO: BALANCING ##############
 
             # queue memory balancing
@@ -494,6 +514,11 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
 
     return rest_checkpoint, exit_code
 
+
+def manual_command(commands):
+    with open(COMMAND_WHILE_CHAINING, 'w') as commandline:
+        for command in commands:
+            commandline.write(command + '\n')
 
 
 def test_process(queue:Queue):

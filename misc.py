@@ -279,6 +279,13 @@ class ThatException(Exception):
 #                 functions                  #
 # ########################################## #
 
+def log_it(logfile, message):
+    if message:
+        with open(logfile, 'a') as log:
+            log.write(message)
+            if message[-1] != '\n':log.write('\n')
+
+
 def GFF_to_fasta(gff_name, fasta_name):
     with open(gff_name, 'r') as gff, open(fasta_name, 'w') as fasta:
         _ = gff.readline() # gff version line
