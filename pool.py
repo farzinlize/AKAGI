@@ -3,7 +3,7 @@ from mongo import get_client, safe_operation
 import struct
 from typing import List
 from FoundMap import FileMap
-from constants import BYTE_PATTERN, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, DATABASE_NAME, DROP, FIND_ONE, IMPORTANT_LOG, INSERT_ONE, INT_SIZE, POOLS_COLLECTION, POOL_LIMITED, POOL_NAME, POOL_SIZE, POOL_TAG, PWM, P_VALUE, SCORES, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLES, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER, UPDATE
+from constants import BYTE_PATTERN, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, DATABASE_NAME, DEBUG_LOG, DROP, FIND_ONE, IMPORTANT_LOG, INSERT_ONE, INT_SIZE, POOLS_COLLECTION, POOL_LIMITED, POOL_NAME, POOL_SIZE, POOL_TAG, PWM, P_VALUE, SCORES, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLES, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER, UPDATE
 from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, pwm_score_sequence
 from TrieFind import ChainNode, initial_chainNodes
 
@@ -183,6 +183,9 @@ class AKAGIPool:
         if not mongo_client:mongo_client = get_client();should_close = True
         else                                           :should_close = False
 
+        if __debug__:
+            with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] starting to save pool ({self.collection_name})\n')
+
         # # # # # #    TASK.1   # # # # # #
         #         preserve data           #
         # # # # # # # # # # # # # # # # # #
@@ -205,6 +208,9 @@ class AKAGIPool:
                     seen.append(entity.data.label)
                     collected_patterns.append(entity.data)
 
+        if __debug__:
+            with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] done gathering data\n')
+
         # preserve data on seperated collection
         new_patterns = initial_chainNodes([(pattern.label, pattern.foundmap) for pattern in collected_patterns], 
                                             self.collection_name, 
@@ -216,6 +222,9 @@ class AKAGIPool:
             new_patterns = collected_patterns
             with open(IMPORTANT_LOG, 'a') as log:
                 log.write(f'[WARNING][POOL] preserve default collection data in order to {self.collection_name+POOL_TAG} to be valid\n')
+
+        if __debug__:
+            with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] done inserting to database\n')
 
         # # # # # #    TASK.3   # # # # # #
         #      saving pool in file        #
@@ -253,6 +262,9 @@ class AKAGIPool:
                         entity.data.to_byte()
                     )
 
+        if __debug__:
+            with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] {self.collection_name+POOL_TAG} file created\n')
+
         # # # # # #    TASK.2   # # # # # #
         #     saving pool document        #
         # # # # # # # # # # # # # # # # # #
@@ -263,6 +275,9 @@ class AKAGIPool:
             with open(IMPORTANT_LOG, 'a') as log:log.write(f'[POOL][INSERT] error: {error}\n')
 
         if should_close:mongo_client.close()
+
+        if __debug__:
+            with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] save done <3\n')
 
 
     def readfile(self):
