@@ -42,3 +42,4 @@ totalchain
 *.png
 mprofile*
 *.out
+constants.py

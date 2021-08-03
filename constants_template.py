@@ -1,3 +1,11 @@
+if __name__ == "__main__":
+    cut_line = 7
+    with open('constants_template.py', 'r') as template, open('constants.py', 'w') as module:
+        for _ in range(cut_line):template.readline() # ignore module functions
+        module.write(template.read())
+
+# - - < - cut file - - - - - - - - - - - - - - - - - - - - 
+
 # [WARNING] related to TREES_TYPE as global constant from app module
 # any change to one of these lists must be applied to another
 DATASET_TREES = [('', ''), ('gkhood56', 'cache56'), ('gkhood78', 'cache78')]
