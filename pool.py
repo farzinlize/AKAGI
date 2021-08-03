@@ -2,7 +2,7 @@ from io import BytesIO
 from mongo import get_client, safe_operation
 import struct
 from typing import List
-from FoundMap import FileMap, ReadOnlyMap, initial_readonlymaps
+from FoundMap import FileMap
 from constants import BYTE_PATTERN, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, DATABASE_NAME, DROP, FIND_ONE, IMPORTANT_LOG, INSERT_ONE, INT_SIZE, POOLS_COLLECTION, POOL_LIMITED, POOL_NAME, POOL_SIZE, POOL_TAG, PWM, P_VALUE, SCORES, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLES, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER, UPDATE
 from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, pwm_score_sequence
 from TrieFind import ChainNode, initial_chainNodes
@@ -180,7 +180,8 @@ class AKAGIPool:
     '''
     def save(self, mongo_client=None):
 
-        if not mongo_client:mongo_client = get_client()
+        if not mongo_client:mongo_client = get_client();should_close = True
+        else                                           :should_close = False
 
         # # # # # #    TASK.1   # # # # # #
         #         preserve data           #
@@ -188,12 +189,12 @@ class AKAGIPool:
 
         collection = mongo_client[DATABASE_NAME][self.collection_name]
 
+        # droping older version collection
         error = safe_operation(collection, DROP)
         if error:
             with open(IMPORTANT_LOG, 'a') as log:log.write(f'[POOL][DROP] error: {error}\n')
 
-        # gather data
-        # to preserve data from cleaning 
+        # gather data (chain nodes)
         collected_patterns:List[ChainNode] = []
         seen = []
 
@@ -204,6 +205,7 @@ class AKAGIPool:
                     seen.append(entity.data.label)
                     collected_patterns.append(entity.data)
 
+        # preserve data on seperated collection
         new_patterns = initial_chainNodes([(pattern.label, pattern.foundmap) for pattern in collected_patterns], 
                                             self.collection_name, 
                                             client=mongo_client)
@@ -217,6 +219,7 @@ class AKAGIPool:
 
         # # # # # #    TASK.3   # # # # # #
         #      saving pool in file        #
+        #   (also replace new objects)    #
         # # # # # # # # # # # # # # # # # #
 
         # again but this time put those maps instead of the older ones and save objects
@@ -235,8 +238,10 @@ class AKAGIPool:
                         if entity.data.label != newdata.label:
                             with open(IMPORTANT_LOG, 'a') as log:
                                 log.write(f'[POOL][ERROR] gathered data in contrast of new data\n{entity.data.label} != {newdata.label}\n')
+                            if should_close:mongo_client.close()
                             raise Exception('can not sort data as it should')
 
+                        # replace pool object with new object
                         seen.append(entity.data.label)
                         entity.data = newdata
 
@@ -256,6 +261,8 @@ class AKAGIPool:
         error = safe_operation(pool_collection, UPDATE, order_filter={POOL_NAME:self.collection_name}, order={'$set':self.to_document()})
         if error:
             with open(IMPORTANT_LOG, 'a') as log:log.write(f'[POOL][INSERT] error: {error}\n')
+
+        if should_close:mongo_client.close()
 
 
     def readfile(self):
