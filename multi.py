@@ -349,7 +349,8 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
     # parent is in charge of memory balancing 
     else:
         exit_code = END_EXIT
-        since = datetime.now()
+        exec_time = datetime.now()
+        loop_time = datetime.now()
         m = (MAXIMUM_MEMORY_BALANCE - MINIMUM_CHUNK_SIZE)/(MAXIMUM_MEMORY_BALANCE - NEAR_FULL)
         allow_restore_from_disk = False
         permit_count = PERMIT_RESTORE_AFTER
@@ -363,7 +364,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             ############## PHASE ONE: CHECKING ##############
 
             # check for timeout
-            if time_has_ended(since, TIMER_CHAINING_HOURS):
+            if time_has_ended(exec_time, TIMER_CHAINING_HOURS):
                 exit_code = TIMESUP_EXIT;break
 
             # check for status
@@ -447,7 +448,8 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
 
             # queue size report
             with open(MEMORY_BALANCING_REPORT, 'w') as report:
-                report.write("work => %d\nmerge => %d\n%s"%(work.qsize(), merge.qsize(), message_report))
+                report.write(f"work => {work.qsize()}\nmerge => {merge.qsize()}\n{message_report}\n{datetime.now() - loop_time}")
+                loop_time = datetime.now()
 
     ############### end of processing #######################
 
