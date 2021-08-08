@@ -1,8 +1,34 @@
+import os
+
 if __name__ == "__main__":
-    cut_line = 7
-    with open('constants_template.py', 'r') as template, open('constants.py', 'w') as module:
-        for _ in range(cut_line):template.readline() # ignore module functions
-        module.write(template.read())
+    cut_line = 33
+    if os.path.isfile('constants.py'): # merge
+        
+        # read configured as dictionary
+        with open('constants.py', 'r') as configured:
+            conf_dict = {}
+            for line in configured:
+                list_line = line.split('=')
+                if   len(list_line) == 1:continue
+                elif len(list_line) >  2:rest_of_the_line = "=".join(list_line[1:])
+                else                    :rest_of_the_line = list_line[1]
+                conf_dict.update({''.join(list_line[0].split()):rest_of_the_line})
+
+        with open('constants_template.py', 'r') as template, open('constants.py', 'w') as merge:
+            for _ in range(cut_line):template.readline() # ignore module functions
+            for line in template:
+                list_line = line.split('=')
+                if   len(list_line) == 1:merge.write(line);continue
+                else                    :rest_of_the_line = "=".join(list_line[1:])
+                
+                key = ''.join(list_line[0].split())
+                if key in conf_dict:rest_of_the_line = conf_dict[key]
+                merge.write(key + ' =' + rest_of_the_line)
+
+    else: # create
+        with open('constants_template.py', 'r') as template, open('constants.py', 'w') as module:
+            for _ in range(cut_line):template.readline() # ignore module functions
+            module.write(template.read())
 
 # - - < - cut file - - - - - - - - - - - - - - - - - - - - 
 
@@ -103,6 +129,7 @@ ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
 DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
 MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath ~/database/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
+RAW_MONGOD_SERVER_COMMAND_LINUX = 'mongod --dbpath %s --fork --logpath ~/logs/%s.log --auth --port %s'
 
 # document enums
 MONGO_ID = '_id'
