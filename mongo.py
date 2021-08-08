@@ -1,14 +1,14 @@
-from typing import List
-import os
+import os, json
 from io import BytesIO
-from misc import ExtraPosition, bytes_to_int, int_to_bytes
-from constants import BINARY_DATA, CLEAR, COLLECTION, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, DROP, END, FIND_ONE, INSERT_MANY, INSERT_ONE, INT_SIZE, LABEL, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, STR, UPDATE
+from misc import ExtraPosition, bytes_to_int, int_to_bytes, make_location
+from constants import BINARY_DATA, CLEAR, COLLECTION, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, DROP, END, FIND_ONE, INSERT_MANY, INSERT_ONE, INT_SIZE, LABEL, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGOD_SHUTDOWN_COMMAND, MONGO_ID, MONGO_SECRET_ADDRESS, MONGO_USERNAME, RAW_MONGOD_SERVER_COMMAND_LINUX, STR, UPDATE
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import ServerSelectionTimeoutError
 from pymongo.results import DeleteResult
 
 
+# deprecated
 def mongo_secret_password():
     with open(MONGO_SECRET_ADDRESS, 'r') as secret:
         pwd = secret.read().split(',')[1]
@@ -17,7 +17,28 @@ def mongo_secret_password():
 
 def get_client(connect=None):
     return MongoClient(DATABASE_ADDRESS%(MONGO_USERNAME, mongo_secret_password()), connect=connect)
-    
+
+
+def initial_akagi_database(name, dbpath, port):
+
+    # run mongod server without --auth and make dbpath directory
+    make_location(dbpath)
+    stream = os.popen(RAW_MONGOD_SERVER_COMMAND_LINUX%(dbpath, name, '', port))
+    output = stream.read()
+    with open(DATABASE_LOG, 'a') as log:log.write('[MONGO][INITIAL] running server via python:\n' + output)
+    if output.split('\n')[2].startswith('ERROR'):raise Exception(f'cant run mongo server check {DATABASE_LOG}')
+
+    # read configuration for user akagi
+    with open('mongo.secret','r') as secret:config = json.load(secret)
+
+    # create user using super client
+    super_client = MongoClient(f'localhost:{port}')
+    answer = super_client[DATABASE_NAME].command('createUser', config['user'], pwd=config['pwd'], roles=config['roles'])
+    if not answer['ok']:raise Exception(f'cant create user -> {answer}')
+
+    # shutting down super server
+    os.system(MONGOD_SHUTDOWN_COMMAND%dbpath)
+
 
 def binary_to_list(reader:BytesIO):
 
@@ -83,6 +104,7 @@ def list_to_binary(found_list):
 def safe_operation(collection:Collection, command, order=None, order_filter=None):
     try:
         if   command == INSERT_MANY :collection.insert_many(order, ordered=False)
+        elif command == 'pop'       :collection.find_one_and_delete()
         elif command == FIND_ONE    :return collection.find_one(order)
         elif command == COLLECTION  :return [item for item in collection.find()]
         elif command == CLEAR       :return collection.delete_one(order)
