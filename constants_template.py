@@ -129,7 +129,7 @@ ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
 DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
 MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath ~/database/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
-RAW_MONGOD_SERVER_COMMAND_LINUX = 'mongod --dbpath %s --fork --logpath ~/logs/%s.log --auth --port %s'
+RAW_MONGOD_SERVER_COMMAND_LINUX = 'mongod --dbpath %s --fork --logpath ~/logs/%s.log %s --port %d'
 MONGOD_SHUTDOWN_COMMAND = 'mongod --dbpath %s --shutdown'
 
 # document enums
