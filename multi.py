@@ -174,6 +174,8 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
 
 
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
+# [WARNING] deprecated function dont use it!
+# PARENT_WORK should be False
 def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
 
     # timer first stamp
@@ -344,13 +346,13 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
     # parent also is a worker
     # [WARNING] may results in memory overflow
     if PARENT_WORK:
-        exit_code = parent_chaining(work, merge, on_sequence, dataset_dict, overlap, gap, q)
+        raise Exception('PARENT_WORK = True is deprecated, change app configuration')
+        # exit_code = parent_chaining(work, merge, on_sequence, dataset_dict, overlap, gap, q)
 
     # parent is in charge of memory balancing 
     else:
         exit_code = END_EXIT
         exec_time = datetime.now()
-        loop_time = datetime.now()
         m = (MAXIMUM_MEMORY_BALANCE - MINIMUM_CHUNK_SIZE)/(MAXIMUM_MEMORY_BALANCE - NEAR_FULL)
         allow_restore_from_disk = False
         permit_count = PERMIT_RESTORE_AFTER
@@ -360,6 +362,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
 
             # just wait for next check round
             sleep(CHECK_TIME_INTERVAL)
+            loop_time = datetime.now()
 
             ############## PHASE ONE: CHECKING ##############
 
@@ -423,7 +426,7 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
                     if get_one.foundmap.collection != DEFAULT_COLLECTION:work.put(get_one)
                     else                                                :items.append(get_one)
 
-                message_report += 'stored a chunk into disk\n'
+                message_report += f'stored a chunk (size:{len(items)}) into disk\n'
                 disk_queue.insert_all(items)
 
             # restore from disk
@@ -449,7 +452,6 @@ def multicore_chaining_main(cores_order, initial_works: List[ChainNode], on_sequ
             # queue size report
             with open(MEMORY_BALANCING_REPORT, 'w') as report:
                 report.write(f"work => {work.qsize()}\nmerge => {merge.qsize()}\n{message_report}\n{datetime.now() - loop_time}")
-                loop_time = datetime.now()
 
     ############### end of processing #######################
 
