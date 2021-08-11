@@ -6,7 +6,7 @@ from pymongo.errors import ServerSelectionTimeoutError
 from bson.objectid import ObjectId
 from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
 import os, sys, mongo
-from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_LOG, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FOUNDMAP_NAMETAG, ID_LENGTH, INSERT_MANY, MAXIMUM_ORDER_SIZE, MONGO_ID, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_LOG, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FILEMAP, FOUNDMAP_NAMETAG, ID_LENGTH, INSERT_MANY, MAXIMUM_ORDER_SIZE, MEMOMAP, MONGO_ID, READMAP, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 '''
@@ -14,7 +14,7 @@ from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_LOG, DATAB
         MemoryMap: saving data in python list structure (object version of found_list)
         FileMap: saving data in byte-file
 '''
-class FoundMap:
+class FoundMap(Bytable):
 
     # abstract functions
     def add_location(self, seq_id, position):raise NotImplementedError
@@ -22,9 +22,12 @@ class FoundMap:
     def get_sequences(self):raise NotImplementedError
     def get_positions(self):raise NotImplementedError
     def get_list(self) -> List[List]:raise NotImplementedError
-    def clone(self): raise NotImplementedError
-    def clear(self): raise NotImplementedError
+    def clone(self):raise NotImplementedError
+    def clear(self):raise NotImplementedError
+    def to_byte(self):raise NotImplementedError
 
+    @staticmethod
+    def byte_to_object(buffer: BufferedReader):raise NotImplementedError
 
     def instances_to_string_fastalike(self, label, sequences: List[str]):
         result = '>pattern\n%s\n>instances\n'%(label)
@@ -50,9 +53,18 @@ def get_foundmap(batch_limit=BATCH_SIZE, foundmap_type=FOUNDMAP_MODE) -> FoundMa
     else:raise Exception('[FoundMap] FOUNDMAP_MODE variable unrecognized')
 
 
-class MemoryMap(FoundMap):
+def read_foundmap(buffer: BufferedReader):
+    map_type = buffer.read(1)
+    if   map_type == MEMOMAP:return MemoryMap.byte_to_object(buffer)
+    elif map_type == FILEMAP:return FileMap.byte_to_object(buffer)
+    elif map_type == READMAP:return ReadOnlyMap.byte_to_object(buffer)
 
-    def __init__(self):self.found_list = [[],[]]
+
+class MemoryMap(FoundMap, Bytable):
+
+    def __init__(self, initial=None):
+        if initial:self.found_list=initial
+        else      :self.found_list = [[],[]]
 
     def add_location(self, seq_id, position):
         self.found_list = binary_special_add(self.found_list, seq_id, position)
@@ -61,6 +73,7 @@ class MemoryMap(FoundMap):
     def get_sequences(self):return self.found_list[0]
     def get_positions(self):return self.found_list[1]
     def get_list(self):return self.found_list
+    def clear(self):del self.found_list;self.found_list = [[],[]]
 
     def __str__(self) -> str:
         return str(self.found_list)
@@ -71,8 +84,15 @@ class MemoryMap(FoundMap):
     def turn_to_filemap(self):
         return FileMap().dump_list(self.found_list)
 
+    def to_byte(self):
+        return MEMOMAP + mongo.list_to_binary(self.found_list)
 
-class FileMap(FoundMap, Bytable):
+    @staticmethod
+    def byte_to_object(buffer: BufferedReader):
+        return MemoryMap(initial=mongo.binary_to_list(buffer))
+
+
+class FileMap(FoundMap):
 
     class FileHandler:
 
@@ -330,7 +350,7 @@ class FileMap(FoundMap, Bytable):
         if self.virgin:
             self.dump()
 
-        return int_to_bytes(self.q) + int_to_bytes(len(self.path)) + bytes(self.path, encoding='ascii')
+        return FILEMAP + int_to_bytes(self.q) + int_to_bytes(len(self.path)) + bytes(self.path, encoding='ascii')
 
 
     @staticmethod
@@ -382,7 +402,7 @@ class FileMap(FoundMap, Bytable):
         self.path = protected_path
 
 
-class ReadOnlyMap(FoundMap, Bytable):            
+class ReadOnlyMap(FoundMap):            
 
     def __init__(self, collection, address:bytes):
         self.collection = collection
@@ -390,10 +410,11 @@ class ReadOnlyMap(FoundMap, Bytable):
 
 
     def to_byte(self):
-        return self.address
+        return READMAP + int_to_bytes(len(self.collection)) + bytes(self.collection, encoding='ascii') + self.address
 
 
-    def byte_to_object(buffer: BufferedReader, collection):
+    def byte_to_object(buffer: BufferedReader):
+        collection = str(buffer.read(buffer.read(INT_SIZE)), encoding='ascii')
         address = buffer.read(ID_LENGTH)
         return ReadOnlyMap(collection, address=address)
 

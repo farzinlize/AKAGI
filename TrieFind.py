@@ -1,14 +1,14 @@
-from io import BufferedReader
+from io import BufferedReader, BytesIO
 from typing import List, Tuple
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 import mongo
 from misc import Bytable, bytes_to_int, int_to_bytes
-from FoundMap import FoundMap, ReadOnlyMap, get_foundmap
+from FoundMap import FoundMap, MemoryMap, ReadOnlyMap, get_foundmap, read_foundmap
 from Nodmer import Nodmer
 
-from constants import BINARY_DATA, DATABASE_NAME, DEFAULT_COLLECTION, EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INSERT_MANY, INT_SIZE, LABEL, MAXIMUM_ORDER_SIZE, MONGO_ID
+from constants import BINARY_DATA, DATABASE_NAME, DEFAULT_COLLECTION, EXTRACT_KMER, EXTRACT_OBJ, FOUNDMAP_MEMO, FOUNDMAP_MODE, INSERT_MANY, INT_SIZE, LABEL, MAXIMUM_ORDER_SIZE, MONGO_ID, POP, QUEUE_COLLECTION
 
 '''
     Trie node object -> two purposed object for <searching> and <saving> kmers
@@ -219,7 +219,7 @@ class WatchNodeC(WatchNode):
 
 class ChainNode(Bytable):
 
-    def __init__(self, label, foundmap: ReadOnlyMap):
+    def __init__(self, label, foundmap: FoundMap):
         self.foundmap = foundmap
         self.label = label
 
@@ -228,18 +228,17 @@ class ChainNode(Bytable):
         serialization methods for byte/object conversion 
     '''
     def to_byte(self):
-
         return int_to_bytes(len(self.label))    + \
             bytes(self.label, encoding='ascii') + \
             self.foundmap.to_byte()
 
 
     @staticmethod
-    def byte_to_object(buffer: BufferedReader, collection=DEFAULT_COLLECTION):
+    def byte_to_object(buffer: BufferedReader):
         first_read = buffer.read(INT_SIZE)
         if first_read:
             label = str(buffer.read(bytes_to_int(first_read)), 'ascii')
-            foundmap = ReadOnlyMap.byte_to_object(buffer, collection)
+            foundmap = read_foundmap(buffer)
             return ChainNode(label, foundmap)
             
         
@@ -277,6 +276,21 @@ def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, clien
     if should_close:client.close()
     if error:return error
     else    :return objects
+
+
+def pop_chain_node(client:MongoClient=None):
+
+    if not client:client=mongo.get_client();should_close = True
+    else                                   :should_close = False
+
+    collection = client[DATABASE_NAME][QUEUE_COLLECTION]
+    popy = mongo.safe_operation(collection, POP)
+    if should_close:client.close()
+
+    if not popy:return None
+    if not isinstance(popy, dict):return popy # as error
+
+    return ChainNode(popy[LABEL], MemoryMap(initial=mongo.binary_to_list(BytesIO(popy[BINARY_DATA]))))
 
 
 # ########################################## #

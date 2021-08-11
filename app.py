@@ -208,7 +208,7 @@ def motif_finding_chain(dataset_name,
     if multicore:
         dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
         last_time = currentTime()
-        rest, code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+        code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
     else:        
         # changes must be applied
         raise NotImplementedError
@@ -217,8 +217,8 @@ def motif_finding_chain(dataset_name,
         
     print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
     print('finish code:', code)
-    if   code == TIMESUP_EXIT:print(f'timsup for chaining - rest is saved at {rest}')
-    elif code == ERROR_EXIT  :print(f'something bad happened -> error was {rest}')
+    if   code == TIMESUP_EXIT:print(f'timsup for chaining')
+    elif code == ERROR_EXIT  :print(f'something bad happened')
     elif code == END_EXIT    :print('all jobs done')
 
     # make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
@@ -453,7 +453,13 @@ def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
     pwm = read_pfm_save_pwm(pfm)
     #
     dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
-    rest_checkpoint, finish_code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+    last_time = currentTime()
+    rest, finish_code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+    print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
+    print('finish code:', finish_code)
+    if   finish_code == TIMESUP_EXIT:print(f'timsup for chaining - rest is saved at {rest}')
+    elif finish_code == ERROR_EXIT  :print(f'something bad happened -> error was {rest}')
+    elif finish_code == END_EXIT    :print('all jobs done')
     #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
@@ -462,7 +468,7 @@ def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
         master = AssistanceService.connect_to_master(assist_network, is_new=False)
         master.report_back(BEST_PATTERNS_POOL%(PC_NAME, os.getpid()), finish_code)
         if finish_code == TIMESUP_EXIT:
-            master.copy_checkpoint(rest_checkpoint)
+            master.copy_checkpoint(rest)
 
 
 

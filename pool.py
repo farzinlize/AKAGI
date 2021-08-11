@@ -2,7 +2,7 @@ from io import BytesIO
 from mongo import get_client, safe_operation
 import struct
 from typing import List
-from FoundMap import FileMap
+from FoundMap import FileMap, MemoryMap
 from constants import BYTE_PATTERN, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, DATABASE_NAME, DEBUG_LOG, DROP, FIND_ONE, IMPORTANT_LOG, INSERT_ONE, INT_SIZE, POOLS_COLLECTION, POOL_LIMITED, POOL_NAME, POOL_SIZE, POOL_TAG, PWM, P_VALUE, SCORES, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLES, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER, UPDATE
 from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, pwm_score_sequence
 from TrieFind import ChainNode, initial_chainNodes
@@ -43,16 +43,12 @@ class AKAGIPool:
         for _ in pool_descriptions:self.tables.append([])
 
     
-    def judge(self, pattern:ChainNode, mongo_client=None):
+    def judge(self, pattern:ChainNode):
 
         # calculating pattern scores
         scores = []
         for description in self.descriptions:
-                new_score = description[FUNCTION_KEY](pattern, description[ARGUMENT_KEY], mongo_client) * description[SIGN_KEY]
-                if not isinstance(new_score, float):
-                    with open(IMPORTANT_LOG, 'a') as log:log.write(f'[JUDGE] error was occurred while judging pattern:{pattern.label}\n')
-                    return new_score # as error
-                scores.append(new_score)
+            scores.append(description[FUNCTION_KEY](pattern, description[ARGUMENT_KEY]) * description[SIGN_KEY])
 
         # inserting the pattern to each sorted table for each score
         ranks = []
@@ -61,10 +57,12 @@ class AKAGIPool:
             entity.sorted_by = sorted_by
             table, rank = binary_add_return_position(table, entity)
             
-            if rank == POOL_SIZE:ranks.append(-1)
-            else:ranks.append(rank)
+            if rank == POOL_SIZE:ranks.append(-1) # worst possible rank
+            else                :ranks.append(rank)
+
 
             if POOL_LIMITED and len(table) == POOL_SIZE + 1:
+                # table[-1].data.foundmap.clear()
                 table = table[:-1]
 
             self.tables[sorted_by] = table
@@ -175,8 +173,8 @@ class AKAGIPool:
         TASKS:
             1. preserve data to locate all pattern appearances (foundmaps) in seperated collection
                 - first drop the related collection if exist then initial gathered unique chain nodes on that collection
-            2. save object in pool collection
-            3. save object in file with byte conversion (redundant backup to recover data from chaotic working collection)
+            2. save object in file with byte conversion (redundant backup to recover data from chaotic working collection)
+            3. save object in pool collection
     '''
     def save(self, mongo_client=None):
 
@@ -226,7 +224,7 @@ class AKAGIPool:
         if __debug__:
             with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] done inserting to database\n')
 
-        # # # # # #    TASK.3   # # # # # #
+        # # # # # #    TASK.2   # # # # # #
         #      saving pool in file        #
         #   (also replace new objects)    #
         # # # # # # # # # # # # # # # # # #
@@ -252,6 +250,7 @@ class AKAGIPool:
 
                         # replace pool object with new object
                         seen.append(entity.data.label)
+                        del entity.data
                         entity.data = newdata
 
                     # save object with its score in object file
@@ -265,7 +264,7 @@ class AKAGIPool:
         if __debug__:
             with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] {self.collection_name+POOL_TAG} file created\n')
 
-        # # # # # #    TASK.2   # # # # # #
+        # # # # # #    TASK.3   # # # # # #
         #     saving pool document        #
         # # # # # # # # # # # # # # # # # #
 
@@ -280,16 +279,30 @@ class AKAGIPool:
             with open(DEBUG_LOG, 'a') as log:log.write(f'[POOL] save done <3\n')
 
 
-    def readfile(self):
+    def save_snap(self, filename=None):
+        if not filename:filename = self.collection_name + POOL_TAG
+        with open(self.collection_name+POOL_TAG, 'wb') as snap:
+            for table in self.tables:
+                snap.write(int_to_bytes(len(table)))
+                for entity in table:
+                    scores_pack = struct.pack('d'*len(entity.scores), *entity.scores)
+                    snap.write(
+                        int_to_bytes(len(scores_pack)) +
+                        scores_pack +
+                        entity.data.to_byte()
+                    )
 
-        with open(self.collection_name+POOL_TAG, 'rb') as disk:
+
+    def read_snap(self, filename=None):
+        if not filename:filename = self.collection_name + POOL_TAG
+        with open(self.collection_name+POOL_TAG, 'rb') as snap:
             for table_index in range(len(self.tables)):
-                table_len = bytes_to_int(disk.read(INT_SIZE))
+                table_len = bytes_to_int(snap.read(INT_SIZE))
 
                 for _ in range(table_len):
-                    pack_len = bytes_to_int(disk.read(INT_SIZE))
-                    scores = list(struct.unpack('d'*len(self.descriptions), disk.read(pack_len)))
-                    pattern = ChainNode.byte_to_object(disk, collection=self.collection_name)
+                    pack_len = bytes_to_int(snap.read(INT_SIZE))
+                    scores = list(struct.unpack('d'*len(self.descriptions), snap.read(pack_len)))
+                    pattern = ChainNode.byte_to_object(snap)
                     self.tables[table_index].append(AKAGIPool.Entity(pattern, scores))
 
 
@@ -403,12 +416,9 @@ class RankingPool:
         self.pool = merged
 
 
-def objective_function_pvalue(pattern: ChainNode, sequences_bundles, mongo_client):
+def objective_function_pvalue(pattern: ChainNode, sequences_bundles):
 
-    # error handeling
-    try:foundlist_seq_vector = pattern.foundmap.get_list(client=mongo_client)[0]
-    except Exception as e:return e
-
+    foundlist_seq_vector = pattern.foundmap.get_list()[0]
     foundlist_index = 0
     sequence_index = 0
     psum = 0
@@ -434,12 +444,9 @@ def objective_function_pvalue(pattern: ChainNode, sequences_bundles, mongo_clien
     return (psum/len(foundlist_seq_vector)) - nscore
 
 
-def distance_to_summit_score(pattern: ChainNode, sequences_bundles, mongo_client):
+def distance_to_summit_score(pattern: ChainNode, sequences_bundles):
 
-    # error handeling
-    try:pattern_foundlist = pattern.foundmap.get_list(client=mongo_client)
-    except Exception as e:return e
-
+    pattern_foundlist = pattern.foundmap.get_list()
     sum_distances = 0
     num_instances = 0
     for index, seq_id in enumerate(pattern_foundlist[0]):
@@ -460,7 +467,7 @@ def distance_to_summit_score(pattern: ChainNode, sequences_bundles, mongo_client
     return sum_distances / num_instances
     
 
-def pwm_score(pattern: ChainNode, arg_bundle, mongo_client):
+def pwm_score(pattern: ChainNode, arg_bundle):
 
     # unpacking arguments
     sequences = arg_bundle[0]
@@ -469,10 +476,7 @@ def pwm_score(pattern: ChainNode, arg_bundle, mongo_client):
     
     aggregated = 0
     count = 0
-
-    # error handeling
-    try:bundle = pattern.foundmap.get_list(client=mongo_client)
-    except Exception as e:return e
+    bundle = pattern.foundmap.get_list()
     
     for index, seq_id in enumerate(bundle[0]):
         position: ExtraPosition
@@ -540,7 +544,7 @@ if __name__ == '__main__':
     pooly = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}))
     pooly.collection_name = 'pooly'
 
-    a = FileMap()
+    a = MemoryMap()
     a.add_location(0, ExtraPosition(6, 4))
     a.add_location(0, ExtraPosition(6, 4))
     a.add_location(1, ExtraPosition(6, 4))
@@ -570,10 +574,10 @@ if __name__ == '__main__':
     pooly.tables[1].append(eb)
     pooly.tables[2].append(eb)
 
-    pooly.save()
-
+    pooly.save_snap(filename='test.pool')
+    del pooly
     disk = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
-    disk.readfile()
-    mon = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
-    mon.read_document()
+    disk.read_snap(filename='test.pool')
+    # mon = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
+    # mon.read_document()
     # pooly_disk.readfile()

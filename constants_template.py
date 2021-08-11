@@ -1,8 +1,12 @@
-import os
+import os, sys
 
 if __name__ == "__main__":
-    cut_line = 33
-    if os.path.isfile('constants.py'): # merge
+
+    if len(sys.argv) > 1 and sys.argv[1] in ['-f', '--force']:ignore = True
+    else                                                     :ignore = False
+
+    cut_line = 37
+    if os.path.isfile('constants.py') and not ignore: # merge
         
         # read configured as dictionary
         with open('constants.py', 'r') as configured:
@@ -25,7 +29,7 @@ if __name__ == "__main__":
                 if key in conf_dict:rest_of_the_line = conf_dict[key]
                 merge.write(key + ' =' + rest_of_the_line)
 
-    else: # create
+    else: # create or force creating new one
         with open('constants_template.py', 'r') as template, open('constants.py', 'w') as module:
             for _ in range(cut_line):template.readline() # ignore module functions
             module.write(template.read())
@@ -57,6 +61,7 @@ DATABASE_LOG = 'database.log'
 IMPORTANT_LOG = 'IMPORTANTE.log'
 DEBUG_LOG = 'debug.log'
 CHAINING_EXECUTION_STATUS = 'status.report'
+BANK_PORTS_REPORT = 'bankports.report'
 COMMAND_WHILE_CHAINING = 'command.app'
 BEST_PATTERNS_POOL = '%s_%d.pool'
 MEMORY_BALANCING_REPORT = 'queue.report'
@@ -82,6 +87,10 @@ STR = b'\xFF'
 DEL = b'\xDD'
 END = b'\xFF'
 PRT = b'\x00'
+
+MEMOMAP = b'\x00'
+FILEMAP = b'\x01'
+READMAP = b'\x02'
 
 DNA_ALPHABET = 'ATCG'
 DELIMETER = '-'
@@ -128,6 +137,7 @@ MONGO_PORT = 2090
 ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
 DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
+BANKBASE_ADDRESS = 'mongodb://%s:%s@localhost:%d/?authSource=' + DATABASE_NAME
 MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath ~/database/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
 RAW_MONGOD_SERVER_COMMAND_LINUX = 'mongod --dbpath %s --fork --logpath ~/logs/%s.log %s --port %d'
 MONGOD_SHUTDOWN_COMMAND = 'mongod --dbpath %s --shutdown'
@@ -144,6 +154,7 @@ SCORES = 'scores'
 # commands
 FIND_ONE = 'find'
 CLEAR = 'clear'
+POP = 'pop'
 INSERT_MANY = 'insert'
 INSERT_ONE = 'ione'
 UPDATE = 'up'
@@ -243,6 +254,9 @@ PWM = 'pwm'
 DATASET_NAME = 'name'
 EXIT_SIGNAL = 'ex'
 SAVE_SIGNAL = 'sv'
+RESET_BANK = 'reset'
+BANK_NAME = 'BANK%d'
+BANK_PATH = 'bank%d/'
 CONTINUE_SIGNAL = 'co'
 STATUS_RUNNING = 'running'
 STATUS_SUSSPENDED = 'sus'
