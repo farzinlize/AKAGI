@@ -129,7 +129,7 @@ def list_to_binary(found_list):
 def safe_operation(collection:Collection, command, order=None, order_filter=None):
     try:
         if   command == INSERT_MANY :collection.insert_many(order, ordered=False)
-        elif command == POP         :collection.find_one_and_delete({})
+        elif command == POP         :return collection.find_one_and_delete({})
         elif command == FIND_ONE    :return collection.find_one(order)
         elif command == COLLECTION  :return [item for item in collection.find()]
         elif command == CLEAR       :return collection.delete_one(order)
