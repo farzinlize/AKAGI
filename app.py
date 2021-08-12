@@ -75,7 +75,7 @@ def motif_finding_chain(dataset_name,
                         cores=1,
                         pfm=None,
                         checkpoint=None,
-                        cloud=SAVE_OBSERVATION_CLOUD):
+                        banks=1):
 
     def observation(q, save_collection=DEFAULT_COLLECTION):
 
@@ -208,7 +208,7 @@ def motif_finding_chain(dataset_name,
     if multicore:
         dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
         last_time = currentTime()
-        code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
+        code = multicore_chaining_main(cores, banks, motifs, on_sequence, dataset_dict, overlap, gap, q)
     else:        
         # changes must be applied
         raise NotImplementedError
@@ -416,6 +416,7 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer):
     store_checkpoint_to_cloud(checkpoint, directory_name)
         
 
+# deprecated TODO need update
 def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
 
     # manual checkpoint input name
@@ -496,17 +497,18 @@ if __name__ == "__main__":
     make_location(APPDATA_PATH)
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:kh:'
+    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:kh:b:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
         'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
         'multi-layer', 'feature', 'megalexa=', 'separated=', 'change=', 'reference=', 'disable-chaining',
-        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=']
+        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'bank=']
 
     # default values
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
         'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False,
-        'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None, 'assist':None}
+        'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None, 'assist':None,
+        'nbank':1}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -551,6 +553,7 @@ if __name__ == "__main__":
             with open(a, 'r') as arguments:opts += getopt(arguments.read().split(), shortopt, longopts)[0]
         elif o == '--name':args_dict.update({'name':a})
         elif o in ['-h', '--assist']:args_dict.update({'assist':a})
+        elif o in ['-b', '--bank']:args_dict.update({'nbank':int(a)})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -583,7 +586,8 @@ if __name__ == "__main__":
             multicore=args_dict['multicore'],
             cores=args_dict['ncores'],
             pfm=args_dict['jaspar'],
-            checkpoint=args_dict['checkpoint'])
+            checkpoint=args_dict['checkpoint'],
+            banks=args_dict['nbank'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
