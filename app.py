@@ -1,5 +1,6 @@
 # python libraries 
 import os
+from pool import AKAGIPool, get_AKAGI_pools_configuration
 from time import time as currentTime
 from time import strftime, gmtime
 from getopt import getopt
@@ -12,19 +13,15 @@ from misc import brief_sequence, change_global_constant_py, log_it, read_bundle,
 from report import FastaInstance, OnSequenceAnalysis, aPWM, Ranking
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
-from jaspar import costume_table_jaspar, get_jaspar_raw
-from peakseq import annotation_to_sequences
-from pause import resume_any_cloud
 from onSequence import OnSequenceDistribution
 from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
-from checkpoint import load_checkpoint_file, load_collection, observation_checkpoint_name
+from checkpoint import load_collection, observation_checkpoint_name
 from TrieFind import initial_chainNodes
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
-from networking import AssistanceService
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, CHECKPOINT_TAG, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_OBSERVATION_CLOUD, SEQUENCES, SEQUENCE_BUNDLES, BEST_PATTERNS_POOL, PC_NAME
+from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -64,18 +61,17 @@ def motif_finding_chain(dataset_name,
                         d, 
                         gap, 
                         overlap, 
-                        report, 
-                        s_mask=None, 
-                        color_frame=ARG_UNSET, 
                         multilayer=None, 
                         megalexa=None, 
-                        additional_name='',
                         chaining_disable=False,
                         multicore=False, 
                         cores=1,
                         pfm=None,
                         checkpoint=None,
-                        banks=1):
+                        banks=1,
+                        resume=False,
+                        on_sequence_compressed=None,
+                        initial_pool=''):
 
     def observation(q, save_collection=DEFAULT_COLLECTION):
 
@@ -134,7 +130,7 @@ def motif_finding_chain(dataset_name,
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
         arguments -> f(s)=%s, q=%d, d(s)=%s, gap=%d, overlap=%d, dataset=%s\n\
-        operation mode: %s; coloring_frame=%d; multi-layer=%s; megalexa=%d'%(
+        multi-layer=%s; megalexa=%d, resume=%s'%(
             str(gkhood_index), 
             str(frame_size), 
             q, 
@@ -142,10 +138,9 @@ def motif_finding_chain(dataset_name,
             gap, 
             overlap, 
             dataset_name,
-            str(report[1]),
-            color_frame,
             str(multilayer),
-            megalexa))
+            megalexa),
+            str())
 
     print('[FOUNDMAP] foundmap mode: %s'%FOUNDMAP_MODE)
 
@@ -163,52 +158,68 @@ def motif_finding_chain(dataset_name,
         sequences, bundles = brief_sequence(sequences, bundles)
         assert len(sequences) == len(bundles)
         print('[BRIEFING] number of sequences = %d'%len(sequences))
-        for seq, bundle in zip(sequences, bundles):
-            print('(len:%d,score:%f)'%(len(seq), bundle[P_VALUE]), end=' ', flush=True)
-        print('')
+        if __debug__:
+            with open(DEBUG_LOG, 'a') as log:
+                for seq, bundle in zip(sequences, bundles):
+                    log.write('(len:%d,score:%f)'%(len(seq), bundle[P_VALUE]))
+                log.write('\n')
 
     if q == ARG_UNSET:q = len(sequences)
 
     # assertion to catch error
     assert len(bundles) == len(sequences)
     assert q <= len(sequences) or q == FIND_MAX
-    if s_mask != None:assert len(sequences) == len(s_mask)
 
     # search for observation checkpoint
-    if checkpoint:
-        checkpoint_file = observation_checkpoint_name(dataset_name, frame_size, d, multilayer)
-        motifs = load_collection(checkpoint_file.split('.')[0])
+    if not resume and checkpoint:
+        checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer).split('.')[0]
+        motifs = load_collection(checkpoint_collection)
 
         if __debug__:log_it(DEBUG_LOG, f'[CHECKPOINT] observation data in database: {bool(motifs)}')
 
         # run and save observation data
-        if not motifs:
-            motifs = observation(q, save_collection=checkpoint_file.split('.')[0])
-            # save_checkpoint(motifs, checkpoint_file)
-            # if cloud:store_checkpoint_to_cloud(checkpoint_file, protected_collection) #TODO: not working with mongo
+        if not motifs:motifs = observation(q, save_collection=checkpoint_collection)
     
     # run observation without checkpoint check
-    else:
-        motifs = observation(q)
+    elif not resume and not checkpoint:motifs = observation(q)
 
     # # # # # # # #
     # - update motifs are reported as chain node from `observation()` 
     # chaining procedure required chain nodes instead of watch nodes 
     # zero_chain_nodes = [ChainNode(motif.label, motif.foundmap) for motif in motifs]
+    # # # # # # # #
 
-    if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
-    if not motifs:print('[FATAL][ERROR] no observation data is available (error)');return
+    if not resume and not motifs:print('[FATAL][ERROR] no observation data is available (error)');return
 
-    try                      :on_sequence = OnSequenceDistribution(motifs, sequences)
-    except Exception as error:print(f'[FATAL][ERROR] cant make OnSequence {error}');return
-
+    # # # # # # # #  OnSequence data structure  # # # # # # # #
+    # generate from motifs
+    if not resume:
+        try:on_sequence = OnSequenceDistribution(motifs, sequences)
+        except Exception as error:print(f'[FATAL][ERROR] cant make OnSequence {error}');return
+    # read compressed from file
+    else:on_sequence = OnSequenceDistribution(compressed_data=on_sequence_compressed)
+    # save compressed for later
+    if SAVE_ONSEQUENCE_FILE:on_sequence.compress(filename=on_sequence_compressed)
     # reports for analysis
     if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+    ############### start to chain ###############
+    if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
+    dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
+
+    # load pool to start with
+    if initial_pool:
+        pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict), collection_name='-'.join([EXECUTION, GLOBAL_POOL_NAME, 'resume']))
+        pool.read_snap(filename=initial_pool)
+    
+    else:pool = None
 
     if multicore:
-        dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
         last_time = currentTime()
-        code = multicore_chaining_main(cores, banks, motifs, on_sequence, dataset_dict, overlap, gap, q)
+        if not resume:code = multicore_chaining_main(cores, banks, motifs, on_sequence, dataset_dict, overlap, gap, q)
+        else         :code = multicore_chaining_main(cores, banks, None, on_sequence, dataset_dict, overlap, gap, q, initial_flag=False, initial_pool=pool)
+
     else:        
         # changes must be applied
         raise NotImplementedError
@@ -220,15 +231,6 @@ def motif_finding_chain(dataset_name,
     if   code == TIMESUP_EXIT:print(f'timsup for chaining')
     elif code == ERROR_EXIT  :print(f'something bad happened')
     elif code == END_EXIT    :print('all jobs done')
-
-    # make_location('%s%s%s'%(RESULT_LOCATION, dataset_name, additional_name))
-
-    if report[1]:
-        pass
-        # colored_neighbours_analysis(chains, sequences, color_frame, '%s%s-colored/'%(RESULT_LOCATION, dataset_name))
-    else:
-        pass
-        # motif_chain_report(motifs, '%s%s%s/f%s-d%s-q%d-g%d-o%d'%(RESULT_LOCATION, dataset_name, additional_name, str(frame_size), str(d), q, gap, overlap), sequences)
 
 
 def sequences_distance_matrix(location):
@@ -416,63 +418,6 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer):
     store_checkpoint_to_cloud(checkpoint, directory_name)
         
 
-# deprecated TODO need update
-def resume_chaining(cores, overlap, gap, checkpoint_name, assist_network):
-
-    # manual checkpoint input name
-    if checkpoint_name:
-        checkpoint = checkpoint_name
-
-    # download helping package of work
-    elif assist_network:
-        master = AssistanceService.connect_to_master(assist_network, is_new=True)
-        checkpoint = master.get_checkpoint(working_on_it=True)
-
-    # auto-find resumable checkpoints local or cloud
-    else:
-        offline_checkpoints = [f for f in os.listdir() if f.endswith(CHECKPOINT_TAG) and f[0]=='R']
-
-        if offline_checkpoints:
-            checkpoint = offline_checkpoints[0]
-        else:
-            checkpoint = resume_any_cloud()
-    
-    if checkpoint == None:
-        print('[APP] found nothing to resume - end')
-        return
-
-    motifs, on_sequence, q, dataset_name = load_checkpoint_file(checkpoint)
-    pfm = get_jaspar_raw(costume_table_jaspar(dataset_name))
-
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-    # 
-    # [AKAGI EXE] data prepartion for caught resumable checkpoint
-    if not os.path.exists(f'{dataset_name}.fasta'): # or '.bundle'
-        annotation_to_sequences(dataset_name+'.cod', '2bits/hg18.2bit')
-    sequences = read_fasta('%s.fasta'%(dataset_name))
-    bundles = read_bundle('%s.bundle'%(dataset_name))
-    pwm = read_pfm_save_pwm(pfm)
-    #
-    dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
-    last_time = currentTime()
-    rest, finish_code = multicore_chaining_main(cores, motifs, on_sequence, dataset_dict, overlap, gap, q)
-    print('chaining done in ', strftime("%H:%M:%S", gmtime(currentTime() - last_time)))
-    print('finish code:', finish_code)
-    if   finish_code == TIMESUP_EXIT:print(f'timsup for chaining - rest is saved at {rest}')
-    elif finish_code == ERROR_EXIT  :print(f'something bad happened -> error was {rest}')
-    elif finish_code == END_EXIT    :print('all jobs done')
-    #
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-    # report back to the main application
-    if assist_network:
-        master = AssistanceService.connect_to_master(assist_network, is_new=False)
-        master.report_back(BEST_PATTERNS_POOL%(PC_NAME, os.getpid()), finish_code)
-        if finish_code == TIMESUP_EXIT:
-            master.copy_checkpoint(rest)
-
-
-
 def testing(dataset_name):
     global FOUNDMAP_MODE
 
@@ -488,7 +433,6 @@ def testing(dataset_name):
     return motif_tree_memo, motif_tree_disk
 
 
-
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
@@ -497,18 +441,17 @@ if __name__ == "__main__":
     make_location(APPDATA_PATH)
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:hq:f:G:p:c:QuFx:t:C:r:Pn:j:a:kh:b:'
-    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'color-frame=',
-        'overlap=', 'histogram', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 
-        'multi-layer', 'feature', 'megalexa=', 'separated=', 'change=', 'reference=', 'disable-chaining',
-        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'bank=']
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:QuFx:A:C:r:Pn:j:a:kh:b:RS:'
+    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
+        'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=',
+        'multi-layer', 'feature', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining',
+        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
 
     # default values
-    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'color-frame':2,
-        'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'histogram_report':False, 
-        'multi-layer':False, 'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False,
-        'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None, 'assist':None,
-        'nbank':1}
+    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'resume':False,
+        'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'multi-layer':False, 
+        'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False, 'nbank':1, 'pool':'',
+        'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None, 'assist':None}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -529,7 +472,6 @@ if __name__ == "__main__":
         elif o in ['-g', '--gap']:args_dict.update({'gap':int(a)})
         elif o in ['-O', '--overlap']:args_dict.update({'overlap':int(a)})
         elif o == '--mask':args_dict.update({'mask':a})
-        elif o in ['-h', '--histogram']:args_dict.update({'histogram_report':True})
         elif o in ['-q', '--quorum']:args_dict.update({'quorum':int(a)})
         elif o in ['-f', '--frame']: 
             try:args_dict.update({'frame_size':int(a)})
@@ -538,12 +480,11 @@ if __name__ == "__main__":
             try:args_dict.update({'gkhood_index':int(a)})
             except:args_dict.update({'gkhood_index':[int(o) for o in a.split(DELIMETER)]})
         elif o in ['-p', '--path']:args_dict.update({'path':a})
-        elif o in ['-c', '--color-frame']:args_dict.update({'color-frame':int(a)})
         elif o in ['-Q', '--find-max-q']:args_dict.update({'quorum':FIND_MAX})
         elif o in ['-u', '--multi-layer']:args_dict.update({'multi-layer':True})
         elif o == '-F':args_dict.update(feature_update)
         elif o in ['-x', '--megalexa']:args_dict.update({'megalexa':int(a)})
-        elif o in ['-t', '--separated']:args_dict.update({'additional_name':a})
+        elif o in ['-A', '--additional-name']:args_dict.update({'additional_name':a})
         elif o in ['-r', '--reference']:args_dict.update({'reference':a})
         elif o == '--disable-chaining':args_dict.update({'disable_chaining':True})
         elif o in ['-P', '--multicore']: args_dict.update({'multicore':True})
@@ -554,6 +495,8 @@ if __name__ == "__main__":
         elif o == '--name':args_dict.update({'name':a})
         elif o in ['-h', '--assist']:args_dict.update({'assist':a})
         elif o in ['-b', '--bank']:args_dict.update({'nbank':int(a)})
+        elif o in ['-R', '--resume-chaining']:args_dict.update({'resume':True})
+        elif o in ['-S', '--score-pool']:args_dict.update({'pool':a})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -577,34 +520,23 @@ if __name__ == "__main__":
             args_dict['dmax'], 
             args_dict['gap'], 
             args_dict['overlap'], 
-            report=(args_dict['histogram_report'], False),
-            s_mask=args_dict['mask'],
             multilayer=args_dict['multi-layer'],
             megalexa=args_dict['megalexa'],
-            additional_name=args_dict['additional_name'],
             chaining_disable=args_dict['disable_chaining'],
             multicore=args_dict['multicore'],
             cores=args_dict['ncores'],
             pfm=args_dict['jaspar'],
             checkpoint=args_dict['checkpoint'],
-            banks=args_dict['nbank'])
+            banks=args_dict['nbank'],
+            resume=args_dict['resume'],
+            on_sequence_compressed=args_dict['additional_name'],
+            initial_pool=args_dict['pool'])
     elif command == 'SDM':
         sequences_distance_matrix(args_dict['sequences'])
     elif command == 'ARS':
         analysis_raw_statistics(args_dict['sequences'], args_dict['path'])
     elif command == 'ALG':
         alignment_fasta(args_dict['path'])
-    elif command == 'CNM':
-        motif_finding_chain(
-            args_dict['sequences'], 
-            args_dict['gkhood_index'], 
-            args_dict['frame_size'], 
-            args_dict['quorum'], 
-            args_dict['dmax'], 
-            args_dict['gap'], 
-            args_dict['overlap'], 
-            report=(False, True),
-            color_frame=args_dict['color-frame'])
     elif command == 'FLD':
         assert isinstance(args_dict['level'], list)
         FL_dataset(
@@ -630,13 +562,6 @@ if __name__ == "__main__":
             args_dict['frame_size'], 
             args_dict['dmax'], 
             args_dict['multi-layer'])
-    elif command == 'RCH':
-        resume_chaining(
-            args_dict['ncores'], 
-            args_dict['overlap'], 
-            args_dict['gap'],
-            args_dict['name'],
-            args_dict['assist'])
     elif command == 'NOP':
         pass
     else:

@@ -132,13 +132,14 @@ GLOBAL_POOL_NAME = 'global'
 DATABASE_NAME = 'akagidb'
 MONGO_USERNAME = 'akagi'
 DEFAULT_COLLECTION = 'working'
+QUEUE_COLLECTION = 'queue'
 POOLS_COLLECTION = 'pools'
 MONGO_PORT = 2090
 ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
 DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
 BANKBASE_ADDRESS = 'mongodb://%s:%s@localhost:%d/?authSource=' + DATABASE_NAME
-MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath ~/database/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
+MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath {APPDATA_PATH}mongod/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
 RAW_MONGOD_SERVER_COMMAND_LINUX = 'mongod --dbpath %s --fork --logpath ~/logs/%s.log %s --port %d'
 MONGOD_SHUTDOWN_COMMAND = 'mongod --dbpath %s --shutdown'
 
@@ -204,8 +205,8 @@ GOOD_HIT = POOL_SIZE * GOOD_HIT_RATIO
 # ########################################## #
 
 BRIEFING = True
-ON_SEQUENCE_ANALYSIS = True
-MAIL_SERVICE = True
+ON_SEQUENCE_ANALYSIS = False
+MAIL_SERVICE = False
 LIVE_REPORT = True
 POOL_LIMITED = True
 SAVE_OBSERVATION_CLOUD = False
@@ -213,10 +214,10 @@ CHAIN_REPORT_PRINT = False
 MEME_FASTA_ID = True
 PIXELS_ANALYSIS = True
 PARENT_WORK = False
-SAVE_THE_REST_CLOUD = True
 HELP_CLOUD = True
 HOPEFUL = True
 AUTO_DATABASE_SETUP = True
+SAVE_ONSEQUENCE_FILE = False
 
 FOUNDMAP_MODE = FOUNDMAP_DISK
 QUEUE_MODE = QUEUE_DISK
@@ -256,7 +257,7 @@ EXIT_SIGNAL = 'ex'
 SAVE_SIGNAL = 'sv'
 RESET_BANK = 'reset'
 BANK_NAME = 'BANK%d'
-BANK_PATH = 'bank%d/'
+BANK_PATH = APPDATA_PATH + 'bank%d/'
 CONTINUE_SIGNAL = 'co'
 STATUS_RUNNING = 'running'
 STATUS_SUSSPENDED = 'sus'

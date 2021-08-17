@@ -1,9 +1,10 @@
-from mongo import get_client
+from checkpoint import load_collection
+from constants import DATABASE_NAME
 import pickle
-from constants import BRIEFING
+from mongo import get_client
 from typing import List
 from TrieFind import ChainNode
-from misc import ExtraPosition, brief_sequence, read_bundle, read_fasta
+from misc import ExtraPosition
 
 
 '''
@@ -15,19 +16,31 @@ from misc import ExtraPosition, brief_sequence, read_bundle, read_fasta
 '''
 class OnSequenceDistribution:
 
-    def __init__(self, motifs=None, sequences=None, struct=None):
+    def __init__(self, motifs=None, sequences=None, struct=None, compressed_data=None):
         if struct:
             self.struct = struct
+        elif compressed_data:
+            self.read_file(compressed_data)
         else:
             assert motifs and sequences
             self.generate_list(motifs, sequences)
+
+
+    def read_file(self, filename):
+        with open(filename, 'rb') as c:self.struct = pickle.load(c)
+        
+
+    def compress(self, filename):
+        with open(filename, 'wb') as c:pickle.dump(self.struct, c)
 
 
     def generate_list(self, motifs: List[ChainNode], sequences):
         client = get_client()
         self.struct = [[[] for _ in range(len(sequence))] for sequence in sequences] 
         for motif in motifs:
-            bundle = motif.foundmap.get_list(client=client)
+
+            try   :bundle = motif.foundmap.get_list(client=client)
+            except:bundle = motif.foundmap.get_list()
 
             if not isinstance(bundle, list):
                 if bundle:raise bundle
@@ -58,44 +71,5 @@ class OnSequenceDistribution:
         return result + '[OnSequence][Analysis] total=%d\t|\tempty positions -> %d\n'%(total, position_without_motif)
 
 
-def test():
-    checkpoint = 'ENCODE_HAIB_GM12878_SRF_peak_f5-6_d1-1.checkpoint'
-    # dataset_name = 'hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak'
-    # sequences = read_fasta('%s.fasta'%(dataset_name))
-    # bundles = read_bundle('%s.bundle'%(dataset_name))
-
-    # if BRIEFING:
-    #     sequences, bundles = brief_sequence(sequences, bundles)
-    #     assert len(sequences) == len(bundles)
-    #     print('[BRIEFING] number of sequences = %d'%len(sequences))
-
-    # on_sequence = OnSequenceDistribution(motifs, sequences)
-    # print('on sequence ready')
-
-    # # print('start to write', end='... ')
-    # # with open('test.byte', 'wb') as f:
-    # #     f.write(on_sequence.to_byte())
-    # # print('writing is done')
-
-    # # with open('test.byte', 'rb') as f:
-    # #     loaded_on_sequence = OnSequenceDistribution.byte_to_object(f)
-
-    # with open('test.pickle', 'wb') as f:
-    #     pickle.dump(398, f)
-    #     pickle.dump('salam', f)
-    #     pickle.dump(on_sequence, f)
-    #     f.write(b'\xff\xaa')
-    # with open('test.pickle', 'rb') as f:
-    #     numq = pickle.load(f)
-    #     test = pickle.load(f)
-    #     assert test == 'salam'
-    #     assert numq == 398
-    #     on_pickled = pickle.load(f)
-    #     assert f.read(1) == b'\xff'
-    #     assert f.read(1) == b'\xaa'
-
-    # return on_sequence, on_pickled#, loaded_on_sequence
-
-
 if __name__ == '__main__':
-    o, p = test()
+    pass

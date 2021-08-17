@@ -9,7 +9,7 @@ from typing import List
 from pymongo.errors import ServerSelectionTimeoutError
 
 # project modules
-from mongo import get_bank_client, get_client, initial_akagi_database, run_database_server, run_mongod_server
+from mongo import get_bank_client, get_client, initial_akagi_database, serve_database_server
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
 from report_email import send_files_mail
@@ -152,7 +152,7 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
         # check for message
         if isinstance(merge_request, str):
 
-            global_pool.save() # TODO save or save file?
+            global_pool.save_snap()
             if   merge_request==EXIT_SIGNAL:return
             elif merge_request==SAVE_SIGNAL:continue
 
@@ -176,96 +176,6 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
 # [WARNING] deprecated function dont use it!
 # PARENT_WORK should be False
-def parent_chaining(work: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
-
-    # timer first stamp
-    since = datetime.now()
-    # since_last_help = datetime.now()
-
-    local_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict))
-
-    counter = 0
-    chaining_done_by_me = 0
-    jobs_done_by_me = 0
-
-    while counter < 10:
-
-        # reports before work
-        with open('parent.report', 'w') as report:
-            report.write("work queue size => %d\nmerge queue size => %d"%(work.qsize(), merge.qsize()))
-
-        # obtaining a job if available
-        try:
-            motif: ChainNode = work.get(timeout=5)
-            jobs_done_by_me += 1
-            counter = 0
-        
-        # no job is found - try again another time till the counter reaches its limit
-        except Empty:
-            counter += 1
-            continue
-
-        # evaluation the job (motif)
-        good_enough = 0
-        go_merge = False
-        for rank, multiplier in zip(local_pool.judge(motif), [1, 1, 2]):
-            good_enough += int(rank <= GOOD_HIT)*multiplier
-
-            # merge request policy
-            if rank == 0:go_merge = True
-        if go_merge:merge.put(local_pool)
-
-        if len(motif.label) <= CHAINING_PERMITTED_SIZE:
-            good_enough += POOL_HIT_SCORE + 1
-
-        # ignouring low rank motifs
-        if good_enough <= POOL_HIT_SCORE:continue
-
-        # open process report file
-        report = open(PROCESS_REPORT_FILE%(os.getpid()), 'a+')
-
-        # chaining
-        next_motifs, used_nodes = next_chain(motif, on_sequence, overlap, gap, q, report=report, chain_id=chaining_done_by_me)
-
-        # report and close
-        report.write('USED NODES COUNT %d\n'%used_nodes)
-        report.close()
-
-        # insert next generation jobs
-        for next_motif in next_motifs:
-            work.put(ChainNode(
-                motif.label + next_motif.label, 
-                next_motif.foundmap.readonly()))
-            del next_motif
-        
-        chaining_done_by_me += 1
-
-        # timout check
-        if time_has_ended(since, TIMER_CHAINING_HOURS):
-            merge.put(local_pool)
-            with open(PROCESS_REPORT_FILE%(os.getpid()), 'a+') as last_report:
-                last_report.write(PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
-            return TIMESUP_EXIT
-
-        # need for help check
-        if HOPEFUL:
-            estimated_size = work.qsize()
-            if estimated_size > NEED_HELP:
-
-                help_me_with = []
-                for _ in range(int(estimated_size*HELP_PORTION)):
-                    help_me_with.append(work.get())
-
-                # saving rest of the work as checkpoint
-                save_the_rest(help_me_with, on_sequence, q, dataset_dict[DATASET_NAME], cloud=HELP_CLOUD)
-
-                # inform by email
-                if MAIL_SERVICE:
-                    send_files_mail(
-                        strings=['HELP HAS SENT - EXECUTION OF ANOTHER AKAGI INSTANCE IS REQUESTED'],
-                        additional_subject=' HELP AKAGI')
-    
-    return END_EXIT
 
 
 def network_handler(merge: Queue):
@@ -308,6 +218,7 @@ def multicore_chaining_main(cores_order,
                             overlap, 
                             gap, 
                             q, 
+                            initial_flag=True,
                             network=False, 
                             initial_pool=None):
     
@@ -335,29 +246,40 @@ def multicore_chaining_main(cores_order,
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     #
+    #                execute banks to resume
+    #                           /
     #                initializing data banks
     #
-    # -> run and config mongod servers on different ports (report bank and their ports)
     bank_ports = []
     for i in range(bank_order):
         new_bank_port = MONGO_PORT + 20 + i*10
-        try:initial_akagi_database(BANK_NAME%i, BANK_PATH%i, new_bank_port, serve=True)
-        except Exception as e:print(f'[FATAL][ERROR] something went wrong {e}');return ERROR_EXIT
         bank_ports.append(new_bank_port)
+
+        # -> run and config mongod servers on different ports
+        if initial_flag:
+            try:initial_akagi_database(BANK_NAME%i, BANK_PATH%i, new_bank_port, serve=True)
+            except Exception as e:print(f'[FATAL][ERROR] something went wrong {e}');return ERROR_EXIT
+        # -> serve mongod on previously initiated banks 
+        else:
+            try:serve_database_server(BANK_NAME%i,BANK_PATH%i, new_bank_port)
+            except Exception as e:print(f'[FATAL][ERROR] something went wrong {e}');return ERROR_EXIT
+
+    # report bank and their ports
     with open(BANK_PORTS_REPORT, 'w') as pr:pr.write('\n'.join([f'bank{index}:{port}' for index, port in enumerate(bank_ports)]))
 
     # -> static job distribution between banks
-    bank_initial_lists = [[] for _ in range(bank_order)]
-    for index, motif in enumerate(initial_works):
-        bank_initial_lists[index%bank_order].append(motif)
+    if initial_works:
+        bank_initial_lists = [[] for _ in range(bank_order)]
+        for index, motif in enumerate(initial_works):
+            bank_initial_lists[index%bank_order].append(motif)
 
-    # -> insert jobs into banks
-    for index, port in enumerate(bank_ports):
-        bank_client = get_bank_client(port)
-        result = initial_chainNodes([(m.label, m.foundmap) for m in bank_initial_lists[index]], QUEUE_COLLECTION, bank_client)
-        if not isinstance(result, list):print(f'[FATAL][ERROR] something went wrong {result}');return ERROR_EXIT
-        del result # parent doesn't need job objects 
-        bank_client.close()
+        # -> insert jobs into banks
+        for index, port in enumerate(bank_ports):
+            bank_client = get_bank_client(port)
+            result = initial_chainNodes([(m.label, m.foundmap) for m in bank_initial_lists[index]], QUEUE_COLLECTION, bank_client)
+            if not isinstance(result, list):print(f'[FATAL][ERROR] something went wrong {result}');return ERROR_EXIT
+            del result # parent doesn't need job objects 
+            bank_client.close()
     #
     #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -416,12 +338,12 @@ def multicore_chaining_main(cores_order,
 
                         # signal workers to continue 
                         elif command.startswith(CONTINUE_SIGNAL):
-                            how_many = int(command.split[1])
+                            how_many = int(command.split()[1])
                             for _ in range(how_many):message.put(CONTINUE_SIGNAL)
 
                         elif command.startswith('reset'):
                             bank_index = int(command.split()[1])
-                            try:run_database_server(BANK_NAME%bank_index, BANK_PATH%bank_index, bank_ports[bank_index])
+                            try:serve_database_server(BANK_NAME%bank_index, BANK_PATH%bank_index, bank_ports[bank_index])
                             except Exception as e:log_it(IMPORTANT_LOG, f'[PARENT] can not run database server bank{bank_index}\n{e}')
 
                         # ignore and log wrong commands
@@ -434,7 +356,7 @@ def multicore_chaining_main(cores_order,
 
             # queue size report
             with open(MEMORY_BALANCING_REPORT, 'w') as report:
-                report.write(f"merge => {merge.qsize()}\n{datetime.now() - loop_time}")
+                report.write(f"merge => {merge.qsize()}\nmessage => {message.qsize()}\nloop time =>{datetime.now() - loop_time}")
 
     ############### end of processing #######################
 

@@ -49,7 +49,7 @@ def initial_akagi_database(name, dbpath, port=MONGO_PORT, serve=False):
         if output.split('\n')[2].startswith('ERROR'):raise Exception(f'cant run mongo server check {DATABASE_LOG}')
 
 
-def run_database_server(name, dbpath, port):
+def serve_database_server(name, dbpath, port):
     stream = os.popen(RAW_MONGOD_SERVER_COMMAND_LINUX%(dbpath, name, '--auth', port))
     output = stream.read()
     with open(DATABASE_LOG, 'a') as log:log.write('[MONGO][INITIAL] running server via python:\n' + output)

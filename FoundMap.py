@@ -414,7 +414,7 @@ class ReadOnlyMap(FoundMap):
 
 
     def byte_to_object(buffer: BufferedReader):
-        collection = str(buffer.read(buffer.read(INT_SIZE)), encoding='ascii')
+        collection = str(buffer.read(bytes_to_int(buffer.read(INT_SIZE))), encoding='ascii')
         address = buffer.read(ID_LENGTH)
         return ReadOnlyMap(collection, address=address)
 

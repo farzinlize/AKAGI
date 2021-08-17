@@ -2,17 +2,16 @@ from io import BytesIO
 from mongo import get_client, safe_operation
 import struct
 from typing import List
-from FoundMap import FileMap, MemoryMap
-from constants import BYTE_PATTERN, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, DATABASE_NAME, DEBUG_LOG, DROP, FIND_ONE, IMPORTANT_LOG, INSERT_ONE, INT_SIZE, POOLS_COLLECTION, POOL_LIMITED, POOL_NAME, POOL_SIZE, POOL_TAG, PWM, P_VALUE, SCORES, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLES, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER, UPDATE
 from misc import ExtraPosition, binary_add_return_position, bytes_to_int, int_to_bytes, pwm_score_sequence
 from TrieFind import ChainNode, initial_chainNodes
+from constants import BYTE_PATTERN, CR_TABLE_HEADER_JASPAR, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, DATABASE_NAME, DEBUG_LOG, DROP, FIND_ONE, IMPORTANT_LOG, INT_SIZE, POOLS_COLLECTION, POOL_LIMITED, POOL_NAME, POOL_SIZE, POOL_TAG, PWM, P_VALUE, SCORES, SEQUENCES, SEQUENCE_BUNDLES, SUMMIT, FUNCTION_KEY, ARGUMENT_KEY, SIGN_KEY, TABLES, TABLE_HEADER_KEY, TOP_TEN_REPORT_HEADER, UPDATE
 
 class AKAGIPool:
 
     class Entity:
-        def __init__(self, data:ChainNode=None, scores=None, document=None, collection_name=None):
+        def __init__(self, data:ChainNode=None, scores=None, document=None):
             if document:
-                self.read_document(document, collection_name)
+                self.read_document(document)
             else:
                 self.data = data
                 self.scores = scores
@@ -31,8 +30,8 @@ class AKAGIPool:
         def documented(self):
             return {BYTE_PATTERN:self.data.to_byte(), SCORES:self.scores}
 
-        def read_document(self, document, collection_name):
-            self.data = ChainNode.byte_to_object(BytesIO(document[BYTE_PATTERN]), collection=collection_name)
+        def read_document(self, document):
+            self.data = ChainNode.byte_to_object(BytesIO(document[BYTE_PATTERN]))
             self.scores = document[SCORES]
 
 
@@ -295,7 +294,7 @@ class AKAGIPool:
 
     def read_snap(self, filename=None):
         if not filename:filename = self.collection_name + POOL_TAG
-        with open(self.collection_name+POOL_TAG, 'rb') as snap:
+        with open(filename, 'rb') as snap:
             for table_index in range(len(self.tables)):
                 table_len = bytes_to_int(snap.read(INT_SIZE))
 
@@ -321,7 +320,7 @@ class AKAGIPool:
         self.tables = []
         documented = item_or_error[TABLES]
         for table in documented:
-            new_table = [self.Entity(document=document, collection_name=self.collection_name) for document in table]
+            new_table = [self.Entity(document=document) for document in table]
             self.tables.append(new_table[:])
 
 
@@ -542,42 +541,43 @@ def get_AKAGI_pools_configuration(dataset_dict=None):
 
 if __name__ == '__main__':
     pooly = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}))
-    pooly.collection_name = 'pooly'
+    pooly.read_snap(filename='./results/ExSRF/SCHA/ExSRF-SCHA-global.pool')
+    # pooly.collection_name = 'pooly'
 
-    a = MemoryMap()
-    a.add_location(0, ExtraPosition(6, 4))
-    a.add_location(0, ExtraPosition(6, 4))
-    a.add_location(1, ExtraPosition(6, 4))
-    a.add_location(2, ExtraPosition(6, 4))
-    a.add_location(2, ExtraPosition(6, 4))
-    a.add_location(3, ExtraPosition(6, 4))
+    # a = MemoryMap()
+    # a.add_location(0, ExtraPosition(6, 4))
+    # a.add_location(0, ExtraPosition(6, 4))
+    # a.add_location(1, ExtraPosition(6, 4))
+    # a.add_location(2, ExtraPosition(6, 4))
+    # a.add_location(2, ExtraPosition(6, 4))
+    # a.add_location(3, ExtraPosition(6, 4))
 
-    b = FileMap()
-    b.add_location(0, ExtraPosition(8, 3))
-    b.add_location(1, ExtraPosition(8, 3))
-    b.add_location(1, ExtraPosition(8, 3))
-    b.add_location(2, ExtraPosition(8, 3))
-    b.add_location(2, ExtraPosition(8, 3))
-    b.add_location(5, ExtraPosition(8, 3))
+    # b = FileMap()
+    # b.add_location(0, ExtraPosition(8, 3))
+    # b.add_location(1, ExtraPosition(8, 3))
+    # b.add_location(1, ExtraPosition(8, 3))
+    # b.add_location(2, ExtraPosition(8, 3))
+    # b.add_location(2, ExtraPosition(8, 3))
+    # b.add_location(5, ExtraPosition(8, 3))
 
-    pa = ChainNode('ATCGCCC', a)
-    pb = ChainNode('TTCGAG', b)
+    # pa = ChainNode('ATCGCCC', a)
+    # pb = ChainNode('TTCGAG', b)
 
-    eb = AKAGIPool.Entity(pb, [12.67, 1.2, 6.7])
-    ea = AKAGIPool.Entity(pa, [2.4, 5.7, 3.9])
+    # eb = AKAGIPool.Entity(pb, [12.67, 1.2, 6.7])
+    # ea = AKAGIPool.Entity(pa, [2.4, 5.7, 3.9])
 
-    pooly.tables[0].append(ea)
-    pooly.tables[1].append(ea)
-    pooly.tables[2].append(ea)
+    # pooly.tables[0].append(ea)
+    # pooly.tables[1].append(ea)
+    # pooly.tables[2].append(ea)
 
-    pooly.tables[0].append(eb)
-    pooly.tables[1].append(eb)
-    pooly.tables[2].append(eb)
+    # pooly.tables[0].append(eb)
+    # pooly.tables[1].append(eb)
+    # pooly.tables[2].append(eb)
 
-    pooly.save_snap(filename='test.pool')
-    del pooly
-    disk = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
-    disk.read_snap(filename='test.pool')
+    # pooly.save_snap(filename='test.pool')
+    # del pooly
+    # disk = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
+    # disk.read_snap(filename='test.pool')
     # mon = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}), collection_name='pooly')
     # mon.read_document()
     # pooly_disk.readfile()
