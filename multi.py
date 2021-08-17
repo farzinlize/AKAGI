@@ -36,7 +36,7 @@ def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_s
 
         # save the working motif in file if exist as chain node
         if isinstance(motif, ChainNode):
-            with open('process_%d.error', 'w') as errorfile:
+            with open('process_%d.error'%(os.getpid()), 'wb') as errorfile:
                 errorfile.write(motif.to_byte())
 
         # in case of database server down -> infrom administration and wait for signal in message
