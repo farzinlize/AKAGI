@@ -41,7 +41,7 @@ def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_s
 
         # in case of database server down -> infrom administration and wait for signal in message
         if isinstance(error, ServerSelectionTimeoutError):
-            with open(IMPORTANT_LOG, 'a') as log:log.write(f'[PID:{os.getpid()}] server down (port :{bank_port})')
+            log_it(IMPORTANT_LOG, f'[PID:{os.getpid()}] server down (port :{bank_port})')
             signal = message.get()
 
             # exit signal
@@ -333,7 +333,7 @@ def multicore_chaining_main(cores_order,
                     for command in commands:
 
                         # manually command to save global pool
-                        if   command == SAVE_SIGNAL:
+                        if command.startswith(SAVE_SIGNAL):
                             merge.put(SAVE_SIGNAL)
 
                         # signal workers to continue 
