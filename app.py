@@ -139,8 +139,8 @@ def motif_finding_chain(dataset_name,
             overlap, 
             dataset_name,
             str(multilayer),
-            megalexa),
-            str(resume))
+            megalexa,
+            str(resume)))
 
     print('[FOUNDMAP] foundmap mode: %s'%FOUNDMAP_MODE)
 
