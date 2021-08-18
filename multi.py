@@ -148,7 +148,7 @@ def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_s
         # chaining
         last_time = datetime.now()
         next_motifs, used_nodes_or_error = next_chain(motif, on_sequence, overlap, gap, q, report=report, chain_id=chaining_done_by_me)
-        report.write(f'CHAINING({datetime.now() - last_time}) | NEW-PATTERNS({len(next_motif)}) |')
+        report.write(f'CHAINING({datetime.now() - last_time}) | NEW-PATTERNS({len(next_motifs)}) |')
 
         # report and close
         report.write('USED NODES COUNT %d | '%used_nodes_or_error)
