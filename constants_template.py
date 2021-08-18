@@ -137,6 +137,7 @@ POOLS_COLLECTION = 'pools'
 MONGO_PORT = 2090
 ID_LENGTH = 12
 MAXIMUM_ORDER_SIZE = 10000
+AUTORECONNECT_TRY = 5
 DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
 BANKBASE_ADDRESS = 'mongodb://%s:%s@localhost:%d/?authSource=' + DATABASE_NAME
 MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath {APPDATA_PATH}mongod/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'

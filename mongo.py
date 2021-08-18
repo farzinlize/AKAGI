@@ -1,10 +1,10 @@
 import os, json
 from io import BytesIO
-from misc import ExtraPosition, bytes_to_int, int_to_bytes, make_location
-from constants import BANKBASE_ADDRESS, BINARY_DATA, CLEAR, COLLECTION, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, DROP, END, FIND_ONE, INSERT_MANY, INSERT_ONE, INT_SIZE, LABEL, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGOD_SHUTDOWN_COMMAND, MONGO_ID, MONGO_PORT, MONGO_SECRET_ADDRESS, MONGO_USERNAME, POP, RAW_MONGOD_SERVER_COMMAND_LINUX, STR, UPDATE
+from misc import ExtraPosition, bytes_to_int, int_to_bytes, log_it, make_location
+from constants import AUTORECONNECT_TRY, BANKBASE_ADDRESS, BINARY_DATA, CLEAR, COLLECTION, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, DROP, END, FIND_ONE, INSERT_MANY, INSERT_ONE, INT_SIZE, LABEL, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGOD_SHUTDOWN_COMMAND, MONGO_ID, MONGO_PORT, MONGO_SECRET_ADDRESS, MONGO_USERNAME, POP, RAW_MONGOD_SERVER_COMMAND_LINUX, STR, UPDATE
 from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.errors import ServerSelectionTimeoutError
+from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 from pymongo.results import DeleteResult
 
 
@@ -126,7 +126,7 @@ def list_to_binary(found_list):
     return writer.getvalue()
 
 
-def safe_operation(collection:Collection, command, order=None, order_filter=None):
+def safe_operation(collection:Collection, command, order=None, order_filter=None, try_tokens=AUTORECONNECT_TRY):
     try:
         if   command == INSERT_MANY :collection.insert_many(order, ordered=False)
         elif command == POP         :return collection.find_one_and_delete({})
@@ -136,12 +136,14 @@ def safe_operation(collection:Collection, command, order=None, order_filter=None
         elif command == DROP        :collection.drop()
         elif command == INSERT_ONE  :collection.insert_one(order)
         elif command == UPDATE      :collection.find_one_and_update(filter=order_filter, update=order, upsert=True)
+    except AutoReconnect as reconnect_error:
+        log_it(DATABASE_LOG, f'[MONGO][SAFE] AutoReconnect problem - try again? ({try_tokens}) - {reconnect_error}')
+        if try_tokens:return safe_operation(collection, command, order, order_filter, try_tokens-1)
+        else:log_it(DATABASE_LOG, f'[MONGO][SAFE] no more trying return error');return reconnect_error
     except ServerSelectionTimeoutError as server_down:
-        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO] server down\n{server_down}\n')
-        return server_down
+        log_it(DATABASE_LOG, f'[MONGO] server down\n{server_down}');return server_down
     except Exception as any_error:
-        with open(DATABASE_LOG, 'a') as log:log.write(f'[MONGO] database error\n{any_error, type(any_error)}\n')
-        return any_error
+        log_it(DATABASE_LOG, f'[MONGO] database error\n{any_error, type(any_error)}');return any_error
 
 
 def read_list(address:bytes, collection_name, client:MongoClient=None):

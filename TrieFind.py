@@ -248,6 +248,7 @@ class ChainNode(Bytable):
 
 def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, client:MongoClient=None)->List[ChainNode]:
 
+    if not tuples:return [] # nothing to submit? are you making fun of me? -__-
     if not client:client = mongo.get_client();should_close = True
     else                                     :should_close = False
     
