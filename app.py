@@ -21,7 +21,7 @@ from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
+from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -188,6 +188,13 @@ def motif_finding_chain(dataset_name,
     # chaining procedure required chain nodes instead of watch nodes 
     # zero_chain_nodes = [ChainNode(motif.label, motif.foundmap) for motif in motifs]
     # # # # # # # #
+
+    # ----------------------------------------------------------------------------------- #
+    # [WARNING] in case of using previously calculated observation data
+    #           you must set q argument as reported in observation report.
+    # the program will set q to maximum but it could ignore many patterns in your lexicon
+    if q < 0:log_it(IMPORTANT_LOG, '[WARNING] argument q is not set to run on cached observation data - set to maximum');q = len(sequences)
+    # ----------------------------------------------------------------------------------- #
 
     if not resume and not motifs:print('[FATAL][ERROR] no observation data is available (error)');return
 
