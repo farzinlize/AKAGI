@@ -21,7 +21,7 @@ from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import APPDATA_PATH, BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, QUEUE_COLLECTION, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -31,6 +31,36 @@ END_EXIT = 0
 
 
 def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
+
+    def empty_handler():
+        nonlocal bank_client
+
+        log_it(IMPORTANT_LOG, f'[PID:{os.getpid()}] database empty (port :{bank_port})')
+        signal = message.get()
+
+        # exit signal
+        if signal == EXIT_SIGNAL:
+            merge.put(local_pool)
+            report.write('EXIT ON END\n' + PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+            report.close()
+            raise Exception('END OF PROCESS')
+
+        # change database
+        elif signal.startswith(REDIRECT_BANK) and int(signal.split()[1]) == os.getpid():
+            new_bank_port = int(signal.split()[2])
+            bank_client.close()
+            bank_client = get_bank_client(new_bank_port, connect=True)
+        
+        # continue with the same bank
+        elif signal == CONTINUE_SIGNAL:return
+
+        # somthing bad is in messages
+        else:
+            merge.put(local_pool)
+            report.write('EXIT ON FAILURE\n' + PROCESS_ENDING_REPORT%(jobs_done_by_me, chaining_done_by_me))
+            report.close()
+            raise Exception(f'wrong signal detected {signal}')
+            
 
     def error_handler(error):
 
@@ -88,11 +118,11 @@ def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_s
                 return # exit
             
             # in case of mistakenly pick someone else's signal
-            elif signal == CONTINUE_SIGNAL:
-                message.put(CONTINUE_SIGNAL)
+            else:message.put(signal)
 
         # obtaining a job
         motif: ChainNode = pop_chain_node(bank_client)
+        if not motif:bank_client = empty_handler(bank_client)   ;continue
         if not isinstance(motif, ChainNode):error_handler(motif);continue
         jobs_done_by_me += 1
 
