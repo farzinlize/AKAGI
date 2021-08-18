@@ -290,6 +290,16 @@ def process_report_to_list(filename):
     return result
 
 
+def process_report_extract_next_generation_count(filename):
+    result = 0
+    with open(filename, 'r') as process_report:
+        for line in process_report:
+            for word in line.split():
+                if word.startswith('NEW-PATTERNS('):
+                    result += int(word[len('NEW-PATTERNS('):-1])
+    return result
+
+
 # ########################################## #
 #           main function section            #
 # ########################################## #
@@ -364,4 +374,10 @@ def test_apwm():
 
 
 if __name__ == "__main__":
-    test_apwm()
+    import sys
+    total = 0
+    for process_report in sys.argv[1:]:
+        nexty = process_report_extract_next_generation_count(process_report)
+        print(process_report, nexty)
+        total += nexty
+    print(f'total -> {total}')
