@@ -123,7 +123,7 @@ def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_s
 
         # obtaining a job
         motif: ChainNode = pop_chain_node(bank_client)
-        if not motif:bank_client = empty_handler(bank_client)   ;continue
+        if not motif:bank_client = empty_handler();continue
         if not isinstance(motif, ChainNode):error_handler(motif);continue
         jobs_done_by_me += 1
 
