@@ -3,23 +3,26 @@ import pickle
 from typing import List
 from pymongo import MongoClient
 import os, mongo
-from FoundMap import ReadOnlyMap
+from FoundMap import MemoryMap, ReadOnlyMap
 from TrieFind import ChainNode, initial_chainNodes
 from constants import CHECKPOINT_TAG, COLLECTION, DATABASE_LOG, DATABASE_NAME, LABEL, LOCK_PREFIX, MONGO_ID
 
 '''
     saving motifs using their serialization methode AND on_sequence object using pickle
         UPDATE: motifs foundmap are considered to be stored at a collection with the same name as object_file
-        
-        flags --/
-            change_collection=True: moving each foundmap of motifs to another collection name
-            resumable=True: creating checkpoint file to recover motifs and additional data compact ready for resuming
-                additional argument -> on_sequence, q, dataset_name
-        --/
+
+        -> change_collection=True: moving each foundmap of motifs to another collection name as objects_file (without extention)
+        -> move=True: clear foundmaps from previously given motifs an replace new ones (in case of changing collection)
+        -> if object_file ends with checkpoint extention: create a file containing objects
+        -> resumable=True: adding meta-information necessary for resuming (in case of creating object file)
+            additional argument -> on_sequence, q, dataset_name
+        -> compact=True: make objects file independent, saving all data on a single file (in case of creating object file)
 '''
 def save_checkpoint(motifs:List[ChainNode], 
                     objects_file:str, 
                     change_collection=False, 
+                    move=True,
+                    compact=False,
                     resumable=False, 
                     on_sequence=None, 
                     q=None, 
@@ -27,23 +30,33 @@ def save_checkpoint(motifs:List[ChainNode],
                     mongo_client=None):
 
     if change_collection:
-        newchainnodes = initial_chainNodes([(motif.label, motif.foundmap) for motif in motifs], objects_file.split('.')[0], mongo_client)
-        if not isinstance(newchainnodes, list):return newchainnodes
-        for motif, newmotif in zip(motifs, newchainnodes):
-            motif.foundmap.clear()
-            motif.foundmap = newmotif.foundmap
-            del newmotif
-            
-    if resumable:
+        these_motifs = initial_chainNodes([(motif.label, motif.foundmap) for motif in motifs], objects_file.split('.')[0], mongo_client)
+        if not isinstance(these_motifs, list):return these_motifs
 
-        # save data needed for resuming
+        if move: # clear older foundmaps and replace new ones for previously given motifs
+            for motif, newmotif in zip(motifs, these_motifs):
+                motif.foundmap.clear()
+                motif.foundmap = newmotif.foundmap
+    
+    # consider previously given motifs for furthur use
+    else:these_motifs = motifs
+
+    if objects_file.endswith(CHECKPOINT_TAG):
         with open(objects_file, 'wb') as f:
-            pickle.dump(on_sequence, f)
-            pickle.dump(q, f) 
-            pickle.dump(dataset_name, f)
 
-            # save motifs in file
-            for motif in motifs:f.write(motif.to_byte())
+            # meta-data for resuming
+            if resumable:
+                pickle.dump(on_sequence, f)
+                pickle.dump(q, f) 
+                pickle.dump(dataset_name, f)
+
+            # writing motifs and their binary information alongside them in one single file
+            if compact:
+                for motif in these_motifs:f.write(ChainNode(motif.label, MemoryMap(motif.foundmap.get_list())).to_byte())
+            
+            # save motifs as they are (data may depend on external databases)
+            else:
+                for motif in these_motifs:f.write(motif.to_byte())
 
 
 # resumable files containing motifs plus additional data
@@ -70,16 +83,23 @@ def load_checkpoint_file(objects_file:str):
     return motifs, on_sequence, q, dataset_name
 
 
-def observation_checkpoint_name(dataset: str, f, d, multilayer):
+'''
+    generate observation name based on configuration
+        returns name with or without checkpoint extention for file or collection use
+'''
+def observation_checkpoint_name(dataset: str, f, d, multilayer, extention=True):
 
     dataset_name = dataset.split('/')[-1]
 
     if multilayer:
         assert isinstance(d, list) and isinstance(f, list)
-        return '%s_f%s_d%s'%(dataset_name, '-'.join([str(a) for a in f]), '-'.join([str(a) for a in d])) + CHECKPOINT_TAG
+        name =  '%s_f%s_d%s'%(dataset_name, '-'.join([str(a) for a in f]), '-'.join([str(a) for a in d]))
     else:
         assert isinstance(d, int) and isinstance(f, int)
-        return '%s_f%d_d%d'%(dataset_name, f, d) + CHECKPOINT_TAG
+        name = '%s_f%d_d%d'%(dataset_name, f, d)
+    
+    if extention:return name + CHECKPOINT_TAG
+    else        :return name
 
 
 # return a name based on time (with R suffix)
@@ -95,9 +115,8 @@ def query_resumable_checkpoints() -> str:
 
 
 def remove_checkpoint(checkpoint:str, locked=False):
-    if locked:filename = os.remove(LOCK_PREFIX + checkpoint)
-    else     :filename = os.remove(checkpoint)
-
+    if locked:os.remove(LOCK_PREFIX + checkpoint)
+    else     :os.remove(checkpoint)
 
 
 def lock_checkpoint(checkpoint):

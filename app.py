@@ -172,7 +172,7 @@ def motif_finding_chain(dataset_name,
 
     # search for observation checkpoint
     if not resume and checkpoint:
-        checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer).split('.')[0]
+        checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
         motifs = load_collection(checkpoint_collection)
 
         if __debug__:log_it(DEBUG_LOG, f'[CHECKPOINT] observation data in database: {bool(motifs)}')
