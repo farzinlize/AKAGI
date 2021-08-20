@@ -9,19 +9,17 @@ from typing import List
 from pymongo.errors import ServerSelectionTimeoutError
 
 # project modules
-from mongo import get_bank_client, get_client, initial_akagi_database, serve_database_server
+from mongo import get_bank_client, initial_akagi_database, serve_database_server
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
-from report_email import send_files_mail
-from pause import save_the_rest, time_has_ended
 from pool import AKAGIPool, get_AKAGI_pools_configuration
-from misc import QueueDisk, log_it
+from misc import log_it, time_has_ended
 from TrieFind import ChainNode, initial_chainNodes, pop_chain_node
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -67,7 +65,7 @@ def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_s
 
         # save the working motif in file if exist as chain node
         if isinstance(motif, ChainNode):
-            with open('process_%d.error'%(os.getpid()), 'wb') as errorfile:
+            with open(PROCESS_ERRORS_FILE%(os.getpid()), 'ab') as errorfile:
                 errorfile.write(motif.to_byte())
 
         # in case of database server down -> infrom administration and wait for signal in message
