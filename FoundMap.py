@@ -2,11 +2,10 @@ from random import randrange
 from io import BufferedReader
 from typing import List
 from pymongo import MongoClient
-from pymongo.errors import ServerSelectionTimeoutError
 from bson.objectid import ObjectId
-from misc import Bytable, ExtraPosition, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, make_location
+from misc import Bytable, ExtraPosition, binary_to_list, get_random_free_path, binary_add, bytes_to_int, int_to_bytes, list_to_binary, make_location
 import os, sys, mongo
-from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_LOG, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FILEMAP, FOUNDMAP_NAMETAG, ID_LENGTH, INSERT_MANY, MAXIMUM_ORDER_SIZE, MEMOMAP, MONGO_ID, READMAP, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
+from constants import APPDATA_PATH, BATCH_SIZE, BINARY_DATA, DATABASE_NAME, DISK_QUEUE_NAMETAG, END, FILEMAP, FOUNDMAP_NAMETAG, ID_LENGTH, INSERT_MANY, MAXIMUM_ORDER_SIZE, MEMOMAP, MONGO_ID, READMAP, STR, DEL, INT_SIZE, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE
 
 
 '''
@@ -85,11 +84,11 @@ class MemoryMap(FoundMap, Bytable):
         return FileMap().dump_list(self.found_list)
 
     def to_byte(self):
-        return MEMOMAP + mongo.list_to_binary(self.found_list)
+        return MEMOMAP + list_to_binary(self.found_list)
 
     @staticmethod
     def byte_to_object(buffer: BufferedReader):
-        return MemoryMap(initial=mongo.binary_to_list(buffer))
+        return MemoryMap(initial=binary_to_list(buffer))
 
 
 class FileMap(FoundMap):
@@ -450,7 +449,7 @@ def initial_readonlymaps(foundmaps:List[FoundMap], collection_name, client:Mongo
             else:order = []
 
         readonlymap = ReadOnlyMap(collection_name, ObjectId().binary)
-        order.append({MONGO_ID:readonlymap.address, BINARY_DATA:mongo.list_to_binary(foundmap.get_list())})
+        order.append({MONGO_ID:readonlymap.address, BINARY_DATA:list_to_binary(foundmap.get_list())})
         objects.append(readonlymap)
 
     error = mongo.safe_operation(collection, INSERT_MANY, order)

@@ -4,7 +4,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 import mongo
-from misc import Bytable, bytes_to_int, int_to_bytes
+from misc import Bytable, binary_to_list, bytes_to_int, int_to_bytes, list_to_binary
 from FoundMap import FoundMap, MemoryMap, ReadOnlyMap, get_foundmap, read_foundmap
 from Nodmer import Nodmer
 
@@ -269,7 +269,7 @@ def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, clien
         readonlymap = ReadOnlyMap(collection_name, ObjectId().binary)
         chain_node = ChainNode(label=label, foundmap=readonlymap)
         order.append({MONGO_ID   :readonlymap.address, 
-                      BINARY_DATA:mongo.list_to_binary(foundmap.get_list()),
+                      BINARY_DATA:list_to_binary(foundmap.get_list()),
                       LABEL:label})
         objects.append(chain_node)
 
@@ -291,7 +291,7 @@ def pop_chain_node(client:MongoClient=None):
     if not popy:return None
     if not isinstance(popy, dict):return popy # as error
 
-    return ChainNode(popy[LABEL], MemoryMap(initial=mongo.binary_to_list(BytesIO(popy[BINARY_DATA]))))
+    return ChainNode(popy[LABEL], MemoryMap(initial=binary_to_list(BytesIO(popy[BINARY_DATA]))))
 
 
 # ########################################## #

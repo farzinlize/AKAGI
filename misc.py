@@ -1,11 +1,12 @@
-from io import BufferedReader
+from io import BufferedReader, BytesIO
 from math import ceil, e, log2, inf
+from datetime import datetime, timedelta
 import os, platform, random, string
 from typing import Dict, List
 from time import time as currentTime
 from multiprocessing.synchronize import Lock
 
-from constants import APPDATA_PATH, BYTE_READ_INT_MODE, DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, PSEUDOCOUNT, P_VALUE, RANK, SUMMIT, TYPES_OF
+from constants import APPDATA_PATH, BYTE_READ_INT_MODE, DEL, DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, END, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, PSEUDOCOUNT, P_VALUE, RANK, SUMMIT, TYPES_OF, STR
 
 
 # ########################################## #
@@ -278,6 +279,10 @@ class ThatException(Exception):
 # ########################################## #
 #                 functions                  #
 # ########################################## #
+
+def time_has_ended(since, hours):
+    return (datetime.now() - since) > timedelta(hours=hours)
+
 
 def log_it(logfile, message):
     if message:
@@ -755,6 +760,71 @@ def change_global_constant_py(variable_name: str, new_value: str):
                 f.write(' ' + new_value + '\n')
             else:
                 f.write(rest_of_the_line)
+
+
+# ########################################## #
+#           foundmap list binary             #
+# ########################################## #
+
+def binary_to_list(reader:BytesIO):
+
+    sequences = []
+    positions_vector = []
+
+    # check header byte signature
+    assert reader.read(1) == STR
+
+    # reading sequence vector
+    for _ in range(bytes_to_int(reader.read(INT_SIZE))):
+        sequences += [bytes_to_int(reader.read(INT_SIZE))]
+                    
+    assert reader.read(1) == DEL
+
+    # reading 2D-position vector
+    for _ in range(len(sequences)):
+        positions = []
+        for _ in range(bytes_to_int(reader.read(INT_SIZE))):
+            position = bytes_to_int(reader.read(INT_SIZE))
+            size = bytes_to_int(reader.read(INT_SIZE))
+            positions += [ExtraPosition(position, size)]
+        positions_vector += [positions[:]]
+
+        assert reader.read(1) == DEL
+                
+    assert reader.read(1) == END
+
+    return [sequences, positions_vector]
+
+
+def list_to_binary(found_list):
+
+    writer = BytesIO()
+    sequences = found_list[0]
+    positions_vector = found_list[1]
+
+    # header byte signature
+    writer.write(STR)
+
+    # writing sequence vector
+    writer.write(int_to_bytes(len(sequences)))
+    for seq_id in sequences:
+        writer.write(int_to_bytes(seq_id))
+                
+    writer.write(DEL)
+
+    # writing 2D-position vector
+    for index in range(len(sequences)):
+        writer.write(int_to_bytes(len(positions_vector[index])))
+        position: ExtraPosition
+        for position in positions_vector[index]:
+            writer.write(int_to_bytes(position.start_position))
+            writer.write(int_to_bytes(position.size))
+                
+        writer.write(DEL)
+
+    writer.write(END)
+
+    return writer.getvalue()
 
 
 # ########################################## #
