@@ -4,7 +4,7 @@ import pickle
 from mongo import get_client
 from typing import List
 from TrieFind import ChainNode
-from misc import ExtraPosition
+from misc import ExtraPosition, brief_sequence, int_to_bytes, read_bundle, read_fasta
 
 
 '''
@@ -30,6 +30,17 @@ class OnSequenceDistribution:
         with open(filename, 'rb') as c:self.struct = pickle.load(c)
         
 
+    def raw_file(self, filename):
+        with open(filename, 'wb') as raw:
+            raw.write(int_to_bytes(len(self.struct)))
+            for seq_id in range(len(self.struct)):
+                raw.write(int_to_bytes(len(self.struct[seq_id])))
+                for position in range(len(self.struct[seq_id])):
+                    raw.write(int_to_bytes(len(self.struct[seq_id][position])))
+                    for motif in self.struct[seq_id][position]:
+                        raw.write(int_to_bytes(len(motif)) + bytes(motif, 'ascii'))
+
+
     def compress(self, filename):
         with open(filename, 'wb') as c:pickle.dump(self.struct, c)
 
@@ -52,8 +63,8 @@ class OnSequenceDistribution:
                     try:
                         self.struct[seq_id][position.start_position] += [motif.label]
                     except IndexError:
-                        print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d'%(
-                            seq_id, position.start_position, len(sequences[index])
+                        print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d and motif:%s'%(
+                            seq_id, position.start_position, len(sequences[index]), motif.label
                         ))
         client.close()
                 
@@ -72,4 +83,17 @@ class OnSequenceDistribution:
 
 
 if __name__ == '__main__':
-    pass
+
+    # fake
+    # with open('cplus/test.raw', 'wb') as f:
+    #     f.write(int_to_bytes(2))
+    #     f.write(int_to_bytes(0))
+    #     f.write(int_to_bytes(0))
+
+    sequences = read_fasta('hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak.fasta')
+    bundles = read_bundle('hmchipdata/Human_hg18_peakcod/ENCODE_HAIB_GM12878_SRF_peak.bundle')
+    seq, bun = brief_sequence(sequences, bundles)
+    motifs = load_collection('ENCODE_HAIB_GM12878_SRF_peak_f5-6_d1-2')
+    on_sequence = OnSequenceDistribution(motifs, seq)
+    print('[GOOD] on sequence object')
+    on_sequence.raw_file('cplus/test.raw')
