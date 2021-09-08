@@ -239,6 +239,7 @@ def next_chain(motif: ChainNode, on_sequence, overlap, gap, q, report:BufferedWr
     observation_size = 0
     bundle = motif.foundmap.get_list()
 
+    # Observation
     next_tree = WatchNodeC(custom_foundmap_type=CHAINING_FOUNDMAP_MODE)
     for index, seq_id in enumerate(bundle[0]):
         position: ExtraPosition

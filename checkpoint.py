@@ -60,27 +60,30 @@ def save_checkpoint(motifs:List[ChainNode],
 
 
 # resumable files containing motifs plus additional data
-def load_checkpoint_file(objects_file:str):
+def load_checkpoint_file(objects_file:str, resumable=False):
     
     if not os.path.isfile(objects_file):
         print("[CHECK-POINT] checkpoint doesn't exist")
         return None
 
-    collection_name = objects_file.split('.')[0]
+    # collection_name = objects_file.split('.')[0]
 
     motifs=[]
     with open(objects_file, 'rb') as f:
 
-        on_sequence =   pickle.load(f)
-        q =             pickle.load(f)
-        dataset_name =  pickle.load(f)
+        if resumable:
+            on_sequence =   pickle.load(f)
+            q =             pickle.load(f)
+            dataset_name =  pickle.load(f)
 
-        item = ChainNode.byte_to_object(f, collection_name)
+        item = ChainNode.byte_to_object(f)
         while item:
             motifs.append(item)
-            item = ChainNode.byte_to_object(f, collection_name)
+            item = ChainNode.byte_to_object(f)
 
-    return motifs, on_sequence, q, dataset_name
+    if resumable:
+        return motifs, on_sequence, q, dataset_name
+    return motifs
 
 
 '''
