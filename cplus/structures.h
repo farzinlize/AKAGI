@@ -45,10 +45,17 @@ typedef struct list_of_chains
     list_of_chains * next;
 } list_of_chains;
 
+typedef struct dataset
+{
+    char ** sequences;
+    int * summits;
+    float * p_values;
+};
+
+dataset load_compact_dataset(char * filename);
 char * str_plus_char(char * st, char ch);
 tree_node * initial_tree(char * label);
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index);
-list_of_chains extract_motifs(tree_node * root, int quorum);
 on_sequence open_on_sequence(char * filename);
 
 #endif

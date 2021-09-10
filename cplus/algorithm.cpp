@@ -2,9 +2,9 @@
 
 list_of_chains next_chain(chain_node motif, on_sequence on_seq, int sequences_count, int overlap, int gap, int q){
     
-    int i;
-
     /*   observation   */
+
+    int i;
     tree_node * observation = initial_tree(NULL);
     FoundMap * current_map = motif.foundmap;
     while(current_map != NULL){                                 //sequences
@@ -25,5 +25,47 @@ list_of_chains next_chain(chain_node motif, on_sequence on_seq, int sequences_co
     }
 
     /*   next-generation extreaction   */   
-    return extract_motifs(observation, q);
+    
+    // initial result array
+    list_of_chains * head = (list_of_chains *) malloc(sizeof(list_of_chains));
+    list_of_chains * chains = head;
+    head->node = NULL;
+
+    // initiate stack with tree root
+    int sp = 0;
+    tree_node * stack = (tree_node *) malloc(sizeof(tree_node)*MAX_STACK_SIZE);
+    stack[sp++] = *observation;
+
+    while (sp != 0){
+        tree_node current_node = stack[--sp];
+
+        // check for quorum
+        if(current_node.q >= q){
+            chain_node * new_chain = (chain_node *) malloc(sizeof(chain_node));
+            new_chain->foundmap = current_node.foundmap;
+            new_chain->label = current_node.label;
+
+            // push to dynamic link-list to refere as result
+            chains->node = new_chain;
+            chains->next = (list_of_chains *) malloc(sizeof(list_of_chains));
+            chains = chains->next;
+        }
+
+        // add tree children to stack
+        for(int i=0;i<4;i++){
+            if (current_node.children[i] != NULL){
+                stack[sp++] = *current_node.children[i];
+            }
+        }
+    }
+    
+    // clear dynamic garbage
+    free(stack);
+
+    return *head;
+}
+
+
+double pwm_score(){
+    
 }

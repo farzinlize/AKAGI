@@ -18,15 +18,13 @@ __pycache__/*
 /hmchipdata/Human_hg18_peakcod/*
 /hmchipdata/HumanRank/*
 *secret*
-test.py
-test_c.py
+*test*
 akagi_1.fasta
 akagi_2.fasta
 *.temp
 *.log
 /pfms/*
 *.window
-test_argument.arg
 *.checkpoint
 /memechip/*
 *.pool

@@ -100,11 +100,6 @@ char * str_plus_char(char * s, char n){
 on_sequence open_on_sequence(char * filename){
     FILE * onsequence_data = fopen(filename, "rb");
     int number_of_sequences = read_integer(onsequence_data);
-
-    #ifdef TEST
-    printf("sequence count = %u\n", number_of_sequences);
-    #endif
-
     char **** all_sequences = (char ****) malloc(sizeof(char ***)*number_of_sequences);
     int * sequence_lengths = (int *) malloc(sizeof(int)*number_of_sequences);
     for(int i=0;i<number_of_sequences;i++){
@@ -129,44 +124,18 @@ on_sequence open_on_sequence(char * filename){
 }
 
 
-// DFS / BFS
-list_of_chains extract_motifs(tree_node * root, int quorum){
+dataset load_compact_dataset(char * filename){
+    int count;
+    dataset * result = (dataset *) malloc(sizeof(dataset));
+    FILE * compact = fopen(filename, "r");
+    fscanf(compact, "%u\n", &count);
 
-    // initial result array
-    list_of_chains * head = (list_of_chains *) malloc(sizeof(list_of_chains));
-    list_of_chains * chains = head;
-    head->node = NULL;
+    result->p_values = (float *) malloc(sizeof(double)*count);
+    result->summits = (int *) malloc(sizeof(int)*count);
+    result->sequences = (char **) malloc(sizeof(char *)*count);
 
-    // initiate stack with tree root
-    int sp = 0;
-    tree_node * stack = (tree_node *) malloc(sizeof(tree_node)*MAX_STACK_SIZE);
-    stack[sp++] = *root;
+    for(int i=0;i<count;i++)
+        fscanf(compact, "%s\n%u\n%f\n", &(result->sequences[i]), &(result->summits[i]), &(result->p_values[i]));
 
-    while (sp != 0){
-        tree_node current_node = stack[--sp];
-
-        // check for quorum
-        if(current_node.q >= quorum){
-            chain_node * new_chain = (chain_node *) malloc(sizeof(chain_node));
-            new_chain->foundmap = current_node.foundmap;
-            new_chain->label = current_node.label;
-
-            // push to dynamic link-list to refere as result
-            chains->node = new_chain;
-            chains->next = (list_of_chains *) malloc(sizeof(list_of_chains));
-            chains = chains->next;
-        }
-
-        // add tree children to stack
-        for(int i=0;i<4;i++){
-            if (current_node.children[i] != NULL){
-                stack[sp++] = *current_node.children[i];
-            }
-        }
-    }
-    
-    // clear dynamic garbage
-    free(stack);
-
-    return *head;
+    return *result;
 }
