@@ -10,10 +10,13 @@ tree_node * initial_tree(char * label){
     return tree;
 }
 
-
-FoundMap * initital_foundmap(int seq_id, int location, int size){
+/*
+ * KEEP IN MIND
+ * all foundmap instances contain at least one position
+ */
+FoundMap * initital_foundmap(int seq_id, int location, int size, FoundMap * nexty){
     FoundMap * initialmap = (FoundMap *) malloc(sizeof(FoundMap));
-    initialmap->next = NULL;
+    initialmap->next = nexty;
     initialmap->seq_id = seq_id;
 
     // inital pos_v for first position entry
@@ -38,13 +41,11 @@ int add_position(FoundMap * foundmap, int seq_id, int location, int size){
         return 0;
     }
     else if (foundmap->next == NULL){
-        foundmap->next = initital_foundmap(seq_id, location, size);
+        foundmap->next = initital_foundmap(seq_id, location, size, NULL);
         return 1;
     }
     else if(foundmap->next->seq_id > seq_id){
-        FoundMap * nexty = foundmap->next;
-        foundmap->next = initital_foundmap(seq_id, location, size);
-        foundmap->next->next = nexty;
+        foundmap->next = initital_foundmap(seq_id, location, size, foundmap->next);
         return 1;
     }
 
@@ -55,9 +56,9 @@ int add_position(FoundMap * foundmap, int seq_id, int location, int size){
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index){
 
     // end of the path
-    if(frame[current_frame_index] == NULL){
+    if(frame[current_frame_index] == '\0'){
         if(node->foundmap == NULL){
-            node->foundmap = initital_foundmap(seq_id, location, size);
+            node->foundmap = initital_foundmap(seq_id, location, size, NULL);
             node->q = 1;
         }else {
             node->q = node->q + add_position(node->foundmap, seq_id, location, size);
@@ -123,7 +124,7 @@ on_sequence open_on_sequence(char * filename){
     return *result;
 }
 
-
+/* WARNING NOT COMPLETED */
 dataset load_compact_dataset(char * filename){
     int count;
     dataset * result = (dataset *) malloc(sizeof(dataset));
@@ -135,7 +136,137 @@ dataset load_compact_dataset(char * filename){
     result->sequences = (char **) malloc(sizeof(char *)*count);
 
     for(int i=0;i<count;i++)
-        fscanf(compact, "%s\n%u\n%f\n", &(result->sequences[i]), &(result->summits[i]), &(result->p_values[i]));
+        fscanf(compact, "%s\n%u\n%f\n", result->sequences[i], &(result->summits[i]), &(result->p_values[i]));
 
     return *result;
+}
+
+
+int intlen_positions(pos_link * positions){
+
+    #ifndef OPTIMIZED
+    if(positions == NULL) return 0;
+    #endif
+
+    int answer = 2;
+    pos_link * current = positions->next;
+    while(current != NULL) {
+        current = current->next;
+        answer = answer + 2;
+    }
+    
+    return answer;
+}
+
+
+unsigned char * structure_to_binary(FoundMap * map, int * binary_size){
+
+    /*
+     * First calculate number of bytes needed to encode the map
+     * for each sequence and its position list two additional integer and one byte are considered:
+     * (one int for position length, another int for sequence ID and one byte for ending delimeter)
+     */
+    int bytesize = (intlen_positions(map->positions) + 2) * INTEGER_BYTES + 1;
+    int sequence_count = 1;
+    FoundMap * current = map->next;
+
+    while (current != NULL){
+        bytesize = bytesize + (intlen_positions(current->positions) + 2) * INTEGER_BYTES + 1;
+        sequence_count++;
+        current = current->next;
+    }
+
+    /* 
+     * consider STR, END and DEL bytes plus sequence vector size
+     * (DEL between sequence vector and positions 2D-vector)
+     */
+    unsigned char * binary = (unsigned char *) malloc(bytesize + 3 + INTEGER_BYTES);
+    if(binary_size != NULL) *binary_size = bytesize + 3 + INTEGER_BYTES;
+
+    int si = 0;
+    int pi = (sequence_count+1) * INTEGER_BYTES + 1;
+    binary[si++] = STR;
+    put_integer(&binary[si], sequence_count);si=si+INTEGER_BYTES;
+    binary[pi++] = DEL;
+
+    FoundMap here = *map;
+    do{
+        /* sequence vector */
+        put_integer(&binary[si], here.seq_id);si=si+INTEGER_BYTES;
+
+        /* 2D position vector */
+        pos_link current_position = *here.positions;
+        put_integer(&binary[pi], intlen_positions(&current_position)/2);pi=pi+INTEGER_BYTES;
+        do{
+            put_integer(&binary[pi], current_position.location);pi=pi+INTEGER_BYTES;
+            put_integer(&binary[pi], current_position.size);    pi=pi+INTEGER_BYTES;
+
+            if(current_position.next == NULL) break;
+            else current_position = *current_position.next;
+        } while (true);
+        binary[pi++] = DEL;
+
+        if(here.next == NULL) break;
+        else here = *here.next;
+    } while (true);
+    
+    binary[pi] = END;
+    return binary;
+}
+
+
+FoundMap * binary_to_structure(unsigned char * binary){
+
+    #ifndef OPTIMIZED
+    int si = 0;
+    assert(binary[si++] == STR);
+    #else
+    int si = 1;
+    #endif
+
+    int sequence_count = get_integer(&binary[si]);si=si+INTEGER_BYTES;
+
+    #ifndef OPTIMIZED
+    int pi = (sequence_count+1) * INTEGER_BYTES + 1;
+    assert(binary[pi++] == DEL);
+    #else
+    int pi = (sequence_count+1) * INTEGER_BYTES + 2;
+    #endif
+
+    FoundMap * all_maps = (FoundMap *) calloc(sequence_count, sizeof(FoundMap));
+    for(int sequence = 0;sequence < sequence_count;sequence++){
+
+        /* sequence vector */
+        all_maps[sequence].seq_id = get_integer(&binary[si]);si=si+INTEGER_BYTES;
+
+        /* linking */ 
+        if(sequence != sequence_count-1)
+             all_maps[sequence].next = &all_maps[sequence+1];
+        else all_maps[sequence].next = NULL;
+
+        /* position vector */
+        int len_positions = get_integer(&binary[pi]);pi=pi+INTEGER_BYTES;
+        pos_link * all_positions = (pos_link *) calloc(len_positions, sizeof(pos_link));
+        for(int position=0;position<len_positions;position++){
+            all_positions[position].location = get_integer(&binary[pi]);pi=pi+INTEGER_BYTES;
+            all_positions[position].size     = get_integer(&binary[pi]);pi=pi+INTEGER_BYTES;
+
+            /* linking */
+            if(position != len_positions-1)
+                 all_positions[position].next = &all_positions[position+1];
+            else all_positions[position].next = NULL;
+        }
+
+        #ifndef OPTIMIZED
+        assert(binary[pi++]==DEL);
+        #else
+        pi++;
+        #endif
+    }
+
+    #ifndef OPTIMIZED
+    assert(binary[pi]==END);
+    #endif
+
+    return all_maps;
 }

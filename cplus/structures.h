@@ -5,8 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #define MAX_STACK_SIZE 10000
+#define STR 0xff
+#define DEL 0xdd
+#define END 0xff
 
 typedef struct pos_link{
     int location;
@@ -50,12 +54,17 @@ typedef struct dataset
     char ** sequences;
     int * summits;
     float * p_values;
-};
+} dataset;
 
 dataset load_compact_dataset(char * filename);
 char * str_plus_char(char * st, char ch);
 tree_node * initial_tree(char * label);
+FoundMap * initital_foundmap(int seq_id, int location, int size, FoundMap * nexty);
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index);
+int add_position(FoundMap * foundmap, int seq_id, int location, int size);
 on_sequence open_on_sequence(char * filename);
+unsigned char * structure_to_binary(FoundMap * map, int * binary_size);
+FoundMap * binary_to_structure(unsigned char * binary);
+int intlen_positions(pos_link * positions);
 
 #endif
