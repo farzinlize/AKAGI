@@ -10,5 +10,7 @@
 int read_integer(FILE * data);
 char * read_str(FILE * data, int size);
 void logit(char * message, char * logfile);
+void put_integer(unsigned char * here, int n);
+int get_integer(unsigned char * here);
 
 #endif
