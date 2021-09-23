@@ -26,8 +26,7 @@ int error_handler(int error){
 
 int main(int argc, char* argv[]){
 
-    printf("IN\n");
-    // initiating report file with process id
+    /* initiating report file with process id */
     char report_file[NAME_BUFFER_SIZE];
     sprintf(report_file, REPORT_FILE_NAME, getpid());
     FILE * report = fopen(report_file, "w");
