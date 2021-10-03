@@ -33,8 +33,10 @@ typedef struct chain_node{
 typedef struct tree_node{
     char * label;
     tree_node ** children;
+
+    /* observation data */
+    int q;  // quorum
     FoundMap * foundmap;
-    int q;
 } tree_node;
 
 typedef struct on_sequence{
