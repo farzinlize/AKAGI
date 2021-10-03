@@ -51,12 +51,20 @@ typedef struct list_of_chains
 
 typedef struct dataset
 {
+    int sequence_count;
+    int * sequence_lengths;
     char ** sequences;
+
+    /* bundle */
     int * summits;
-    float * p_values;
+    double * p_values;
+
+    /* pwm */
+    int motif_size;
+    double * compact_pwm;
 } dataset;
 
-dataset load_compact_dataset(char * filename);
+dataset load_compact_dataset(const char * filename);
 char * str_plus_char(char * st, char ch);
 tree_node * initial_tree(char * label);
 FoundMap * initital_foundmap(int seq_id, int location, int size, FoundMap * nexty);

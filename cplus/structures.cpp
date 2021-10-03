@@ -31,6 +31,8 @@ FoundMap * initital_foundmap(int seq_id, int location, int size, FoundMap * next
 
 
 int add_position(FoundMap * foundmap, int seq_id, int location, int size){
+
+    /* sequence was present already */
     if(foundmap->seq_id == seq_id){
         pos_link * new_pos = (pos_link *) malloc(sizeof(pos_link));
         new_pos->location = location;
@@ -40,22 +42,26 @@ int add_position(FoundMap * foundmap, int seq_id, int location, int size){
         foundmap->positions = new_pos;
         return 0;
     }
+
+    /* inserting new sequence at tail */
     else if (foundmap->next == NULL){
         foundmap->next = initital_foundmap(seq_id, location, size, NULL);
         return 1;
     }
+
+    /* inserting new sequence in order */
     else if(foundmap->next->seq_id > seq_id){
         foundmap->next = initital_foundmap(seq_id, location, size, foundmap->next);
         return 1;
     }
 
-    // linear search for seq_id match
+    /* linear search for seq_id match */
     return add_position(foundmap->next, seq_id, location, size);
 }
 
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index){
 
-    // end of the path
+    /* end of the path */
     if(frame[current_frame_index] == '\0'){
         if(node->foundmap == NULL){
             node->foundmap = initital_foundmap(seq_id, location, size, NULL);
@@ -65,7 +71,7 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
         }
     }
 
-    // select path
+    /* select path */
     tree_node * next_path;
     switch (frame[current_frame_index]){
     case 'A':next_path = node->children[0];break;
@@ -74,7 +80,7 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
     case 'G':next_path = node->children[3];break;
     }
 
-    // create if not exist
+    /* create path if not exist */
     if(next_path == NULL){
         next_path = initial_tree(str_plus_char(node->label, frame[current_frame_index]));
 
@@ -86,13 +92,13 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
         }
     }
     
-    // recursively go to path until reaching destination
+    /* recursively go to path until reaching destination */
     add_frame(next_path, frame, seq_id, location, size, current_frame_index+1);
 }
 
 
 char * str_plus_char(char * s, char n){
-    char * result = (char *) malloc(strlen(s)+1);
+    char * result = (char *) malloc(strlen(s)+2);
     sprintf(result, "%s%c", s, n);
     return result;
 }
@@ -124,21 +130,35 @@ on_sequence open_on_sequence(char * filename){
     return *result;
 }
 
-/* WARNING NOT COMPLETED */
-dataset load_compact_dataset(char * filename){
-    int count;
-    dataset * result = (dataset *) malloc(sizeof(dataset));
-    FILE * compact = fopen(filename, "r");
-    fscanf(compact, "%u\n", &count);
 
-    result->p_values = (float *) malloc(sizeof(double)*count);
-    result->summits = (int *) malloc(sizeof(int)*count);
-    result->sequences = (char **) malloc(sizeof(char *)*count);
+dataset load_compact_dataset(const char * filename){
 
-    for(int i=0;i<count;i++)
-        fscanf(compact, "%s\n%u\n%f\n", result->sequences[i], &(result->summits[i]), &(result->p_values[i]));
+    FILE * compact = fopen(filename, "rb");
+    dataset result;
 
-    return *result;
+    result.sequence_count = read_integer(compact);
+
+    /* initializing arrays about sequences */
+    result.sequence_lengths = (int *)    malloc(sizeof(int)    * result.sequence_count);
+    result.sequences        = (char **)  malloc(sizeof(char *) * result.sequence_count);
+    result.summits          = (int *)    malloc(sizeof(int)    * result.sequence_count);
+    result.p_values         = (double *) malloc(sizeof(double) * result.sequence_count);
+
+    /* reading sequences and info */
+    for(int i=0;i<result.sequence_count;i++){
+        result.sequence_lengths[i] = read_integer(compact);
+        result.sequences[i]        = read_string(compact, result.sequence_lengths[i]);
+        result.summits[i]          = read_integer(compact);
+        result.p_values[i]         = read_double(compact);
+    }
+
+    /* reading pwm */
+    result.motif_size  = read_integer(compact);
+    result.compact_pwm = (double *) malloc(sizeof(double) * result.motif_size * 4 * 2);
+    fread(result.compact_pwm  , sizeof(double), result.motif_size * 4 * 2, compact);
+
+    fclose(compact);
+    return result;
 }
 
 
