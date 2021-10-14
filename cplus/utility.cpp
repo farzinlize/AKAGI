@@ -35,19 +35,20 @@ char * read_str(FILE * data, int size){
 }
 
 void logit(char * message, char * logfile){
+    time_t date = time(NULL);
     FILE * log = fopen(logfile, "a");
-    fprintf(log, "%s\n", message);
+    fprintf(log, "[%.19s]%s\n", ctime(&date), message);
     fclose(log);
 }
 
-void put_integer(unsigned char * here, int n){
+void put_integer(uint8_t * here, int n){
     here[0] = (n >> 24) & 0xFF;
     here[1] = (n >> 16) & 0xFF;
     here[2] = (n >> 8 ) & 0xFF;
     here[3] =  n        & 0xFF;
 }
 
-int get_integer(unsigned char * here){
+int get_integer(uint8_t * here){
     return (here[3]) + (here[2] << 8) + (here[1] << 16) + (here[0] << 24);
 }
 
@@ -63,4 +64,14 @@ double pwm_find(double * compact_pwm, int motif_size, char alphabet, int positio
 
     int position_on_array = a*motif_size*2 + (position*2 + reverse);
     return compact_pwm[position_on_array];
+}
+
+double max_double(double a, double b){
+    if(a > b) return a;
+    else      return b;
+}
+
+int max_integer(int a, int b){
+    if(a > b) return a;
+    else      return b;
 }
