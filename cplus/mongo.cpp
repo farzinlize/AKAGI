@@ -156,7 +156,7 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
 
 
 /* pop a job from queue */
-bool pop_chain_node(mongoc_client_t * client, chain_node * popy){
+bool pop_chain_node(mongoc_client_t * client, chain_node * popy, bool * empty){
 
     mongoc_collection_t * collection = mongoc_client_get_collection(client, DB_NAME, QUEUE_COLLECTION);
     bson_error_t error; bson_t dummy_query = BSON_INITIALIZER, reply;
@@ -169,7 +169,8 @@ bool pop_chain_node(mongoc_client_t * client, chain_node * popy){
     /* parse replied bson to chain node */
     bson_iter_t iterator, value;
     bool check = bson_iter_init_find(&value, &reply, "value") && bson_iter_recurse(&value, &iterator);
-    if(!check){logit("ITER FAIL", DATABASE_LOG);return false;}
+    if(!check){*empty = true;return false;}
+    else       *empty = false;
 
     #ifdef TEST
     size_t l;
@@ -215,8 +216,13 @@ bool pop_chain_node(mongoc_client_t * client, chain_node * popy){
 }
 
 
+
 #ifdef MONGO_MAIN
-#define NO_POPY
+
+/* mongo test modes */
+#define NO_RESTORE
+// #define NO_POPY
+
 int main(){
     printf("[CPLUS/MONGO][TEST]\n");
 
@@ -231,20 +237,19 @@ int main(){
      * pop, observe, restore
      * ############################################### */
 
-    chain_node popy, popy2, popy3, popy4, popy5; bool check;
-
+    chain_node popy; bool check; bool empty;
     #ifndef NO_POPY
     /* POP */
-    check = pop_chain_node(client, &popy);
+    check = pop_chain_node(client, &popy, &empty);
     printf("pop->%s\n", check?"pass":"ERROR");
 
     /* observe */
     printf("popy label: %s (foundmap will be temporarily stored in test.data)\n", popy.label);
-    FoundMap * current = popy.foundmap;
-    while(current!=NULL){
-        printf("[FOUNDMAP] seq_id=%d, positions count = %d\n", current->seq_id, intlen_positions(current->positions));
-        current = current->next;
-    }
+    // FoundMap * current = popy.foundmap;
+    // while(current!=NULL){
+    //     printf("[FOUNDMAP] seq_id=%d, positions count = %d\n", current->seq_id, intlen_positions(current->positions));
+    //     current = current->next;
+    // }
     uint32_t data_size;
     uint8_t * data = structure_to_binary(popy.foundmap, &data_size);
     printf("data transform to foundmap successfully -> data size = %d\n", data_size);
@@ -271,6 +276,7 @@ int main(){
     free(data);
     #endif
 
+    #ifndef NO_RESTORE
     /* restore */
     chain_link store_1, store_2, store_3, store_4, store_5;
     store_1.node = &popy;
@@ -290,6 +296,7 @@ int main(){
 
     check = store_many_chains(store_1, client);
     printf("store->%s\n", check?"pass":"ERROR");
+    #endif
 
     /* cleanup library */
     mongoc_client_destroy(client);

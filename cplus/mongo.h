@@ -28,6 +28,6 @@
 
 mongoc_client_t * get_client_c(int port);
 bool store_many_chains(chain_link items, mongoc_client_t * client);
-bool pop_chain_node(mongoc_client_t * client, chain_node * popy);
+bool pop_chain_node(mongoc_client_t * client, chain_node * popy, bool * empty);
 
 #endif
