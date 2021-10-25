@@ -34,7 +34,7 @@ char * read_str(FILE * data, int size){
     return result;
 }
 
-void logit(char * message, char * logfile){
+void logit(const char * message, const char * logfile){
     time_t date = time(NULL);
     FILE * log = fopen(logfile, "a");
     fprintf(log, "[%.19s]%s\n", ctime(&date), message);
