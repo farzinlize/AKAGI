@@ -61,6 +61,10 @@ int add_position(FoundMap * foundmap, int seq_id, int location, int size){
 
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index){
 
+    #ifdef DEBUG
+    printf("[FRAME] we are at %d index of our path (char->%c)\n", current_frame_index, frame[current_frame_index]);
+    #endif
+
     /* end of the path */
     if(frame[current_frame_index] == '\0'){
         if(node->foundmap == NULL){
@@ -69,6 +73,7 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
         }else {
             node->q = node->q + add_position(node->foundmap, seq_id, location, size);
         }
+        return;
     }
 
     /* select path */
@@ -80,8 +85,17 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
     case 'G':next_path = node->children[3];break;
     }
 
+    #ifdef DEBUG
+    printf("[FRAME] we selected the next step at %d:address\n", next_path);
+    #endif
+
     /* create path if not exist */
     if(next_path == NULL){
+
+        #ifdef DEBUG
+        printf("[FRAME] path dose not exist (creating on %c edge)\n", frame[current_frame_index]);
+        #endif
+
         next_path = initial_tree(str_plus_char(node->label, frame[current_frame_index]));
 
         switch (frame[current_frame_index]){
@@ -98,8 +112,11 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
 
 
 char * str_plus_char(char * s, char n){
-    char * result = (char *) malloc(strlen(s)+2);
-    sprintf(result, "%s%c", s, n);
+    int str_size;
+    if(s == NULL) str_size = 0;
+    else          str_size = strlen(s);
+    char * result = (char *) malloc(str_size+2);
+    sprintf(result, "%s%c", s==NULL?"":s, n);
     return result;
 }
 
@@ -179,7 +196,7 @@ int intlen_positions(pos_link * positions){
 }
 
 
-unsigned char * structure_to_binary(FoundMap * map, int * binary_size){
+uint8_t * structure_to_binary(FoundMap * map, uint32_t * binary_size){
 
     /*
      * First calculate number of bytes needed to encode the map
@@ -200,7 +217,7 @@ unsigned char * structure_to_binary(FoundMap * map, int * binary_size){
      * consider STR, END and DEL bytes plus sequence vector size
      * (DEL between sequence vector and positions 2D-vector)
      */
-    unsigned char * binary = (unsigned char *) malloc(bytesize + 3 + INTEGER_BYTES);
+    uint8_t * binary = (uint8_t *) malloc(bytesize + 3 + INTEGER_BYTES);
     if(binary_size != NULL) *binary_size = bytesize + 3 + INTEGER_BYTES;
 
     int si = 0;
@@ -235,7 +252,7 @@ unsigned char * structure_to_binary(FoundMap * map, int * binary_size){
 }
 
 
-FoundMap * binary_to_structure(unsigned char * binary){
+FoundMap * binary_to_structure(uint8_t * binary){
 
     #ifndef OPTIMIZED
     int si = 0;
@@ -266,7 +283,13 @@ FoundMap * binary_to_structure(unsigned char * binary){
 
         /* position vector */
         int len_positions = get_integer(&binary[pi]);pi=pi+INTEGER_BYTES;
+
+        #ifdef TEST
+        printf("[BIN] seq_id=%d, len_positions=%d\n", all_maps[sequence].seq_id, len_positions);
+        #endif
+
         pos_link * all_positions = (pos_link *) calloc(len_positions, sizeof(pos_link));
+        all_maps[sequence].positions = all_positions;
         for(int position=0;position<len_positions;position++){
             all_positions[position].location = get_integer(&binary[pi]);pi=pi+INTEGER_BYTES;
             all_positions[position].size     = get_integer(&binary[pi]);pi=pi+INTEGER_BYTES;
@@ -275,6 +298,13 @@ FoundMap * binary_to_structure(unsigned char * binary){
             if(position != len_positions-1)
                  all_positions[position].next = &all_positions[position+1];
             else all_positions[position].next = NULL;
+
+            #ifdef TEST
+            printf("[BIN][OBS] location=%d, size=%d, next_addr=%u\n", 
+                all_positions[position].location, 
+                all_positions[position].size, 
+                all_positions[position].next);
+            #endif
         }
 
         #ifndef OPTIMIZED
@@ -290,3 +320,53 @@ FoundMap * binary_to_structure(unsigned char * binary){
 
     return all_maps;
 }
+
+
+void destroy_foundmap(FoundMap * map){
+    FoundMap *current = map, *next_map;
+    while(current!=NULL){
+
+        /* clearing position list */
+        pos_link *list = current->positions, *next;
+        while(list!=NULL){
+            next = list->next;
+            free(list);
+            list = next;
+        }
+
+        next_map = current->next;
+        free(current);
+        current = next_map;
+    }
+}
+
+
+void destroy_node(chain_node * node){
+    destroy_foundmap(node->foundmap);
+    free(node->label);
+    free(node);
+}
+
+
+#ifdef STRUCT_MAIN
+int main(int argc, char * argv[]){
+
+    tree_node * root = initial_tree(NULL);
+    printf("here we have a root\n");
+
+    char * frame = argv[1];
+    printf("we have a frame -> %s (size=%ld)\n", frame, strlen(frame));
+
+    char * new_frame = str_plus_char(frame, 'G');
+    printf("also we have a new frame plus G -> %s (size=%ld)\n", new_frame, strlen(new_frame));
+
+    char * nully = NULL;
+    char * after_nully = str_plus_char(nully, 'A');
+    printf("we add A character to our nully now we have after_nully -> %s (size=%ld)\n", after_nully, strlen(after_nully));
+
+    add_frame(root, frame, 0, 5, 6, 0);
+    printf("we added a frame to our tree");
+
+    return 0;
+}
+#endif

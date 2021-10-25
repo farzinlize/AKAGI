@@ -2,7 +2,9 @@
 #define _STRUCTURE
 
 #include "utility.h"
+#include "global.h"
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -29,7 +31,7 @@ typedef struct chain_node{
     FoundMap * foundmap;
 } chain_node;
 
-// observation tree entity
+/* observation tree entity */
 typedef struct tree_node{
     char * label;
     tree_node ** children;
@@ -45,11 +47,11 @@ typedef struct on_sequence{
     int * sequence_lengths;
 } on_sequence;
 
-typedef struct list_of_chains
+typedef struct chain_link
 {
     chain_node * node;
-    list_of_chains * next;
-} list_of_chains;
+    chain_link * next;
+} chain_link;
 
 typedef struct dataset
 {
@@ -73,8 +75,12 @@ FoundMap * initital_foundmap(int seq_id, int location, int size, FoundMap * next
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index);
 int add_position(FoundMap * foundmap, int seq_id, int location, int size);
 on_sequence open_on_sequence(char * filename);
-unsigned char * structure_to_binary(FoundMap * map, int * binary_size);
-FoundMap * binary_to_structure(unsigned char * binary);
 int intlen_positions(pos_link * positions);
+void destroy_foundmap(FoundMap * map);
+void destroy_node(chain_node * node);
+
+/* byte encode functions */
+uint8_t * structure_to_binary(FoundMap * map, uint32_t * binary_size);
+FoundMap * binary_to_structure(uint8_t * binary);
 
 #endif
