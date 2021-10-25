@@ -35,9 +35,11 @@ app.build/
 app.dist/
 mongo/
 data/
+cplus/build/*
 
 *secret*
 *test*
+*log*
 
 akagi_1.fasta
 akagi_2.fasta
