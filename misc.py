@@ -1,3 +1,5 @@
+from functools import reduce
+import struct
 from io import BufferedReader, BytesIO
 from math import ceil, e, log2, inf
 from datetime import datetime, timedelta
@@ -760,6 +762,28 @@ def change_global_constant_py(variable_name: str, new_value: str):
                 f.write(' ' + new_value + '\n')
             else:
                 f.write(rest_of_the_line)
+
+
+def make_compact_dataset(filename, sequences, bundles, pwm):
+    with open(filename, 'wb') as compact:
+        compact.write(int_to_bytes(len(sequences)))
+        for sequence, bundle in zip(sequences, bundles):
+            compact.write(int_to_bytes(len(sequence)))
+            compact.write(bytes(sequence, 'utf8'))
+            compact.write(int_to_bytes(bundle[SUMMIT]))
+            compact.write(struct.pack('d', bundle[P_VALUE]))
+        
+        pwm_a = pwm[0]
+        pwm_r = pwm[1]
+        assert len(pwm_a) == len(pwm_r)
+
+        lm = len(pwm_a) # Length of the Motif
+        flattern = lambda a, b:([ai for ai in a] + [bi for bi in b])
+        
+        compact.write(int_to_bytes(lm))
+        for alphabet in 'ACGT':
+            compact.write(struct.pack('d'*lm*2, *reduce(flattern, [(pwm_a[i][alphabet], pwm_r[i][alphabet]) for i in range(lm)])))
+
 
 
 # ########################################## #

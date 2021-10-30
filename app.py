@@ -9,7 +9,7 @@ import sys
 # project imports
 from GKmerhood import DummyTree, GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, multiple_layer_window_find_motif
-from misc import brief_sequence, change_global_constant_py, log_it, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
+from misc import brief_sequence, change_global_constant_py, log_it, make_compact_dataset, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
 from report import FastaInstance, OnSequenceAnalysis, aPWM, Ranking
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
@@ -71,7 +71,8 @@ def motif_finding_chain(dataset_name,
                         banks=1,
                         resume=False,
                         on_sequence_compressed=None,
-                        initial_pool=''):
+                        initial_pool='',
+                        make_compact_dataset_flag=False):
 
     def observation(q, save_collection=DEFAULT_COLLECTION):
 
@@ -210,6 +211,9 @@ def motif_finding_chain(dataset_name,
     # reports for analysis
     if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+    # making compact dataset for cplus/workers
+    if make_compact_dataset_flag:make_compact_dataset("compact_dataset.temp", sequences, bundle, pwm)
 
     ############### start to chain ###############
     if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
@@ -448,9 +452,9 @@ if __name__ == "__main__":
     make_location(APPDATA_PATH)
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:QuFx:A:C:r:Pn:j:a:kh:b:RS:'
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:QuFx:A:C:r:Pn:j:a:kh:b:RS:c'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
-        'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=',
+        'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'compact-dataset'
         'multi-layer', 'feature', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
 
@@ -458,7 +462,8 @@ if __name__ == "__main__":
     args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'resume':False,
         'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'multi-layer':False, 
         'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False, 'nbank':1, 'pool':'',
-        'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None, 'assist':None}
+        'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None,
+        'assist':None, 'compact-dataset':False}
 
     feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
         'megalexa':500, 'quorum':FIND_MAX}
@@ -504,6 +509,7 @@ if __name__ == "__main__":
         elif o in ['-b', '--bank']:args_dict.update({'nbank':int(a)})
         elif o in ['-R', '--resume-chaining']:args_dict.update({'resume':True})
         elif o in ['-S', '--score-pool']:args_dict.update({'pool':a})
+        elif o in ['-c', '--compact-dataset']:args_dict.update({'compact-dataset':True})
         
         # only available with NOP command
         elif o in ['-C', '--change']:
