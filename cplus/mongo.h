@@ -1,9 +1,12 @@
 #ifndef _MONGO_H
 #define _MONGO_H
 
+/* include JSON parser */
+#define JSMN_HEADER
+#include "jsmn.h"
+
 #include <stdio.h>
 #include <mongoc.h>
-#include "jsmn.h"
 #include "structures.h"
 #include "utility.h"
 #include "global.h"

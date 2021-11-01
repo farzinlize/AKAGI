@@ -1,7 +1,7 @@
 # set pkg-config manually in different machine if needed
 
-common_sources= structures.cpp utility.cpp
-worker_sources= worker.cpp structures.cpp utility.cpp comms.cpp algorithm.cpp mongo.cpp
+common_sources= structures.cpp utility.cpp jsmn.c
+worker_sources= worker.cpp structures.cpp utility.cpp comms.cpp algorithm.cpp mongo.cpp jsmn.c
 pkg-mongo= -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 -L/usr/local/lib -lmongoc-1.0 -lbson-1.0
 pkg-static-mongo = -DMONGOC_STATIC -DBSON_STATIC -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 -L/usr/local/lib -lmongoc-static-1.0 -lsasl2 -lssl -lcrypto -lrt -lresolv -pthread -lbson-static-1.0 /usr/lib/x86_64-linux-gnu/librt.a -pthread
 

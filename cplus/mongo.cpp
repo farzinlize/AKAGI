@@ -220,8 +220,9 @@ bool pop_chain_node(mongoc_client_t * client, chain_node * popy, bool * empty){
 #ifdef MONGO_MAIN
 
 /* mongo test modes */
-#define NO_RESTORE
-// #define NO_POPY
+// #define NO_RESTORE
+#define NO_POPY
+#define POP_AFTER
 
 int main(){
     printf("[CPLUS/MONGO][TEST]\n");
@@ -244,7 +245,7 @@ int main(){
     printf("pop->%s\n", check?"pass":"ERROR");
 
     /* observe */
-    printf("popy label: %s (foundmap will be temporarily stored in test.data)\n", popy.label);
+    printf("popy label: %s (foundmap will be temporarily stored in popy_test.data)\n", popy.label);
     // FoundMap * current = popy.foundmap;
     // while(current!=NULL){
     //     printf("[FOUNDMAP] seq_id=%d, positions count = %d\n", current->seq_id, intlen_positions(current->positions));
@@ -258,10 +259,6 @@ int main(){
     #else
     printf("(using dummy chain nodes to test storing procedure)\n");
     popy.label = "dummy";
-    popy2.label = "also_dummy";
-    popy3.label = "dummy_3";
-    popy4.label = "dummy_5";
-    popy5.label = "dummy_6";
     FILE * f = fopen("popy_test.data", "rb");
     fseek(f, 0L, SEEK_END);
     long numbytes = ftell(f);
@@ -269,33 +266,26 @@ int main(){
     uint8_t * data = (uint8_t*)calloc(numbytes, sizeof(uint8_t));	
     fread(data, sizeof(uint8_t), numbytes, f); fclose(f);
     popy.foundmap = binary_to_structure(data);
-    popy2.foundmap = binary_to_structure(data);
-    popy3.foundmap = binary_to_structure(data);
-    popy4.foundmap = binary_to_structure(data);
-    popy5.foundmap = binary_to_structure(data);
     free(data);
     #endif
 
     #ifndef NO_RESTORE
     /* restore */
-    chain_link store_1, store_2, store_3, store_4, store_5;
+    chain_link store_1;
     store_1.node = &popy;
-    store_1.next = &store_2;
-
-    store_2.node = &popy2;
-    store_2.next = &store_3;
-
-    store_3.node = &popy3;
-    store_3.next = &store_4;
-
-    store_4.node = &popy4;
-    store_4.next = &store_5;
-
-    store_5.node = &popy5;
-    store_5.next = NULL;
+    store_1.next = NULL;
 
     check = store_many_chains(store_1, client);
     printf("store->%s\n", check?"pass":"ERROR");
+    #endif
+
+    #ifdef POP_AFTER
+    chain_node after_popy;
+    check = pop_chain_node(client, &after_popy, &empty);
+    printf("after-pop->%s\n", check?"pass":"ERROR");
+    uint32_t data_size;
+    uint8_t * after_data = structure_to_binary(after_popy.foundmap, &data_size);
+    printf("after popy label -> %s, bin size = %u\n", after_popy.label, data_size);
     #endif
 
     /* cleanup library */
