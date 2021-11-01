@@ -19,6 +19,7 @@
 /* ---------------- */
 
 #define DATABASE_LOG "database.log"
+#define DUMPER_FILE  "dumped.motifs"
 #define REPORT_MESSAGE_BUFSIZE 64
 
 /* scores */

@@ -1,3 +1,6 @@
+#ifndef _WORKER_H
+#define _WORKER_H
+
 /* built-in C libraries */
 #include<stdio.h>
 #include<string.h>
@@ -28,6 +31,7 @@
 #define OVERLAP_INDEX    5
 #define GAP_INDEX        6
 #define Q_INDEX          7
+#define NUMBER_OF_ARGS   8
 
 /* errors */
 #define EMPTY   0
@@ -48,3 +52,5 @@
 
 #define EXIT_SUCCESS 0
 #define EXIT_ERROR -1
+
+#endif
