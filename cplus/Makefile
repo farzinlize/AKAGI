@@ -10,7 +10,7 @@ worker: $(worker_sources) Makefile
 	gcc -o build/worker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE
 
 fast-worker: $(worker_sources) Makefile
-	gcc -o build/worker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE -O3 -DOPTIMIZED
+	gcc -o build/fworker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE -O3 -DOPTIMIZED
 
 algt: algorithm.cpp $(common_sources) Makefile
 	gcc -o build/algt algorithm.cpp $(common_sources) -DALG_MAIN -DMAKE_MAKE
