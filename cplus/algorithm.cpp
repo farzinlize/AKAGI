@@ -48,6 +48,7 @@ chain_link next_chain(chain_node motif, on_sequence on_seq, int sequences_count,
             chains->node = new_chain;
             chains->next = (chain_link *) malloc(sizeof(chain_link));
             chains = chains->next;
+            chains->node = NULL;
         }
 
         /* add tree children to stack */
@@ -156,23 +157,25 @@ double ssmart_score(dataset data, chain_node pattern){
 
 
 #ifdef ALG_MAIN
-int main(){
+int main(int argc, char * argv[]){
+
+    printf("you need to address motif data file (argc=%d) \n", argc);
 
     /* ready test case */
     chain_node motif;
-    FILE * data = fopen("motif.test", "rb");
-    int label_size = read_integer(data);
-    motif.label = read_string(data, label_size);
-    int bin_size = read_integer(data);
+    FILE * motif_data = fopen(argv[1], "rb");
+    int label_size = read_integer(motif_data);
+    motif.label = read_string(motif_data, label_size);
+    int bin_size = read_integer(motif_data);
     uint8_t * bin = (uint8_t*) calloc(bin_size, sizeof(uint8_t));
-    fread(bin, sizeof(uint8_t), bin_size, data);
+    fread(bin, sizeof(uint8_t), bin_size, motif_data);
     motif.foundmap = binary_to_structure(bin);
     dataset compact = load_compact_dataset("test.dataset");
     on_sequence onseq = open_on_sequence("test.onseq");
-    printf("[ALG] all data loaded\n");
+    printf("[ALG] all data loaded - investigating chain node (label:%s)\n", motif.label);
 
     char * test_motif = onseq.data[0][0][0];
-    printf("first motif in onseq (0.0.0) -> %s, size=%d\n", test_motif, strlen(test_motif));
+    printf("first motif in onseq (0.0.0) -> %s, size=%ld\n", test_motif, strlen(test_motif));
     int a = 1;
     while(test_motif != NULL){
         test_motif = onseq.data[0][0][a++];
@@ -201,6 +204,10 @@ int main(){
             break;
         }
         next_size++;
+        chain_node * nexty = current->node;
+        uint32_t bin_size;
+        structure_to_binary(nexty->foundmap, &bin_size);
+        printf("%d, %s\n", bin_size, nexty->label);
         current = current->next;
     }printf("[CHAIN] number of next chains = %d\n", next_size);
 

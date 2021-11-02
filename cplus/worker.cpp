@@ -41,12 +41,26 @@ void mother_interrupt(int signum){
 }
 
 int error_handler(FILE * stream, int error, chain_node * popy){
+
+    FILE * dump;
+    uint8_t * map_data;
+    uint32_t label_len, mapbinsize;
+
     switch (error){
     case EMPTY:
         fprintf(stream, "database empty (port:%d)\n", bank_port);
         break;
     case ESTORE:
-        //TODO: save popy in a file for furthur restoration
+    
+        /* dumping failed job data for later */
+        dump = fopen(DUMPER_FILE, "ab");
+        label_len = strlen(popy->label);
+        fwrite(&label_len, sizeof(int), 1, dump);
+        fwrite(popy->label, sizeof(char), label_len, dump);
+        map_data = structure_to_binary(popy->foundmap, &mapbinsize);
+        fwrite(&mapbinsize, sizeof(int), 1, dump);
+        fwrite(map_data, sizeof(uint8_t), mapbinsize, dump);
+        fclose(dump);
 
     case EPOP:
         fprintf(stream, "database failure (port:%d)\n", bank_port);
@@ -81,7 +95,7 @@ int main(int argc, char* argv[]){
     mongoc_init();
 
     /* parse arguments and load data */
-    if(argc != 7){fprintf(report, "EXIT ON ERROR - not a correct number of arguments\n");return EXIT_ERROR;}
+    if(argc != NUMBER_OF_ARGS){fprintf(report, "EXIT ON ERROR - not a correct number of arguments\n");return EXIT_ERROR;}
     bank_port = atoi(argv[BANK_PORT_INDEX]);
     int judge_port = atoi(argv[JUDGE_PORT_INDEX]);
     on_sequence onsequence = open_on_sequence(argv[ONSEQUENCE_INDEX]);
@@ -140,7 +154,7 @@ int main(int argc, char* argv[]){
 
         /* report to user in file */
         chaining_done_by_me++;
-        message_buffer[message_index++] = '\x00';
+        message_buffer[message_index] = '\x00';
         fprintf(report, "%s\n", message_buffer);fflush(report);
     }
     

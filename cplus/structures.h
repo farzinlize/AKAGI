@@ -74,7 +74,7 @@ tree_node * initial_tree(char * label);
 FoundMap * initital_foundmap(int seq_id, int location, int size, FoundMap * nexty);
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index);
 int add_position(FoundMap * foundmap, int seq_id, int location, int size);
-on_sequence open_on_sequence(char * filename);
+on_sequence open_on_sequence(const char * filename);
 int intlen_positions(pos_link * positions);
 void destroy_foundmap(FoundMap * map);
 void destroy_node(chain_node * node);

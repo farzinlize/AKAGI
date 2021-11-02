@@ -121,7 +121,7 @@ char * str_plus_char(char * s, char n){
 }
 
 
-on_sequence open_on_sequence(char * filename){
+on_sequence open_on_sequence(const char * filename){
     FILE * onsequence_data = fopen(filename, "rb");
     int number_of_sequences = read_integer(onsequence_data);
     char **** all_sequences = (char ****) malloc(sizeof(char ***)*number_of_sequences);
