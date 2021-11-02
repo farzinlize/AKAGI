@@ -1,4 +1,5 @@
 # set pkg-config manually in different machine if needed
+# [WARNING] static compilations will face linking errors
 
 common_sources= structures.cpp utility.cpp jsmn.c
 worker_sources= worker.cpp structures.cpp utility.cpp comms.cpp algorithm.cpp mongo.cpp jsmn.c
@@ -7,6 +8,9 @@ pkg-static-mongo = -DMONGOC_STATIC -DBSON_STATIC -I/usr/local/include/libmongoc-
 
 worker: $(worker_sources) Makefile
 	gcc -o build/worker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE
+
+fast-worker: $(worker_sources) Makefile
+	gcc -o build/worker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE -O3 -DOPTIMIZED
 
 algt: algorithm.cpp $(common_sources) Makefile
 	gcc -o build/algt algorithm.cpp $(common_sources) -DALG_MAIN -DMAKE_MAKE
