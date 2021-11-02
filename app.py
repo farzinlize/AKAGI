@@ -21,7 +21,7 @@ from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, ORDER_COMPACT_BIT, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES, enum
+from constants import APPDATA_PATH, ARGS, AUTO_DATABASE_SETUP, BRIEFING, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, ORDER_COMPACT_BIT, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES, enum
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -244,6 +244,15 @@ def motif_finding_chain(dataset_name,
     elif code == END_EXIT    :print('all jobs done')
 
 
+def auto_maintenance(args:ARGS):
+    pass
+    # sequences = read_fasta(args.sequences)
+
+    # order = args.auto_order
+    # if order & ORDER_COMPACT_BIT:
+    #     make_compact_dataset(args.name, )
+
+
 def sequences_distance_matrix(location):
     with open('%s.fasta'%location, 'r') as fasta, open('%s.matrix'%location, 'w') as matrix:
         sequences = []
@@ -452,64 +461,61 @@ if __name__ == "__main__":
     make_location(APPDATA_PATH)
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:QuFx:A:C:r:Pn:j:a:kh:b:RS:c'
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
-        'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'compact-dataset'
-        'multi-layer', 'feature', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining',
+        'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
+        'multi-layer', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
 
     # default values
-    args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'resume':False,
-        'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'multi-layer':False, 
-        'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False, 'nbank':1, 'pool':'',
-        'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None,
-        'assist':None, 'compact-dataset':False}
-
-    feature_update = {'dmax':[1,1,1], 'frame_size':[6,7,8], 'gkhood_index':[0,0,1], 'multi-layer':True, 
-        'megalexa':500, 'quorum':FIND_MAX}
+    arguments = ARGS()
+    # args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'resume':False,
+    #     'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'multi-layer':False, 
+    #     'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False, 'nbank':1, 'pool':'',
+    #     'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None,
+    #     'assist':None, 'compact-dataset':False, 'auto-order':'00'}
 
     command = sys.argv[1]
 
     opts, _ = getopt(sys.argv[2:], shortopt, longopts)
     for o, a in opts:
-        if o in ['-m', '--kmin']:args_dict.update({'kmin':int(a)})
-        elif o in ['-M', '--kmax']:args_dict.update({'kmax':int(a)})
+        if o in ['-m', '--kmin']:arguments.kmin = int(a)
+        elif o in ['-M', '--kmax']:arguments.kmax = int(a)
         elif o in ['-l', '--level']:
-            try: args_dict.update({'level':int(a)})
-            except: args_dict.update({'level':[int(o) for o in a.split(DELIMETER)]})
+            try:    arguments.level = int(a)
+            except: arguments.level = [int(o) for o in a.split(DELIMETER)]
         elif o in ['-d', '--distance']:
-            try:args_dict.update({'dmax':int(a)})
-            except:args_dict.update({'dmax':[int(o) for o in a.split(DELIMETER)]})
-        elif o in ['-s', '--sequences']:args_dict.update({'sequences':a})
-        elif o in ['-g', '--gap']:args_dict.update({'gap':int(a)})
-        elif o in ['-O', '--overlap']:args_dict.update({'overlap':int(a)})
-        elif o == '--mask':args_dict.update({'mask':a})
-        elif o in ['-q', '--quorum']:args_dict.update({'quorum':int(a)})
+            try:   arguments.dmax = int(a)
+            except:arguments.dmax = [int(o) for o in a.split(DELIMETER)]
+        elif o in ['-s', '--sequences']:arguments.sequences = a
+        elif o in ['-g', '--gap']:arguments.gap = int(a)
+        elif o in ['-O', '--overlap']:arguments.overlap = int(a)
+        elif o == '--mask':arguments.mask = a
+        elif o in ['-q', '--quorum']:arguments.quorum = int(a)
         elif o in ['-f', '--frame']: 
-            try:args_dict.update({'frame_size':int(a)})
-            except:args_dict.update({'frame_size':[int(o) for o in a.split(DELIMETER)]})
+            try:   arguments.frame_size = int(a)
+            except:arguments.frame_size = [int(o) for o in a.split(DELIMETER)]
         elif o in ['-G', '--gkhood']: 
-            try:args_dict.update({'gkhood_index':int(a)})
-            except:args_dict.update({'gkhood_index':[int(o) for o in a.split(DELIMETER)]})
-        elif o in ['-p', '--path']:args_dict.update({'path':a})
-        elif o in ['-Q', '--find-max-q']:args_dict.update({'quorum':FIND_MAX})
-        elif o in ['-u', '--multi-layer']:args_dict.update({'multi-layer':True})
-        elif o == '-F':args_dict.update(feature_update)
-        elif o in ['-x', '--megalexa']:args_dict.update({'megalexa':int(a)})
-        elif o in ['-A', '--additional-name']:args_dict.update({'additional_name':a})
-        elif o in ['-r', '--reference']:args_dict.update({'reference':a})
-        elif o == '--disable-chaining':args_dict.update({'disable_chaining':True})
-        elif o in ['-P', '--multicore']: args_dict.update({'multicore':True})
-        elif o in ['-n', '--ncores']:args_dict.update({'ncores':int(a)})
-        elif o in ['-j', '--jaspar']:args_dict.update({'jaspar':a})
+            try:   arguments.gkhood_index = int(a)
+            except:arguments.gkhood_index = [int(o) for o in a.split(DELIMETER)]
+        elif o in ['-p', '--path']:arguments.path = a
+        elif o in ['-Q', '--find-max-q']:arguments.quorum = FIND_MAX
+        elif o in ['-u', '--multi-layer']:arguments.multilayer = True
+        elif o in ['-x', '--megalexa']:arguments.megalexa = int(a)
+        elif o in ['-A', '--additional-name']:arguments.additional_name = a
+        elif o in ['-r', '--reference']:arguments.reference = a
+        elif o == '--disable-chaining':arguments.disable_chaining = True
+        elif o in ['-P', '--multicore']: arguments.multicore = True
+        elif o in ['-n', '--ncores']:arguments.ncores = int(a)
+        elif o in ['-j', '--jaspar']:arguments.jaspar = a
         elif o in ['-a', '--arguments']:
             with open(a, 'r') as arguments:opts += getopt(arguments.read().split(), shortopt, longopts)[0]
-        elif o == '--name':args_dict.update({'name':a})
-        elif o in ['-h', '--assist']:args_dict.update({'assist':a})
-        elif o in ['-b', '--bank']:args_dict.update({'nbank':int(a)})
-        elif o in ['-R', '--resume-chaining']:args_dict.update({'resume':True})
-        elif o in ['-S', '--score-pool']:args_dict.update({'pool':a})
-        elif o in ['-c', '--compact-dataset']:args_dict.update({'compact-dataset':True})
+        elif o == '--name':arguments.name = a
+        elif o in ['-h', '--assist']:arguments.assist = a
+        elif o in ['-b', '--bank']:arguments.nbank = int(a)
+        elif o in ['-R', '--resume-chaining']:arguments.resume = True
+        elif o in ['-S', '--score-pool']:arguments.pool = a
+        elif o in ['-o', '--auto-order']:arguments.auto_order = bytes.fromhex(a)
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -520,64 +526,63 @@ if __name__ == "__main__":
 
     if command == 'SLD':
         single_level_dataset(
-            args_dict['kmin'], 
-            args_dict['kmax'], 
-            args_dict['level'], 
-            args_dict['dmax'])
+            arguments.kmin, 
+            arguments.kmax, 
+            arguments.level, 
+            arguments.dmax)
     elif command == 'MFC':
         motif_finding_chain(
-            args_dict['sequences'], 
-            args_dict['gkhood_index'], 
-            args_dict['frame_size'], 
-            args_dict['quorum'], 
-            args_dict['dmax'], 
-            args_dict['gap'], 
-            args_dict['overlap'], 
-            multilayer=args_dict['multi-layer'],
-            megalexa=args_dict['megalexa'],
-            chaining_disable=args_dict['disable_chaining'],
-            multicore=args_dict['multicore'],
-            cores=args_dict['ncores'],
-            pfm=args_dict['jaspar'],
-            checkpoint=args_dict['checkpoint'],
-            banks=args_dict['nbank'],
-            resume=args_dict['resume'],
-            on_sequence_compressed=args_dict['additional_name'],
-            initial_pool=args_dict['pool'])
+            arguments.sequences, 
+            arguments.gkhood_index, 
+            arguments.frame_size, 
+            arguments.quorum, 
+            arguments.dmax, 
+            arguments.gap, 
+            arguments.overlap, 
+            multilayer=arguments.multilayer,
+            megalexa=arguments.megalexa,
+            chaining_disable=arguments.disable_chaining,
+            multicore=arguments.multicore,
+            cores=arguments.ncores,
+            pfm=arguments.jaspar,
+            checkpoint=arguments.checkpoint,
+            banks=arguments.nbank,
+            resume=arguments.resume,
+            on_sequence_compressed=arguments.additional_name,
+            initial_pool=arguments.pool)
     elif command == 'SDM':
-        sequences_distance_matrix(args_dict['sequences'])
+        sequences_distance_matrix(arguments.sequences)
     elif command == 'ARS':
-        analysis_raw_statistics(args_dict['sequences'], args_dict['path'])
+        analysis_raw_statistics(arguments.sequences, arguments.path)
     elif command == 'ALG':
-        alignment_fasta(args_dict['path'])
+        alignment_fasta(arguments.path)
     elif command == 'FLD':
-        assert isinstance(args_dict['level'], list)
+        assert isinstance(arguments.level, list)
         FL_dataset(
-            args_dict['kmin'],
-            args_dict['kmax'],
-            args_dict['level'][0],
-            args_dict['level'][1],
-            args_dict['dmax']
+            arguments.kmin,
+            arguments.kmax,
+            arguments.level[0],
+            arguments.level[1],
+            arguments.dmax
         )
     elif command == '2BT':
-        download_2bit(args_dict['reference'])
+        download_2bit(arguments.reference)
     elif command == 'TST':
-        tree_m, tree_d = testing(args_dict['sequences'])
+        tree_m, tree_d = testing(arguments.sequences)
     elif command == 'DOC':
         download_observation_checkpoint(
-            args_dict['sequences'], 
-            args_dict['frame_size'], 
-            args_dict['dmax'], 
-            args_dict['multi-layer'])
+            arguments.sequences, 
+            arguments.frame_size, 
+            arguments.dmax, 
+            arguments.multilayer)
     elif command == 'UOC':
         upload_observation_checkpoint(
-            args_dict['sequences'], 
-            args_dict['frame_size'], 
-            args_dict['dmax'], 
-            args_dict['multi-layer'])
+            arguments.sequences, 
+            arguments.frame_size, 
+            arguments.dmax, 
+            arguments.multilayer)
     elif command == 'MTH':
-        pass
-        # auto_maintenance(args_dict)
+        auto_maintenance(arguments)
     elif command == 'NOP':
         pass
     else:

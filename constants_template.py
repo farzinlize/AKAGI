@@ -235,6 +235,37 @@ EXECUTION = 'unnamed'
 #                    enums                   #
 # ########################################## #
 
+# default values for application arguments
+class ARGS:
+    def __init__(self) -> None:
+        self.kmin = 5
+        self.kmax = 8
+        self.level = 6
+        self.dmax = 1
+        self.sequences = 'data/dm01r'
+        self.gap = 3
+        self.overlap = 2
+        self.mask = None
+        self.quorum = ARG_UNSET
+        self.frame_size = 6
+        self.gkhood_index = 0
+        self.multilayer = False
+        self.multicore = False
+        self.ncores = MAX_CORE
+        self.jaspar = ''
+        self.checkpoint = True
+        self.name = None
+        self.resume = False
+        self.megalexa = 0
+        self.additional_name = ''
+        self.reference = 'hg18'
+        self.disable_chaining = False
+        self.nbank = 1
+        self.pool = ''
+        self.assist = None
+        self.auto_order = '00'
+        self.path = ''
+
 ARG_UNSET = -1
 FIND_MAX = -2
 EXTRACT_KMER = 1
