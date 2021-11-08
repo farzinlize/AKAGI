@@ -348,6 +348,25 @@ void destroy_node(chain_node * node){
 }
 
 
+int len_chain_link(chain_link head){
+    int result = 0;
+    chain_link * current = &head;
+    while(current != NULL){result++;current = current->next;}
+    return result;
+}
+
+
+void clean_chain_link(chain_link head){
+    chain_link * current = &head, *temp;
+    while(current != NULL){
+        destroy_node(current->node);
+        temp = current->next;
+        free(current);
+        current = temp;
+    }
+}
+
+
 #ifdef STRUCT_MAIN
 int main(int argc, char * argv[]){
 
