@@ -856,15 +856,12 @@ def list_to_binary(found_list):
 # ########################################## #
 
 # functions consider unsigned integer if not mentioned
-def bytes_to_int(b :bytes, signed=False):
-    return int.from_bytes(b, BYTE_READ_INT_MODE, signed=signed)
+def bytes_to_int(b :bytes, signed=False, endian=BYTE_READ_INT_MODE):
+    return int.from_bytes(b, endian, signed=signed)
 
 
-def int_to_bytes(i, int_size=INT_SIZE, signed=False, randomshit=0):
-    try:
-        return i.to_bytes(int_size, BYTE_READ_INT_MODE, signed=signed)
-    except Exception as e:
-        print(f'[ERROR] {e}\n', i, type(i), randomshit, sep='\t')
+def int_to_bytes(i, int_size=INT_SIZE, signed=False):
+    return i.to_bytes(int_size, BYTE_READ_INT_MODE, signed=signed)
 
 
 # ########################################## #
