@@ -22,8 +22,6 @@ chain_link next_chain(chain_node motif, on_sequence on_seq, int sequences_count,
         }current_map = current_map->next;
     }
 
-    printf("[DEBUG] delete me im here\n");
-
     /*   next-generation extreaction   */   
     /* initial result array         */
     chain_link * head = (chain_link *) malloc(sizeof(chain_link));
