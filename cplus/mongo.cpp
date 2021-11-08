@@ -3,12 +3,13 @@
 char * secret_pass(){
 
     FILE * secretfile;
-    char * js;
+    char * js, filename[100];
     long numbytes;
     char * pass;
  
     /* read content of secret file */
-    secretfile = fopen(MONGO_SECRET, "r");
+    sprintf(filename, MONGO_SECRET, AKAGI_PATH);
+    secretfile = fopen(filename, "r");
     fseek(secretfile, 0L, SEEK_END);
     numbytes = ftell(secretfile);
     fseek(secretfile, 0L, SEEK_SET);	
@@ -225,7 +226,7 @@ bool pop_chain_node(mongoc_client_t * client, chain_node * popy, bool * empty){
 #define POP_AFTER
 
 int main(){
-    printf("[CPLUS/MONGO][TEST]\n");
+    printf("[CPLUS/MONGO][TEST][V2]\n");
 
     /* initial library */
     mongoc_init();
