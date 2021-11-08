@@ -41,7 +41,29 @@ class AKAGIPool:
         self.collection_name = collection_name
         for _ in pool_descriptions:self.tables.append([])
 
-    
+
+    def insert_blank(self, scores):
+        ranks = []
+        entity = self.Entity(scores=scores)
+        for sorted_by, table in enumerate(self.tables):
+            entity.sorted_by = sorted_by
+            table, rank = binary_add_return_position(table, entity)
+
+            if rank == POOL_SIZE:ranks.append(-1) # worst possible rank
+            else                :ranks.append(rank)
+
+            if POOL_LIMITED and len(table) == POOL_SIZE + 1:table = table[:-1]
+
+            self.tables[sorted_by] = table
+        return ranks
+
+
+    def place(self, pattern:ChainNode, ranks):
+        for rank, table in zip(ranks, self.tables):
+            if rank == -1: continue
+            table[rank].data = pattern
+            
+
     def judge(self, pattern:ChainNode):
 
         # calculating pattern scores
