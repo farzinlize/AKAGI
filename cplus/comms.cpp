@@ -50,24 +50,29 @@ bool send_report(int judge_fd, chain_node * node, double scores[3]){
 #ifdef COMMS_MAIN
 int main(){
     
-    chain_node popy;
+    int socket_test = connect_communication(2081);
+    uint32_t a = 7;
+    send(socket_test, &a, sizeof(uint32_t), 0);
+    close(socket_test);
 
-    printf("(using dummy chain nodes to test communication)\n");
-    popy.label = "dummy";
-    FILE * f = fopen("popy_test.data", "rb");
-    fseek(f, 0L, SEEK_END);
-    long numbytes = ftell(f);
-    fseek(f, 0L, SEEK_SET);	
-    uint8_t * data = (uint8_t*)calloc(numbytes, sizeof(uint8_t));	
-    fread(data, sizeof(uint8_t), numbytes, f); fclose(f);
-    popy.foundmap = binary_to_structure(data);
-    free(data);
+    // chain_node popy;
 
-    double scores[3] = {1.34, 99.56, 78.145};
+    // printf("(using dummy chain nodes to test communication)\n");
+    // popy.label = "dummy";
+    // FILE * f = fopen("popy_test.data", "rb");
+    // fseek(f, 0L, SEEK_END);
+    // long numbytes = ftell(f);
+    // fseek(f, 0L, SEEK_SET);	
+    // uint8_t * data = (uint8_t*)calloc(numbytes, sizeof(uint8_t));	
+    // fread(data, sizeof(uint8_t), numbytes, f); fclose(f);
+    // popy.foundmap = binary_to_structure(data);
+    // free(data);
 
-    int judge = connect_communication(2091);
-    send_report(judge, &popy, scores);
-    printf("[MAIN] DONE\n");
+    // double scores[3] = {1.34, 99.56, 78.145};
+
+    // int judge = connect_communication(2081);
+    // send_report(judge, &popy, scores);
+    // printf("[MAIN] DONE\n");
 
     // int sockfd = 0;
 
