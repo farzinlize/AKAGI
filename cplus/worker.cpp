@@ -11,31 +11,31 @@ void mother_interrupt(int signum){
     switch(signal){
     case SIGNAL_TERMINATE:
     case EOF:
-        #ifndef OPTIMIZED
+        #ifdef ACK_MOTHER
         putchar(SIGNAL_BYE);
         #endif
         MOTHER_ACTIVE = false;break;
     case SIGNAL_RESUME:
-        #ifndef OPTIMIZED
+        #ifdef ACK_MOTHER
         putchar(SIGNAL_ACK);
         #endif
         sleep(5);break;
     case SIGNAL_CHANGE_BANK:
         bank_port = read_integer(stdin);
-        #ifndef OPTIMIZED
+        #ifdef ACK_MOTHER
         putchar(SIGNAL_ACK);
         #endif
         mongoc_client_destroy(bank);
         bank = get_client_c(bank_port);break;
     default:
-        #ifndef OPTIMIZED
+        #ifdef ACK_MOTHER
         putchar(SIGNAL_NACK);
         #endif
         MOTHER_ACTIVE = false;
         exit_code = EXIT_ERROR;
     }
     /* sending unecessary acknowledges to mother */
-    #ifndef OPTIMIZED
+    #ifdef ACK_MOTHER
     fflush(stdout);
     #endif
 }
@@ -88,6 +88,10 @@ int main(int argc, char* argv[]){
     FILE * report = fopen(report_file, "w");
     FILE * errors = fopen(errors_file, "w");
 
+    #ifdef DEBUG_WORKER
+    fprintf(report, "[DEBUG] worker is here\n");fflush(report);
+    #endif
+
     /* declare signal handler to hear mother messages */
     signal(SIGINT, mother_interrupt);
 
@@ -104,9 +108,23 @@ int main(int argc, char* argv[]){
     int gap = atoi(argv[GAP_INDEX]);
     int q = atoi(argv[Q_INDEX]);
 
+    #ifdef DEBUG_WORKER
+    fprintf(report, "[DEBUG] parsing arguments are done (bank port %d | judge port %d)\n", bank_port, judge_port);fflush(report);
+    #endif
+
     /* connecting to other processes */
     bank = get_client_c(bank_port);
+
+    #ifdef DEBUG_WORKER
+    fprintf(report, "[DEBUG] bank access is established\n");fflush(report);
+    #endif
+
     int judge = connect_communication(judge_port);
+    if(judge == -1){fprintf(report, "EXIT ON ERROR - judge communication failed (port:%d)", judge_port); return EXIT_ERROR;}
+
+    #ifdef DEBUG_WORKER
+    fprintf(report, "[DEBUG] connection to other processes are established\n");fflush(report);
+    #endif
 
     while(MOTHER_ACTIVE){
 
@@ -119,6 +137,10 @@ int main(int argc, char* argv[]){
         if(!check){error_handler(errors, empty?EMPTY:EPOP, NULL);continue;}
         jobs_done_by_me++;
 
+        #ifdef DEBUG_WORKER
+        fprintf(report, "[DEBUG] popy motif -> %s\n", motif.label);fflush(report);
+        #endif
+
         /* evaluating the motif (drop on judge decide) */
         double scores[3];
         now = clock();       // [CAPTURE]
@@ -128,10 +150,19 @@ int main(int argc, char* argv[]){
         record = clock() - now;
         message_index += sprintf(&message_buffer[message_index], "[EVA:%ld]", record);
         
+        #ifdef DEBUG_WORKER
+        fprintf(report, "[DEBUG] socors -> %f, %f, %f\n", scores[0], scores[1], scores[2]);fflush(report);
+        #endif
+
         /* talk with judge and ignore low ranks patterns */
         now = clock();       // [CAPTURE]
         check = send_report(judge, &motif, scores);
         record = clock() - now;
+        
+        #ifdef DEBUG_WORKER
+        fprintf(report, "[DEBUG] judge call -> %s\n", check?"GO":"IGNORE");fflush(report);
+        #endif
+
         if(!check) continue;
         message_index += sprintf(&message_buffer[message_index], "[JUG:%ld]", record);
         
@@ -142,6 +173,11 @@ int main(int argc, char* argv[]){
         record = clock() - now;
         message_index += sprintf(&message_buffer[message_index], "[CHN:%ld]", record);
         
+        #ifdef DEBUG_WORKER
+        fprintf(report, "[DEBUG] chaining done in %d clock (number of next-gen -> %d)\n", record, len_chain_link(next_generation));
+        fflush(report);
+        #endif
+
         /* storing next generation */
         now = clock();       // [CAPTURE]
         check = store_many_chains(next_generation, bank);
@@ -149,8 +185,17 @@ int main(int argc, char* argv[]){
         if(!check){error_handler(errors, ESTORE, &motif);continue;}
         message_index += sprintf(&message_buffer[message_index], "[DBS:%ld]", record);
 
+        #ifdef DEBUG_WORKER
+        fprintf(report, "[DEBUG] next-generation is stored in %d clock\n", record);fflush(report);
+        #endif
+
         /* clean trash */
+        clean_chain_link(next_generation);
         destroy_node(&motif);
+
+        #ifdef DEBUG_WORKER
+        fprintf(report, "[DEBUG] chaining done in %d clock\n", record);fflush(report);
+        #endif
 
         /* report to user in file */
         chaining_done_by_me++;
