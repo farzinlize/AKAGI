@@ -21,7 +21,7 @@ from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, ARGS, AUTO_DATABASE_SETUP, BRIEFING, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, ORDER_COMPACT_BIT, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES, enum
+from constants import APPDATA_PATH, ARGS, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, COMPACT_DATASET_TEMP_LOCATION, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, ORDER_COMPACT_BIT, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES, WORKER_MODE, enum
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -171,6 +171,15 @@ def motif_finding_chain(dataset_name,
     assert len(bundles) == len(sequences)
     assert q <= len(sequences) or q == FIND_MAX
 
+    # ----------------------------------------------------------------------------------- #
+    # [WARNING] in case of using previously calculated observation data
+    #           you must set q argument as reported in observation report.
+    # the program will set q to maximum but it could ignore many patterns in your lexicon
+    #
+    # [WARNING] it is recommended to specify q as argument for each run manually
+    if q < 0 and resume:log_it(IMPORTANT_LOG, '[WARNING] argument q is not set to run on cached observation data - set to maximum');q = len(sequences)
+    # ----------------------------------------------------------------------------------- #
+
     # search for observation checkpoint
     if not resume and checkpoint:
         checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
@@ -190,13 +199,6 @@ def motif_finding_chain(dataset_name,
     # zero_chain_nodes = [ChainNode(motif.label, motif.foundmap) for motif in motifs]
     # # # # # # # #
 
-    # ----------------------------------------------------------------------------------- #
-    # [WARNING] in case of using previously calculated observation data
-    #           you must set q argument as reported in observation report.
-    # the program will set q to maximum but it could ignore many patterns in your lexicon
-    if q < 0:log_it(IMPORTANT_LOG, '[WARNING] argument q is not set to run on cached observation data - set to maximum');q = len(sequences)
-    # ----------------------------------------------------------------------------------- #
-
     if not resume and not motifs:print('[FATAL][ERROR] no observation data is available (error)');return
 
     # # # # # # # #  OnSequence data structure  # # # # # # # #
@@ -204,16 +206,20 @@ def motif_finding_chain(dataset_name,
     if not resume:
         try:on_sequence = OnSequenceDistribution(motifs, sequences)
         except Exception as error:print(f'[FATAL][ERROR] cant make OnSequence {error}');return
-    # read compressed from file
-    else:on_sequence = OnSequenceDistribution(compressed_data=on_sequence_compressed)
-    # save compressed for later
-    if SAVE_ONSEQUENCE_FILE:on_sequence.compress(filename=on_sequence_compressed)
+    # read compressed from file or just pass the compressed file location in case of cplus-worker
+    else:
+        if CPLUS_WORKER:on_sequence = on_sequence_compressed
+        else           :on_sequence = OnSequenceDistribution(compressed_data=on_sequence_compressed)
+    # save compressed for later (raw file for cplus-worker / compress uses python pickle)
+    if SAVE_ONSEQUENCE_FILE:
+        if BYTES_OR_PICKLE:on_sequence.raw_file(filename=on_sequence_compressed)
+        else:              on_sequence.compress(filename=on_sequence_compressed)
     # reports for analysis
     if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-    # making compact dataset for cplus/workers
-    if make_compact_dataset_flag:make_compact_dataset("compact_dataset.temp", sequences, bundle, pwm)
+    # making compact dataset for cplus-workers
+    if make_compact_dataset_flag:make_compact_dataset(COMPACT_DATASET_TEMP_LOCATION, sequences, bundle, pwm)
 
     ############### start to chain ###############
     if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
@@ -467,13 +473,8 @@ if __name__ == "__main__":
         'multi-layer', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
 
-    # default values
+    # default values in ARGS object
     arguments = ARGS()
-    # args_dict = {'kmin':5, 'kmax':8, 'level':6, 'dmax':1, 'sequences':'data/dm01r', 'gap':3, 'resume':False,
-    #     'overlap':2, 'mask':None, 'quorum':ARG_UNSET, 'frame_size':6, 'gkhood_index':0, 'multi-layer':False, 
-    #     'megalexa':0, 'additional_name':'', 'reference':'hg18', 'disable_chaining':False, 'nbank':1, 'pool':'',
-    #     'multicore': False, 'ncores':MAX_CORE, 'jaspar':'', 'checkpoint':True, 'name':None,
-    #     'assist':None, 'compact-dataset':False, 'auto-order':'00'}
 
     command = sys.argv[1]
 

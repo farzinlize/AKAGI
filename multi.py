@@ -1,25 +1,34 @@
 # python libraries 
+from io import BytesIO, TextIOWrapper
+from multiprocessing.connection import Connection
 import os
 from functools import reduce
 from queue import Empty
+from signal import SIGINT
+import struct
+from subprocess import PIPE, Popen
 from time import sleep
 from datetime import datetime
-from multiprocessing import Process, Queue
+from multiprocessing import Pipe, Process, Queue
 from typing import List
+from pymongo import message
 from pymongo.errors import ServerSelectionTimeoutError
+from socket import socket, AF_INET, SOCK_STREAM, gethostname
+from selectors import DefaultSelector, EVENT_READ
 
 # project modules
+from FoundMap import MemoryMap
 from mongo import get_bank_client, initial_akagi_database, serve_database_server
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
 from pool import AKAGIPool, get_AKAGI_pools_configuration
-from misc import log_it, time_has_ended
+from misc import binary_to_list, bytes_to_int, log_it, read_bundle, time_has_ended
 from TrieFind import ChainNode, initial_chainNodes, pop_chain_node
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL
+from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, COMPACT_DATASET_TEMP_LOCATION, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -27,6 +36,8 @@ ERROR_EXIT = -2
 TIMESUP_EXIT = -1
 END_EXIT = 0
 
+class FPopen(Popen):
+    def is_alive(self):return self.poll()==None
 
 def chaining_thread_and_local_pool(bank_port, message: Queue, merge: Queue, on_sequence: OnSequenceDistribution, dataset_dict, overlap, gap, q):
 
@@ -202,6 +213,68 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
         # global_pool.save(mongo_client=client)
 
 
+def judge_process(mother_pipe:Connection, port, cores, dataset_dict, initial_pool:AKAGIPool):
+    
+    def worker_respond(worker:socket):
+        nonlocal global_pool
+        log_it("judge.report", "worker report")
+        scores = struct.unpack("ddd", worker.recv(24))
+        ranks = global_pool.insert_blank(scores)
+        log_it("judge.report", f"----ranks = {ranks} and scores = {scores}")
+        if reduce(lambda a, b:a or (b!=-1), ranks, False):
+            log_it("judge.report", "----job accepted")
+            worker.send(b'\1') # request data
+            label_size = bytes_to_int(worker.recv(INT_SIZE), endian='little')
+            label = str(worker.recv(label_size), 'utf8')
+            bin_size = bytes_to_int(worker.recv(INT_SIZE), endian='little')
+            foundlist = binary_to_list(BytesIO(worker.recv(bin_size)))
+            global_pool.place(ChainNode(label, MemoryMap(initial=foundlist)), ranks)
+        
+        # ignore patterns that appears in no pools
+        else:worker.send(b'\0')
+
+
+    def admin_respond(mother:Connection):
+        nonlocal report_count
+        command = mother.recv()
+        log_it("judge.report", f"admin message -> {command}")
+
+        # top ten report in window file with time stamp
+        if command == 'R':
+            with open(CR_FILE, 'w') as window:
+                window.write(str(datetime.now()) + ' | report #%d\n\n'%report_count)
+                window.write(global_pool.top_ten_reports())
+                report_count += 1
+        
+        elif command == EXIT_SIGNAL:return
+
+    log_it("judge.report", "judge is here")
+    report_count = 0
+    if initial_pool :global_pool = initial_pool
+    else            :global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict), collection_name='-'.join([EXECUTION, GLOBAL_POOL_NAME]))
+
+    event_selector = DefaultSelector()
+    server = socket(AF_INET, SOCK_STREAM)
+    server.bind(('127.0.0.1', port))
+    if cores > 80:log_it(IMPORTANT_LOG, "using a single judge is not recommended for high number of working cores")
+    server.listen(cores)
+    log_it("judge.report", "socket is set for listenting")
+    
+    # register each worker (block until all workers handshake)
+    for _ in range(cores):
+        joining_worker, _ = server.accept()
+        log_it("judge.report", "registering a joining worker")
+        event_selector.register(joining_worker, EVENT_READ, worker_respond)
+
+    # register mother messages
+    if mother_pipe:event_selector.register(mother_pipe, EVENT_READ, admin_respond)
+
+    while True:
+        events = event_selector.select()
+        log_it("judge.report", f"LOOP event count = {len(events)}")
+        for key, _ in events:key.data(key.fileobj)
+        
+
 # a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
 # [WARNING] deprecated function dont use it!
 # PARENT_WORK should be False
@@ -253,7 +326,7 @@ def multicore_chaining_main(cores_order,
     
     try   :available_cores = len(os.sched_getaffinity(0))
     except:available_cores = 'unknown'
-
+    
     print(f'[CHAINING][MULTICORE] number of available cores: {available_cores}')
 
     # making status file
@@ -268,10 +341,6 @@ def multicore_chaining_main(cores_order,
 
     # order custom number of workers
     else:cores = cores_order
-
-    # initializing synchronized queues
-    merge =   Queue()   # merging requests to a global pool
-    message = Queue()   # message box to terminate workers loop (higher priority)
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     #
@@ -313,11 +382,26 @@ def multicore_chaining_main(cores_order,
     #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-    # initial threads
-    workers = [Process(target=chaining_thread_and_local_pool, args=(bank_ports[i%bank_order],message,merge,on_sequence,dataset_dict,overlap,gap,q)) for i in range(cores)]
-    global_pooler = Process(target=global_pool_thread, args=(merge,dataset_dict,initial_pool))
-    for worker in workers:worker.start()
-    global_pooler.start()
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    #
+    #           execute worker and judge processes
+    #               and stablish communication
+    #
+
+    # judge-python process uses inner python pipe communication to communicate with admin
+    if CPLUS_WORKER:
+        judge_pipe, mother_pipe = Pipe()
+        judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, cores, dataset_dict, initial_pool));judge.start()
+        workers = [FPopen(WORKER_EXECUTABLE+f' {bank_ports[i%bank_order]} {JUDGE_PORT} {on_sequence} {COMPACT_DATASET_TEMP_LOCATION} {overlap} {gap} {q}', stdin=PIPE, stdout=PIPE) for i in range(cores)]
+    
+    else: # using python workers (slower) and shared memory queues
+        message = Queue();merge = Queue()
+        judge = Process(target=global_pool_thread, args=(merge, dataset_dict, initial_pool));judge.start()
+        workers = [Process(target=chaining_thread_and_local_pool, args=(bank_ports[i%bank_order],message,merge,on_sequence,dataset_dict,overlap,gap,q)) for i in range(cores)]
+        for worker in workers:worker.start()
+    #
+    #
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     # initial server listener (in case of network computing)
     if network:
@@ -363,12 +447,18 @@ def multicore_chaining_main(cores_order,
 
                         # manually command to save global pool
                         if command.startswith(SAVE_SIGNAL):
-                            merge.put(SAVE_SIGNAL)
+                            judge_pipe.send(SAVE_SIGNAL)
 
                         # signal workers to continue 
                         elif command.startswith(CONTINUE_SIGNAL):
-                            how_many = int(command.split()[1])
-                            for _ in range(how_many):message.put(CONTINUE_SIGNAL)
+                            if CPLUS_WORKER:
+                                worker_index = int(command.split()[1])
+                                os.kill(workers[worker_index].pid, SIGINT)
+                                workers[worker_index].stdin.write(b'R') # TODO: R??????
+                                workers[worker_index].stdin.flush()
+                            else:
+                                how_many = int(command.split()[1])
+                                for _ in range(how_many):message.put(CONTINUE_SIGNAL)
 
                         elif command.startswith('reset'):
                             bank_index = int(command.split()[1])
@@ -383,9 +473,10 @@ def multicore_chaining_main(cores_order,
 
             ############## PHASE TWO: BALANCING (canceled) ##############
 
-            # queue size report
-            with open(MEMORY_BALANCING_REPORT, 'w') as report:
-                report.write(f"merge => {merge.qsize()}\nmessage => {message.qsize()}\nloop time =>{datetime.now() - loop_time}")
+            # queue size report in case of python-workers
+            if not CPLUS_WORKER:
+                with open(MEMORY_BALANCING_REPORT, 'w') as report:
+                    report.write(f"merge => {merge.qsize()}\nmessage => {message.qsize()}\nloop time =>{datetime.now() - loop_time}")
 
     ############### end of processing #######################
 
@@ -396,8 +487,12 @@ def multicore_chaining_main(cores_order,
     #     return exit_code
     
     # message the workers to terminate their job and merge for last time
-    for _ in workers:
-        message.put(EXIT_SIGNAL)
+    for worker in workers:
+        if CPLUS_WORKER:
+            os.kill(worker.pid, SIGINT)
+            worker.stdin.write(b'T');worker.stdin.flush()
+
+        else:message.put(EXIT_SIGNAL)
 
     is_there_alive = reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers])
     join_timeout = 30 # minutes
@@ -417,12 +512,14 @@ def multicore_chaining_main(cores_order,
             print('[ERROR][PROCESS] worker (pid=%d) resist to die (killed by master)'%worker.pid)
             worker.kill()
 
-    ########### all working process are dead #############
-    # message global_pooler to terminate
-    merge.put(EXIT_SIGNAL)
-    global_pooler.join()
+    ###########  all working process are dead  ###########
 
-    ######## shut down banks 
+    # message judge to terminate
+    if CPLUS_WORKER:judge_pipe.send(EXIT_SIGNAL)
+    else           :merge.put(EXIT_SIGNAL)
+    judge.join()
+
+    # shut down banks
     for index in range(len(bank_ports)):os.system(MONGOD_SHUTDOWN_COMMAND%(BANK_PATH%index))
 
     return exit_code
@@ -444,6 +541,7 @@ def test_process(queue:Queue):
 
 if __name__ == '__main__':
     # test
-    queue = Queue()
-    process1 = Process(target=test_process, args=(queue,))
-    process1.start()
+    on_seq = '/home/akagi/Documents/AKAGI/cplus/test.onseq'
+    judge_pipe, mother_pipe = Pipe()
+    judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, 2, None, None));judge.start()
+    workers = [FPopen([WORKER_EXECUTABLE, '2090' ,f'{JUDGE_PORT}', on_seq, COMPACT_DATASET_TEMP_LOCATION, '4', '4', '200'], stdin=PIPE, stdout=PIPE) for i in range(2)]
