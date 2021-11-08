@@ -66,6 +66,7 @@ BANK_PORTS_REPORT = 'bankports.report'
 COMMAND_WHILE_CHAINING = 'command.app'
 BEST_PATTERNS_POOL = '%s_%d.pool'
 MEMORY_BALANCING_REPORT = 'queue.report'
+COMPACT_DATASET_TEMP_LOCATION = 'compact.temp'
 
 
 # ########################################## #
@@ -195,6 +196,7 @@ HELP_PORTION = 0.6
 NEED_HELP = 50000
 SOCKET_BUFFSIZE = 4096
 LUCKY_SHOT = 1
+JUDGE_PORT = 2081
 
 POOL_SIZE = 100
 GOOD_HIT_RATIO = 0.25
@@ -220,6 +222,7 @@ HELP_CLOUD = True
 HOPEFUL = True
 AUTO_DATABASE_SETUP = True
 SAVE_ONSEQUENCE_FILE = False
+BYTES_OR_PICKLE = True
 
 FOUNDMAP_MODE = FOUNDMAP_DISK
 QUEUE_MODE = QUEUE_DISK
@@ -230,41 +233,16 @@ MAIL_TO = ['farzinlize@live.com', 'fmohammadi@ce.sharif.edu']
 PC_NAME = 'Anakin'
 EXECUTION = 'unnamed'
 
+# cplus configuration
+WORKER_NAME = 'worker'
+WORKER_FAST = 'fworker'
+CPLUS_WORKER = True
+WORKER_MODE = WORKER_FAST
+WORKER_EXECUTABLE = f'./cplus/build/{WORKER_MODE}'
 
 # ########################################## #
 #                    enums                   #
 # ########################################## #
-
-# default values for application arguments
-class ARGS:
-    def __init__(self) -> None:
-        self.kmin = 5
-        self.kmax = 8
-        self.level = 6
-        self.dmax = 1
-        self.sequences = 'data/dm01r'
-        self.gap = 3
-        self.overlap = 2
-        self.mask = None
-        self.quorum = ARG_UNSET
-        self.frame_size = 6
-        self.gkhood_index = 0
-        self.multilayer = False
-        self.multicore = False
-        self.ncores = MAX_CORE
-        self.jaspar = ''
-        self.checkpoint = True
-        self.name = None
-        self.resume = False
-        self.megalexa = 0
-        self.additional_name = ''
-        self.reference = 'hg18'
-        self.disable_chaining = False
-        self.nbank = 1
-        self.pool = ''
-        self.assist = None
-        self.auto_order = '00'
-        self.path = ''
 
 ARG_UNSET = -1
 FIND_MAX = -2
@@ -313,3 +291,34 @@ MOTIF_KEY = 2
 MARGIN_KEY = 3
 
 TYPES_OF = {RANK:int, FDR_SCORE:float, P_VALUE:float, SUMMIT:int}
+
+# default values for application arguments
+class ARGS:
+    def __init__(self) -> None:
+        self.kmin = 5
+        self.kmax = 8
+        self.level = 6
+        self.dmax = 1
+        self.sequences = 'data/dm01r'
+        self.gap = 3
+        self.overlap = 2
+        self.mask = None
+        self.quorum = ARG_UNSET
+        self.frame_size = 6
+        self.gkhood_index = 0
+        self.multilayer = False
+        self.multicore = False
+        self.ncores = MAX_CORE
+        self.jaspar = ''
+        self.checkpoint = True
+        self.name = None
+        self.resume = False
+        self.megalexa = 0
+        self.additional_name = ''
+        self.reference = 'hg18'
+        self.disable_chaining = False
+        self.nbank = 1
+        self.pool = ''
+        self.assist = None
+        self.auto_order = '00'
+        self.path = ''
