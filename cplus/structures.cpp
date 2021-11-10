@@ -61,7 +61,7 @@ int add_position(FoundMap * foundmap, int seq_id, int location, int size){
 
 void add_frame(tree_node * node, char * frame, int seq_id, int location, int size, int current_frame_index){
 
-    #ifdef DEBUG
+    #ifdef DEBUG_STRUCTURE
     printf("[FRAME] we are at %d index of our path (char->%c)\n", current_frame_index, frame[current_frame_index]);
     #endif
 
@@ -85,14 +85,14 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
     case 'G':next_path = node->children[3];break;
     }
 
-    #ifdef DEBUG
+    #ifdef DEBUG_STRUCTURE
     printf("[FRAME] we selected the next step at %d:address\n", next_path);
     #endif
 
     /* create path if not exist */
     if(next_path == NULL){
 
-        #ifdef DEBUG
+        #ifdef DEBUG_STRUCTURE
         printf("[FRAME] path dose not exist (creating on %c edge)\n", frame[current_frame_index]);
         #endif
 
@@ -356,8 +356,8 @@ int len_chain_link(chain_link head){
 }
 
 
-void clean_chain_link(chain_link head){
-    chain_link * current = &head, *temp;
+void clean_chain_link(chain_link * head){
+    chain_link *current = head, *temp;
     while(current != NULL){
         destroy_node(current->node);
         temp = current->next;
@@ -370,21 +370,40 @@ void clean_chain_link(chain_link head){
 #ifdef STRUCT_MAIN
 int main(int argc, char * argv[]){
 
-    tree_node * root = initial_tree(NULL);
-    printf("here we have a root\n");
+    chain_node popy;
+    popy.label = "dummy";
+    FILE * f = fopen("popy_test.data", "rb");
+    fseek(f, 0L, SEEK_END);
+    long numbytes = ftell(f);
+    fseek(f, 0L, SEEK_SET);	
+    uint8_t * data = (uint8_t*)calloc(numbytes, sizeof(uint8_t));	
+    fread(data, sizeof(uint8_t), numbytes, f); fclose(f);
+    popy.foundmap = binary_to_structure(data);
+    free(data);
 
-    char * frame = argv[1];
-    printf("we have a frame -> %s (size=%ld)\n", frame, strlen(frame));
+    chain_link a;
+    a.node = &popy;
+    a.next = NULL;
 
-    char * new_frame = str_plus_char(frame, 'G');
-    printf("also we have a new frame plus G -> %s (size=%ld)\n", new_frame, strlen(new_frame));
+    printf("STARTING TO DESTROY\n");
+    clean_chain_link(&a);
+    printf("DONE\n");
 
-    char * nully = NULL;
-    char * after_nully = str_plus_char(nully, 'A');
-    printf("we add A character to our nully now we have after_nully -> %s (size=%ld)\n", after_nully, strlen(after_nully));
+    // tree_node * root = initial_tree(NULL);
+    // printf("here we have a root\n");
 
-    add_frame(root, frame, 0, 5, 6, 0);
-    printf("we added a frame to our tree");
+    // char * frame = argv[1];
+    // printf("we have a frame -> %s (size=%ld)\n", frame, strlen(frame));
+
+    // char * new_frame = str_plus_char(frame, 'G');
+    // printf("also we have a new frame plus G -> %s (size=%ld)\n", new_frame, strlen(new_frame));
+
+    // char * nully = NULL;
+    // char * after_nully = str_plus_char(nully, 'A');
+    // printf("we add A character to our nully now we have after_nully -> %s (size=%ld)\n", after_nully, strlen(after_nully));
+
+    // add_frame(root, frame, 0, 5, 6, 0);
+    // printf("we added a frame to our tree");
 
     return 0;
 }

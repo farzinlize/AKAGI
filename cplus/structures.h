@@ -29,6 +29,7 @@ typedef struct FoundMap{
 typedef struct chain_node{
     char * label;
     FoundMap * foundmap;
+    bool foundmap_mode;
 } chain_node;
 
 /* observation tree entity */
@@ -79,7 +80,7 @@ int intlen_positions(pos_link * positions);
 void destroy_foundmap(FoundMap * map);
 void destroy_node(chain_node * node);
 int len_chain_link(chain_link head);
-void clean_chain_link(chain_link head);
+void clean_chain_link(chain_link * head);
 
 /* byte encode functions */
 uint8_t * structure_to_binary(FoundMap * map, uint32_t * binary_size);
