@@ -66,7 +66,7 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
     bson_t opts = BSON_INITIALIZER, reply;
     BSON_APPEND_BOOL (&opts, "ordered", false);
 
-    #ifdef DEBUG
+    #ifdef DEBUG_MONGO
     printf("[STORE] starting processing input objects into bson\n");
     #endif
 
@@ -74,7 +74,7 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
         /* send order in case of too many documents */
         if(order_size == MAX_ORDER_SIZE){
 
-            #ifdef DEBUG
+            #ifdef DEBUG_MONGO
             printf("[STORE] order array filled - send out data to server\n");
             #endif
 
@@ -90,7 +90,7 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
         if(reorder) bson_destroy(order[order_size]);
         order[order_size++] = current_order;
 
-        #ifdef DEBUG
+        #ifdef DEBUG_MONGO
         printf("[STORE] ---- initialzing bson number %d (reorder->%s)\n", order_size, reorder?"yes":"no");
         #endif
 
@@ -98,7 +98,7 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
         bson_oid_t new_id; bson_oid_init(&new_id, NULL);
         check = bson_append_binary(current_order, MONGO_ID_KEY, MONGO_ID_KEY_LEN, BSON_SUBTYPE_BINARY, new_id.bytes, 12);
 
-        #ifdef DEBUG
+        #ifdef DEBUG_MONGO
         char id_string[25]; bson_oid_to_string(&new_id, id_string);
         printf("[STORE] ---- appending check: %s | appending _id (id=%s)\n", check?"success":"failed", id_string);
         #endif
@@ -107,22 +107,22 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
         uint32_t binary_size; uint8_t * data = structure_to_binary(current.node->foundmap, &binary_size);
         check &= bson_append_binary(current_order, MONGO_DATA_KEY, MONGO_DATA_KEY_LEN, BSON_SUBTYPE_BINARY, data, binary_size);
 
-        #ifdef DEBUG
+        #ifdef DEBUG_MONGO
         printf("[STORE] ---- appending check: %s | structure to binary size -> %u\n", check?"success":"failed", binary_size);
         #endif
 
         check &= bson_append_utf8(current_order, MONGO_LABEL_KEY, MONGO_LABEL_KEY_LEN, current.node->label, -1);
 
-        #ifdef DEBUG
+        #ifdef DEBUG_MONGO
         printf("[STORE] ---- appending check: %s | appending label -> %s\n", check?"success":"failed", current.node->label);
         printf("[STORE] bson number %d is done\n", order_size);
         #endif
 
         if(current.next == NULL) break;
         else current = *current.next;
-    } while (true);
+    } while (current.node != NULL);
     
-    #ifdef DEBUG
+    #ifdef DEBUG_MONGO
     printf("[STORE] no more orders (last order_size -> %d and reorder -> %s)\n", order_size, reorder?"yes":"no");
     #endif
 
@@ -130,14 +130,14 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
         logit(error.message, DATABASE_LOG);
         exit_code = false;
 
-        #ifdef DEBUG
+        #ifdef DEBUG_MONGO
         size_t l; char * json = bson_as_json(&reply, &l);
         FILE * f =fopen("DEBUG_reply.json", "w");
         fwrite(json, sizeof(char), l, f); fclose(f);
         #endif
     }
 
-    #ifdef DEBUG
+    #ifdef DEBUG_MONGO
     printf("[STORE][FREE] starting to free occupied data (exit_code=%s)\n", exit_code?"success":"ERROR");
     #endif
 
@@ -148,7 +148,7 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
     for(int i=0;i<order_size;i++) bson_destroy(order[i]);
     free(order);
 
-    #ifdef DEBUG
+    #ifdef DEBUG_MONGO
     printf("[STORE] goodbye\n");
     #endif
 
