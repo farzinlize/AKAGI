@@ -63,14 +63,16 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
 
     /* unordered option for inserting many documents */
     bson_error_t error;
-    bson_t opts = BSON_INITIALIZER, reply;
+    bson_t opts = BSON_INITIALIZER;
     BSON_APPEND_BOOL (&opts, "ordered", false);
 
     #ifdef DEBUG_MONGO
+    bson_t reply = BSON_INITIALIZER;
     printf("[STORE] starting processing input objects into bson\n");
     #endif
 
-    do{
+    while (current.node != NULL){
+
         /* send order in case of too many documents */
         if(order_size == MAX_ORDER_SIZE){
 
@@ -120,13 +122,14 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
 
         if(current.next == NULL) break;
         else current = *current.next;
-    } while (current.node != NULL);
+    }
     
     #ifdef DEBUG_MONGO
     printf("[STORE] no more orders (last order_size -> %d and reorder -> %s)\n", order_size, reorder?"yes":"no");
+    if(order_size > 0 && exit_code && !mongoc_collection_insert_many(collection, order, order_size, &opts, &reply, &error)){
+    #else
+    if(order_size > 0 && exit_code && !mongoc_collection_insert_many(collection, order, order_size, &opts, NULL, &error)){
     #endif
-
-    if(exit_code && !mongoc_collection_insert_many(collection, order, order_size, &opts, &reply, &error)){
         logit(error.message, DATABASE_LOG);
         exit_code = false;
 
@@ -139,10 +142,11 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
 
     #ifdef DEBUG_MONGO
     printf("[STORE][FREE] starting to free occupied data (exit_code=%s)\n", exit_code?"success":"ERROR");
+    bson_destroy(&reply); 
     #endif
 
     /* free memory */
-    bson_destroy(&opts); bson_destroy(&reply);
+    bson_destroy(&opts); 
     mongoc_collection_destroy(collection);
     if(reorder) order_size = MAX_ORDER_SIZE;
     for(int i=0;i<order_size;i++) bson_destroy(order[i]);
@@ -158,6 +162,9 @@ bool store_many_chains(chain_link items, mongoc_client_t * client){
 
 /* pop a job from queue */
 bool pop_chain_node(mongoc_client_t * client, chain_node * popy, bool * empty){
+
+    /* binary to structure foundmap */
+    popy->foundmap_mode = FOUNDMAP_ARRAY;
 
     mongoc_collection_t * collection = mongoc_client_get_collection(client, DB_NAME, QUEUE_COLLECTION);
     bson_error_t error; bson_t dummy_query = BSON_INITIALIZER, reply;
@@ -221,12 +228,14 @@ bool pop_chain_node(mongoc_client_t * client, chain_node * popy, bool * empty){
 #ifdef MONGO_MAIN
 
 /* mongo test modes */
+// #define TEST_1
 // #define NO_RESTORE
-#define NO_POPY
-#define POP_AFTER
+// #define NO_POPY
+// #define POP_AFTER
+#define TEST_2
 
 int main(){
-    printf("[CPLUS/MONGO][TEST][V2]\n");
+    printf("[CPLUS/MONGO][TEST][V3]\n");
 
     /* initial library */
     mongoc_init();
@@ -234,6 +243,7 @@ int main(){
     /* get client ready */
     mongoc_client_t * client = get_client_c(MONGO_PORT);
 
+    #ifdef TEST_1
     /* ###############################################
      * test#1 
      * pop, observe, restore
@@ -288,6 +298,14 @@ int main(){
     uint8_t * after_data = structure_to_binary(after_popy.foundmap, &data_size);
     printf("after popy label -> %s, bin size = %u\n", after_popy.label, data_size);
     #endif
+
+    #endif // TEST_1
+
+    #ifdef TEST_2
+    chain_link * empty_one = initial_empty_chain_link();
+    bool check = store_many_chains(*empty_one, client);
+    printf("check -> %s\n", check?"OK":"ERROR");
+    #endif // TEST_2
 
     /* cleanup library */
     mongoc_client_destroy(client);
