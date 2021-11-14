@@ -1,6 +1,6 @@
 #include "algorithm.h"
 
-chain_link next_chain(chain_node motif, on_sequence on_seq, int sequences_count, int overlap, int gap, int q){
+chain_link * next_chain(chain_node motif, on_sequence on_seq, int sequences_count, int overlap, int gap, int q){
     
     /*   observation   */
     tree_node * observation = initial_tree(NULL);
@@ -24,43 +24,46 @@ chain_link next_chain(chain_node motif, on_sequence on_seq, int sequences_count,
 
     /*   next-generation extreaction   */   
     /* initial result array         */
-    chain_link * head = (chain_link *) malloc(sizeof(chain_link));
-    chain_link * chains = head;
-    head->node = NULL;
+    chain_link * head = initial_empty_chain_link();
+    chain_link * tail = head;
 
     /* initiate stack with tree root */
     int sp = 0;
-    tree_node * stack = (tree_node *) malloc(sizeof(tree_node)*MAX_STACK_SIZE);
-    stack[sp++] = *observation;
+    tree_node ** stack = (tree_node **) malloc(sizeof(tree_node *)*MAX_STACK_SIZE);
+    stack[sp++] = observation;
 
     while (sp != 0){
-        tree_node current_node = stack[--sp];
+        tree_node * current_node_ref = stack[--sp];
+        tree_node current_node = *current_node_ref;
+        bool preserve = false;
+
+        /* add tree children to stack (DFS) */
+        for(int i=0;i<4;i++){
+            if (current_node.children[i] != NULL){
+                stack[sp++] = current_node.children[i];
+            }
+        }
 
         /* check for quorum */
         if(current_node.q >= q){
             chain_node * new_chain = (chain_node *) malloc(sizeof(chain_node));
             new_chain->foundmap = current_node.foundmap;
             new_chain->label = current_node.label;
+            new_chain->foundmap_mode = FOUNDMAP_NOARRAY;
+            preserve = true;
 
             /* push to dynamic link-list to refere as result */
-            chains->node = new_chain;
-            chains->next = (chain_link *) malloc(sizeof(chain_link));
-            chains = chains->next;
-            chains->node = NULL;
+            tail = insert_chain_link(tail, new_chain);
         }
 
-        /* add tree children to stack */
-        for(int i=0;i<4;i++){
-            if (current_node.children[i] != NULL){
-                stack[sp++] = *current_node.children[i];
-            }
-        }
+        /* delete node after use */
+        delete_tree_node(current_node_ref, preserve);
     }
     
     /* clear dynamic garbage */
     free(stack);
 
-    return *head;
+    return head;
 }
 
 
@@ -191,10 +194,10 @@ int main(int argc, char * argv[]){
 
     /* chaining */
     now = clock();
-    chain_link result = next_chain(motif, onseq, onseq.sequence_count, 4, 4, 200);
+    chain_link * result = next_chain(motif, onseq, onseq.sequence_count, 4, 4, 200);
     record = clock() - now;
     printf("[CHAIN] number of clocks -> %ld (clock per second = %ld)\n", record, CLOCKS_PER_SEC);
-    chain_link *current = &result;
+    chain_link *current = result;
     int next_size = 0;
     while(current != NULL){
         if(current->node == NULL) {
