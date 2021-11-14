@@ -10,6 +10,17 @@ tree_node * initial_tree(char * label){
     return tree;
 }
 
+
+void delete_tree_node(tree_node * node, bool preserve_data){
+    if (!preserve_data){
+        free(node->label);
+        destroy_foundmap(node->foundmap, FOUNDMAP_NOARRAY);
+    }
+    free(node->children);
+    free(node);
+}
+
+
 /*
  * KEEP IN MIND
  * all foundmap instances contain at least one position
@@ -322,29 +333,62 @@ FoundMap * binary_to_structure(uint8_t * binary){
 }
 
 
-void destroy_foundmap(FoundMap * map){
+void destroy_foundmap(FoundMap * map, bool array){
     FoundMap *current = map, *next_map;
     while(current!=NULL){
 
         /* clearing position list */
-        pos_link *list = current->positions, *next;
-        while(list!=NULL){
-            next = list->next;
-            free(list);
-            list = next;
+        if(array)
+            free(current->positions);
+        else{
+            pos_link *list = current->positions, *next;
+            while(list!=NULL){
+                next = list->next;
+                free(list);
+                list = next;
+            }
         }
 
         next_map = current->next;
-        free(current);
+        if(!array) free(current);
         current = next_map;
     }
+    if(array) free(map);
 }
 
 
-void destroy_node(chain_node * node){
-    destroy_foundmap(node->foundmap);
+void destroy_node(chain_node * node, bool heap){
+    destroy_foundmap(node->foundmap, node->foundmap_mode);
     free(node->label);
-    free(node);
+    if(heap) free(node);
+}
+
+
+chain_link * initial_empty_chain_link(){
+    chain_link * result = (chain_link *) malloc(sizeof(chain_link));
+    result->node = NULL;
+    result->next = NULL;
+    return result;
+}
+
+
+/* returns new link pointer as result */
+chain_link * insert_chain_link(chain_link * link, chain_node * node){
+
+    chain_link * result;
+
+    if(link->node == NULL){
+        link->node = node;
+        result = link;
+    }else{
+        chain_link * new_link = initial_empty_chain_link();
+        new_link->node = node;
+        new_link->next = link->next;
+        link->next = new_link;
+        result = new_link;
+    }
+
+    return result;
 }
 
 
@@ -359,7 +403,7 @@ int len_chain_link(chain_link head){
 void clean_chain_link(chain_link * head){
     chain_link *current = head, *temp;
     while(current != NULL){
-        destroy_node(current->node);
+        if(current->node != NULL) destroy_node(current->node, true);
         temp = current->next;
         free(current);
         current = temp;
@@ -370,23 +414,26 @@ void clean_chain_link(chain_link * head){
 #ifdef STRUCT_MAIN
 int main(int argc, char * argv[]){
 
-    chain_node popy;
-    popy.label = "dummy";
+    chain_node * popy_ref = (chain_node *) malloc(sizeof(chain_node));
+    popy_ref->foundmap_mode = FOUNDMAP_ARRAY;
+    char * lbl = (char *) malloc(sizeof(char)*6);
+    lbl[0]='d';lbl[1]='u';lbl[2]='m';lbl[3]='m';lbl[4]='y';lbl[5]='\0';
+    popy_ref->label = lbl;
+    printf("dummy is %s\n", popy_ref->label);
     FILE * f = fopen("popy_test.data", "rb");
     fseek(f, 0L, SEEK_END);
     long numbytes = ftell(f);
     fseek(f, 0L, SEEK_SET);	
     uint8_t * data = (uint8_t*)calloc(numbytes, sizeof(uint8_t));	
     fread(data, sizeof(uint8_t), numbytes, f); fclose(f);
-    popy.foundmap = binary_to_structure(data);
+    popy_ref->foundmap = binary_to_structure(data);
     free(data);
 
-    chain_link a;
-    a.node = &popy;
-    a.next = NULL;
+    chain_link * a = initial_empty_chain_link();
+    insert_chain_link(a, popy_ref);
 
     printf("STARTING TO DESTROY\n");
-    clean_chain_link(&a);
+    clean_chain_link(a);
     printf("DONE\n");
 
     // tree_node * root = initial_tree(NULL);

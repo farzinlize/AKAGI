@@ -77,10 +77,13 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
 int add_position(FoundMap * foundmap, int seq_id, int location, int size);
 on_sequence open_on_sequence(const char * filename);
 int intlen_positions(pos_link * positions);
-void destroy_foundmap(FoundMap * map);
-void destroy_node(chain_node * node);
+void destroy_foundmap(FoundMap * map, bool array);
+void destroy_node(chain_node * node, bool heap);
+void delete_tree_node(tree_node * node, bool preserve_data);
 int len_chain_link(chain_link head);
 void clean_chain_link(chain_link * head);
+chain_link * initial_empty_chain_link();
+chain_link * insert_chain_link(chain_link * link, chain_node * node);
 
 /* byte encode functions */
 uint8_t * structure_to_binary(FoundMap * map, uint32_t * binary_size);
