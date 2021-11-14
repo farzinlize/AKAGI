@@ -41,11 +41,13 @@ cplus/build/*
 *secret*
 *test*
 *log*
+mprofile*
+massif*
 
 akagi_1.fasta
 akagi_2.fasta
 put.here
+dumped.motifs
 quickreport
 totalchain
 constants.py
-mprofile*
