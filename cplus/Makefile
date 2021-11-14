@@ -22,7 +22,7 @@ stt: $(common_sources) Makefile
 	gcc -o build/stt $(common_sources) -DSTRUCT_MAIN -DMAKE_MAKE
 
 mongot: mongo.cpp $(common_sources) Makefile
-	gcc -o build/mongot mongo.cpp $(common_sources) $(pkg-mongo) -fpermissive -DMONGO_MAIN -DMAKE_MAKE
+	gcc -o build/mongot mongo.cpp $(common_sources) $(pkg-mongo) -fpermissive -DMONGO_MAIN -DMAKE_MAKE -DDEBUG_MONGO
 
 smongot: mongo.cpp $(common_sources) Makefile
 	gcc -o build/smongot mongo.cpp $(common_sources) -static $(pkg-static-mongo) -fpermissive -DMONGO_MAIN -DMAKE_MAKE
