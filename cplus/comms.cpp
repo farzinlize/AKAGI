@@ -23,28 +23,50 @@ int connect_communication(int port){
     return sockfd;
 }
 
-bool send_report(int judge_fd, chain_node * node, double scores[3]){
+bool send_report(int judge_fd, chain_node * node, double scores[3], bool * error_flag){
 
-    uint8_t judge_call;
+    *error_flag = false;
+    uint8_t judge_call, *data;
+    ssize_t returned;
+    uint32_t label_size, data_size;
+    int errsv, sent_data;
 
     /* sending scores to judge */
-    send(judge_fd, scores, SCORE_PACK_SIZE, 0);
+    if((returned = send(judge_fd, scores, SCORE_PACK_SIZE, 0)) != 24) goto ERROR;
 
     /* ignore sending pattern if judge doesn't want it */
-    recv(judge_fd, &judge_call, 1, 0);
+    if((returned = recv(judge_fd, &judge_call, 1, 0)) != 1) goto ERROR;
     if(judge_call == '\0') return false;
 
     /* sending pattern label */
-    uint32_t label_size = strlen(node->label), data_size;
-    send(judge_fd, &label_size, sizeof(uint32_t), 0);
-    send(judge_fd, node->label, label_size, 0);
+    label_size = strlen(node->label);
+    if((returned = send(judge_fd, &label_size, sizeof(uint32_t), 0)) != sizeof(uint32_t)) goto ERROR;
+    if((returned = send(judge_fd, node->label, label_size, 0)) != label_size) goto ERROR;
 
     /* sending pattern data */
-    uint8_t * data = structure_to_binary(node->foundmap, &data_size);
-    send(judge_fd, &data_size, sizeof(uint32_t), 0);
-    send(judge_fd, data, data_size, 0);
+    data = structure_to_binary(node->foundmap, &data_size);
+    if((returned = send(judge_fd, &data_size, sizeof(uint32_t), 0)) != sizeof(uint32_t)) goto ERROR;
+
+    /* make sure whole data is sent */
+    if((returned = send(judge_fd, data, data_size, 0)) != data_size) {
+        if (returned == -1) goto ERROR;
+        sent_data = returned;
+        while(sent_data != data_size){
+            if(returned = send(judge_fd, &data[sent_data], data_size-sent_data, 0) == -1) goto ERROR;
+            sent_data = sent_data + returned;
+        }
+    }
 
     return true;
+
+    /* in case of error report */
+    ERROR:
+    errsv = errno;
+    *error_flag = true;
+    char report_error[128];
+    sprintf(report_error, "[ERR] errno=%d, returned=%ld", errsv, returned);
+    logit(report_error, COMMUNICATION_LOG);
+    return false;
 }
 
 #ifdef COMMS_MAIN

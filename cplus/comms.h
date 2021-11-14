@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>	
 #include "utility.h"
@@ -16,6 +17,6 @@
 #define SCORE_PACK_SIZE 24
 
 int connect_communication(int port);
-bool send_report(int judge_fd, chain_node * node, double scores[3]);
+bool send_report(int judge_fd, chain_node * node, double scores[3], bool * error_flag);
 
 #endif
