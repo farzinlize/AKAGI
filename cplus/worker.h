@@ -37,6 +37,7 @@
 #define EMPTY   0
 #define EPOP    1
 #define ESTORE  2
+#define EJUDGE  4
 
 /* mother signals */
 #define SIGNAL_RESUME      'R'

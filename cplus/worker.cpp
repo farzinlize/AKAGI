@@ -46,13 +46,22 @@ int error_handler(FILE * stream, int error, chain_node * popy){
     uint8_t * map_data;
     uint32_t label_len, mapbinsize;
 
+    /* logging error based on type */
     switch (error){
     case EMPTY:
         fprintf(stream, "database empty (port:%d)\n", bank_port);
         break;
     case ESTORE:
-    
-        /* dumping failed job data for later */
+    case EPOP:
+        fprintf(stream, "database failure (port:%d)\n", bank_port);
+        break;
+    case EJUDGE:
+        fprintf(stream, "judge error check comms.log\n");
+        break;
+    } fflush(stream);
+
+    /* dumping failed job data for later */
+    if(error==ESTORE || error==EJUDGE){
         dump = fopen(DUMPER_FILE, "ab");
         label_len = strlen(popy->label);
         fwrite(&label_len, sizeof(int), 1, dump);
@@ -61,10 +70,6 @@ int error_handler(FILE * stream, int error, chain_node * popy){
         fwrite(&mapbinsize, sizeof(int), 1, dump);
         fwrite(map_data, sizeof(uint8_t), mapbinsize, dump);
         fclose(dump);
-
-    case EPOP:
-        fprintf(stream, "database failure (port:%d)\n", bank_port);
-        break;
     }
 
     /* wait for mother to respond*/
@@ -78,7 +83,7 @@ int main(int argc, char* argv[]){
     /* defining variables */
     clock_t now, record;
     char message_buffer[REPORT_MESSAGE_BUFSIZE];
-    bool check, empty;
+    bool check, empty_error;
     uint jobs_done_by_me = 0, chaining_done_by_me = 0, message_index;
 
     /* initiating report file with process id */
@@ -133,8 +138,8 @@ int main(int argc, char* argv[]){
 
         /* obtaining a job */
         chain_node motif;
-        check = pop_chain_node(bank, &motif, &empty);
-        if(!check){error_handler(errors, empty?EMPTY:EPOP, NULL);continue;}
+        check = pop_chain_node(bank, &motif, &empty_error);
+        if(!check){error_handler(errors, empty_error?EMPTY:EPOP, NULL);continue;}
         jobs_done_by_me++;
 
         #ifdef DEBUG_WORKER
@@ -156,7 +161,8 @@ int main(int argc, char* argv[]){
 
         /* talk with judge and ignore low ranks patterns */
         now = clock();       // [CAPTURE]
-        check = send_report(judge, &motif, scores);
+        check = send_report(judge, &motif, scores, &empty_error);
+        if(empty_error) {error_handler(errors, EJUDGE, &motif); continue;}
         record = clock() - now;
         
         #ifdef DEBUG_WORKER
@@ -168,33 +174,40 @@ int main(int argc, char* argv[]){
         
         /* chaining */
         now = clock();       // [CAPTURE]
-        chain_link next_generation = 
+        chain_link * next_generation = 
             next_chain(motif, onsequence, compact_data.sequence_count, overlap, gap, q);
         record = clock() - now;
         message_index += sprintf(&message_buffer[message_index], "[CHN:%ld]", record);
         
         #ifdef DEBUG_WORKER
-        fprintf(report, "[DEBUG] chaining done in %d clock (number of next-gen -> %d)\n", record, len_chain_link(next_generation));
+        fprintf(report, "[DEBUG] chaining done in %ld clock (number of next-gen -> %d)\n", record, len_chain_link(*next_generation));
         fflush(report);
+
+        chain_node * testy = next_generation->node;
+        if(testy != NULL){
+            uint32_t testy_size; uint8_t * testy_bin = structure_to_binary(testy->foundmap, &testy_size);
+            fprintf(report, "[DEBUG] test chaining result -> first item data size = %d\n", testy_size);
+            fflush(report);
+        }
         #endif
 
         /* storing next generation */
         now = clock();       // [CAPTURE]
-        check = store_many_chains(next_generation, bank);
+        check = store_many_chains(*next_generation, bank);
         record = clock() - now;
         if(!check){error_handler(errors, ESTORE, &motif);continue;}
         message_index += sprintf(&message_buffer[message_index], "[DBS:%ld]", record);
 
         #ifdef DEBUG_WORKER
-        fprintf(report, "[DEBUG] next-generation is stored in %d clock\n", record);fflush(report);
+        fprintf(report, "[DEBUG] next-generation is stored in %ld clock\n", record);fflush(report);
         #endif
 
         /* clean trash */
         clean_chain_link(next_generation);
-        destroy_node(&motif);
+        destroy_node(&motif, false);
 
         #ifdef DEBUG_WORKER
-        fprintf(report, "[DEBUG] chaining done in %d clock\n", record);fflush(report);
+        fprintf(report, "[DEBUG] memory cleaning is done\n");fflush(report);
         #endif
 
         /* report to user in file */
