@@ -1,5 +1,5 @@
 # python libraries 
-from io import BytesIO, TextIOWrapper
+from io import BytesIO
 from multiprocessing.connection import Connection
 import os
 from functools import reduce
@@ -11,9 +11,8 @@ from time import sleep
 from datetime import datetime
 from multiprocessing import Pipe, Process, Queue
 from typing import List
-from pymongo import message
 from pymongo.errors import ServerSelectionTimeoutError
-from socket import socket, AF_INET, SOCK_STREAM, gethostname
+from socket import socket, AF_INET, SOCK_STREAM
 from selectors import DefaultSelector, EVENT_READ
 
 # project modules
@@ -22,7 +21,7 @@ from mongo import get_bank_client, initial_akagi_database, serve_database_server
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
 from pool import AKAGIPool, get_AKAGI_pools_configuration
-from misc import binary_to_list, bytes_to_int, log_it, read_bundle, time_has_ended
+from misc import binary_to_list, bytes_to_int, log_it, time_has_ended
 from TrieFind import ChainNode, initial_chainNodes, pop_chain_node
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
@@ -213,71 +212,91 @@ def global_pool_thread(merge: Queue, dataset_dict, initial_pool:AKAGIPool):
         # global_pool.save(mongo_client=client)
 
 
-def judge_process(mother_pipe:Connection, port, cores, dataset_dict, initial_pool:AKAGIPool):
-    
+def judge_process(mother_pipe:Connection, port, cores, initial_pool:AKAGIPool):
+
+    mother_active_signal = True
+
+    def accept_worker(server:socket):
+        nonlocal event_selector, report
+        joining_worker, addr = server.accept()
+        report.write(f'worker joined at {addr}\n')
+        event_selector.register(joining_worker, EVENT_READ, worker_respond)
+
     def worker_respond(worker:socket):
-        nonlocal global_pool
-        log_it("judge.report", "worker report")
-        scores = struct.unpack("ddd", worker.recv(24))
+        nonlocal global_pool, event_selector, report
+        report.write('receiving worker report ...\n');report.flush()
+        read_packet = worker.recv(24)
+
+        # worker has left duty 
+        if not read_packet:
+            report.write(f'---- worker left duty\n');report.flush()
+            event_selector.unregister(worker)
+            return
+
+        scores = struct.unpack("ddd", read_packet)
         ranks = global_pool.insert_blank(scores)
-        log_it("judge.report", f"----ranks = {ranks} and scores = {scores}")
+        report.write(f"---- ranks = {ranks} and scores = {scores}\n");report.flush()
         if reduce(lambda a, b:a or (b!=-1), ranks, False):
-            log_it("judge.report", "----job accepted")
+            report.write('---- job accepted\n');report.flush()
             worker.send(b'\1') # request data
             label_size = bytes_to_int(worker.recv(INT_SIZE), endian='little')
             label = str(worker.recv(label_size), 'utf8')
             bin_size = bytes_to_int(worker.recv(INT_SIZE), endian='little')
-            foundlist = binary_to_list(BytesIO(worker.recv(bin_size)))
+
+            # make sure we have enough bytes
+            bin_data = worker.recv(bin_size)
+            while len(bin_data) != bin_size:bin_data += worker.recv(bin_size - len(bin_data))
+            try: foundlist = binary_to_list(BytesIO(bin_data))
+            except AssertionError as e:
+                report.write("[ERR] wrong structured binary as data - deleteing its position\n")
+                global_pool.remove_blank(ranks);return
+
             global_pool.place(ChainNode(label, MemoryMap(initial=foundlist)), ranks)
         
         # ignore patterns that appears in no pools
         else:worker.send(b'\0')
 
-
     def admin_respond(mother:Connection):
-        nonlocal report_count
+        nonlocal report_count, mother_active_signal
         command = mother.recv()
-        log_it("judge.report", f"admin message -> {command}")
+        report.write(f'admin command -> {command}\n')
 
         # top ten report in window file with time stamp
-        if command == 'R':
+        if command == SAVE_SIGNAL:
             with open(CR_FILE, 'w') as window:
                 window.write(str(datetime.now()) + ' | report #%d\n\n'%report_count)
                 window.write(global_pool.top_ten_reports())
                 report_count += 1
         
-        elif command == EXIT_SIGNAL:return
+        elif command == EXIT_SIGNAL:
+            report.write(f'judge is shutting down by admin command - goodbye\n')
+            mother_active_signal = False
+        else:
+            report.write(f'command is not recognized\n')
+        report.flush()
+        
 
-    log_it("judge.report", "judge is here")
+    report = open(f'judge_{os.getpid()}.report', 'w')
+    report.write('judge is here\n');report.flush()
     report_count = 0
     if initial_pool :global_pool = initial_pool
-    else            :global_pool = AKAGIPool(get_AKAGI_pools_configuration(dataset_dict), collection_name='-'.join([EXECUTION, GLOBAL_POOL_NAME]))
+    else            :global_pool = AKAGIPool(get_AKAGI_pools_configuration(), collection_name='-'.join([EXECUTION, GLOBAL_POOL_NAME]))
 
     event_selector = DefaultSelector()
     server = socket(AF_INET, SOCK_STREAM)
     server.bind(('127.0.0.1', port))
-    if cores > 80:log_it(IMPORTANT_LOG, "using a single judge is not recommended for high number of working cores")
+    if cores > 80:report.write(f"using a single judge is not recommended for high number of workers (cores={cores})\n")
     server.listen(cores)
-    log_it("judge.report", "socket is set for listenting")
+    report.write("socket is set for listenting\n")
     
-    # register each worker (block until all workers handshake)
-    for _ in range(cores):
-        joining_worker, _ = server.accept()
-        log_it("judge.report", "registering a joining worker")
-        event_selector.register(joining_worker, EVENT_READ, worker_respond)
-
-    # register mother messages
+    # register server and moother pipe to monitor
+    event_selector.register(server, EVENT_READ, accept_worker)
     if mother_pipe:event_selector.register(mother_pipe, EVENT_READ, admin_respond)
 
-    while True:
+    while mother_active_signal:
         events = event_selector.select()
-        log_it("judge.report", f"LOOP event count = {len(events)}")
+        report.write(f"[LOOP] event count = {len(events)}\n");report.flush()
         for key, _ in events:key.data(key.fileobj)
-        
-
-# a copy of 'chaining_thread_and_local_pool' function but with keeping eye on work queue for finish
-# [WARNING] deprecated function dont use it!
-# PARENT_WORK should be False
 
 
 def network_handler(merge: Queue):
@@ -391,7 +410,7 @@ def multicore_chaining_main(cores_order,
     # judge-python process uses inner python pipe communication to communicate with admin
     if CPLUS_WORKER:
         judge_pipe, mother_pipe = Pipe()
-        judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, cores, dataset_dict, initial_pool));judge.start()
+        judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, cores, initial_pool));judge.start()
         workers = [FPopen(WORKER_EXECUTABLE+f' {bank_ports[i%bank_order]} {JUDGE_PORT} {on_sequence} {COMPACT_DATASET_TEMP_LOCATION} {overlap} {gap} {q}', stdin=PIPE, stdout=PIPE) for i in range(cores)]
     
     else: # using python workers (slower) and shared memory queues
@@ -543,5 +562,5 @@ if __name__ == '__main__':
     # test
     on_seq = '/home/akagi/Documents/AKAGI/cplus/test.onseq'
     judge_pipe, mother_pipe = Pipe()
-    judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, 2, None, None));judge.start()
+    judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, 2, None));judge.start()
     workers = [FPopen([WORKER_EXECUTABLE, '2090' ,f'{JUDGE_PORT}', on_seq, COMPACT_DATASET_TEMP_LOCATION, '4', '4', '200'], stdin=PIPE, stdout=PIPE) for i in range(2)]
