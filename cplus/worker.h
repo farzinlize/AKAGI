@@ -45,7 +45,7 @@
 #define SIGNAL_TERMINATE   'T'
 
 /* unnecessary message passing for mother */
-#ifndef OPTIMIZED
+#ifdef ACK_MOTHER
 #define SIGNAL_ACK  'A'
 #define SIGNAL_BYE  'B'
 #define SIGNAL_NACK 'N'
