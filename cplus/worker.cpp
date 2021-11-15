@@ -149,8 +149,8 @@ int main(int argc, char* argv[]){
         /* evaluating the motif (drop on judge decide) */
         double scores[3];
         now = clock();       // [CAPTURE]
-        scores[SUMMIT_INDEX] = summit_score(compact_data, motif);
         scores[SSMART_INDEX] = ssmart_score(compact_data, motif);
+        scores[SUMMIT_INDEX] = summit_score(compact_data, motif);
         scores[JASPAR_INDEX] = pwm_score   (compact_data, motif);
         record = clock() - now;
         message_index += sprintf(&message_buffer[message_index], "[EVA:%ld]", record);

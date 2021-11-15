@@ -1,14 +1,16 @@
 #ifndef _GLOBAL_DEFINES_H
 #define _GLOBAL_DEFINES_H
 
-/*              compilation modes                */
-/* DEBUG: activate debuging prints and reports   */
-/* OPTIMIZED: remove unnecessary parts           */
-/* or simply nothing specifiec                   */
+/*              compilation modes                  */
+/* OPTIMIZED: remove unnecessary parts             */
+/* DEBUG_WORKER: only activate main worker reports */
+/* DEBUG_STRUCTURE: structures module debug mode   */
+/* DEBUG_MONGO: database module debug mode         */
+/* or simply nothing specifiec                     */
 
 
-/* all available mains are included here       */
-/* but building with make ignore these defines */
+/* all available mains are included here            */
+/* but building with make will ignore these defines */
 #ifndef MAKE_MAKE
 #define WORKER_MAIN
 #define ALG_MAIN
@@ -16,16 +18,19 @@
 #define COMMS_MAIN
 #define MONGO_MAIN
 #endif
-/* ---------------- */
+/* ------------------------------------------------ */
 
+#define AKAGI_PATH "/home/akagi/Documents/AKAGI/"
 #define DATABASE_LOG "database.log"
 #define DUMPER_FILE  "dumped.motifs"
 #define REPORT_MESSAGE_BUFSIZE 64
+#define FOUNDMAP_NOARRAY false
+#define FOUNDMAP_ARRAY   true
 
 /* scores */
 #define SCORES_COUNT 3
-#define SUMMIT_INDEX 0
-#define SSMART_INDEX 1
+#define SSMART_INDEX 0
+#define SUMMIT_INDEX 1
 #define JASPAR_INDEX 2
 
 
