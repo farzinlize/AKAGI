@@ -15,7 +15,7 @@ class AKAGIPool:
             else:
                 self.data = data
                 self.scores = scores
-                self.sorted_by = None
+            self.sorted_by = None
 
         def __eq__(self, other):
             if self.sorted_by != None:
@@ -25,6 +25,11 @@ class AKAGIPool:
         def __lt__(self, other):
             if self.sorted_by != None:
                 return self.scores[self.sorted_by] < other.scores[self.sorted_by]
+            else:raise Exception('sorted by is not configured for comparison')
+
+        def __gt__(self, other):
+            if self.sorted_by != None:
+                return self.scores[self.sorted_by] > other.scores[self.sorted_by]
             else:raise Exception('sorted by is not configured for comparison')
 
         def documented(self):
@@ -44,7 +49,7 @@ class AKAGIPool:
 
     def insert_blank(self, scores):
         ranks = []
-        entity = self.Entity(scores=scores)
+        entity = self.Entity(scores=[self.descriptions[index][SIGN_KEY]*scores[index] for index in range(len(scores))])
         for sorted_by, table in enumerate(self.tables):
             entity.sorted_by = sorted_by
             table, rank = binary_add_return_position(table, entity)
@@ -62,7 +67,12 @@ class AKAGIPool:
         for rank, table in zip(ranks, self.tables):
             if rank == -1: continue
             table[rank].data = pattern
-            
+
+
+    def remove_blank(self, ranks):
+        for table_index, rank in enumerate(ranks):
+            self.tables[table_index] = self.tables[table_index][:rank] + self.tables[table_index][rank+1:]
+
 
     def judge(self, pattern:ChainNode):
 
@@ -514,31 +524,18 @@ def pwm_score(pattern: ChainNode, arg_bundle):
 
 def get_AKAGI_pools_configuration(dataset_dict=None):
 
-    if not dataset_dict:
-        return [ 
-                # ssmart table configuration
-                {FUNCTION_KEY:objective_function_pvalue, 
-                ARGUMENT_KEY:None, 
-                SIGN_KEY:-1, 
-                TABLE_HEADER_KEY:CR_TABLE_HEADER_SSMART}, 
-
-                # summit table configuration
-                {FUNCTION_KEY:distance_to_summit_score, 
-                ARGUMENT_KEY:None, 
-                SIGN_KEY:1, 
-                TABLE_HEADER_KEY:CR_TABLE_HEADER_SUMMIT}, 
-                
-                # jaspar table configuration
-                {FUNCTION_KEY:pwm_score, 
-                ARGUMENT_KEY:(None,None), 
-                SIGN_KEY:-1, 
-                TABLE_HEADER_KEY:CR_TABLE_HEADER_JASPAR}
-            ]
-
     # unpacking dataset dictionary
-    sequences = dataset_dict[SEQUENCES]
-    bundles = dataset_dict[SEQUENCE_BUNDLES]
-    pwm = dataset_dict[PWM]
+    if dataset_dict:
+        sequences = dataset_dict[SEQUENCES]
+        bundles = dataset_dict[SEQUENCE_BUNDLES]
+        pwm = dataset_dict[PWM]
+    
+    # place none as arguments for provided scores processes
+    # judge_process uses this because cplus workers are in charge of scoring
+    else:
+        sequences = None
+        bundles = None
+        pwm = None
 
     return [ 
                 # ssmart table configuration
@@ -563,7 +560,8 @@ def get_AKAGI_pools_configuration(dataset_dict=None):
 
 if __name__ == '__main__':
     pooly = AKAGIPool(get_AKAGI_pools_configuration({SEQUENCES:'', SEQUENCE_BUNDLES:'', PWM:''}))
-    pooly.read_snap(filename='./results/ExSRF/SCHA/ExSRF-SCHA-global.pool')
+    pooly.read_snap(filename='test.pool')
+
     # pooly.collection_name = 'pooly'
 
     # a = MemoryMap()

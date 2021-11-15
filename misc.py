@@ -521,9 +521,9 @@ def binary_add_return_position(lst, item):
     end = len(lst)-1
     while start <= end:
         mid = (start+end)//2
-        if lst[mid] == item:
+        if item == lst[mid]:
             return lst[:mid] + [item] + lst[mid:], mid
-        elif lst[mid] < item:
+        elif item > lst[mid]:
             start = mid + 1
         else:
             end = mid - 1
