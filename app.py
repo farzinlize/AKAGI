@@ -21,12 +21,42 @@ from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, ARGS, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, COMPACT_DATASET_TEMP_LOCATION, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
+from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, COMPACT_DATASET_TEMP_LOCATION, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
 TREES_TYPE = [DummyTree, GKHoodTree, GKHoodTree]
 
+# default values for application arguments
+class ARGS:
+    def __init__(self) -> None:
+        self.kmin = 5
+        self.kmax = 8
+        self.level = 6
+        self.dmax = 1
+        self.sequences = 'data/dm01r'
+        self.gap = 3
+        self.overlap = 2
+        self.mask = None
+        self.quorum = ARG_UNSET
+        self.frame_size = 6
+        self.gkhood_index = 0
+        self.multilayer = False
+        self.multicore = False
+        self.ncores = MAX_CORE
+        self.jaspar = ''
+        self.checkpoint = True
+        self.name = None
+        self.resume = False
+        self.megalexa = 0
+        self.additional_name = ''
+        self.reference = 'hg18'
+        self.disable_chaining = False
+        self.nbank = 1
+        self.pool = ''
+        self.assist = None
+        self.auto_order = '00'
+        self.path = ''
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
