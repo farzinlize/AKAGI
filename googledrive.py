@@ -139,6 +139,17 @@ def store_single_file(single_file:str, drive=None):
     drive_file.Upload()
 
 
+def download_file(what, drive=None):
+
+    if not drive:
+        drive = connect_drive()
+
+    query = drive.ListFile({'q': f"title = {what}"}).GetList()
+    if len(query) > 1: print('[WARNING] multiple file are present with title = ', what)
+    desired_file:GoogleDriveFile = query[0]
+    desired_file.GetContentFile(what)
+
+
 if __name__ == '__main__':
     # WARNING: this part of code is functional (no testing)
     connect_and_save_credentials()
