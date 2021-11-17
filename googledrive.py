@@ -139,15 +139,19 @@ def store_single_file(single_file:str, drive=None):
     drive_file.Upload()
 
 
-def download_file(what, drive=None):
+def download_file(what, out=None, drive=None):
 
     if not drive:
         drive = connect_drive()
 
-    query = drive.ListFile({'q': f"title = {what}"}).GetList()
-    if len(query) > 1: print('[WARNING] multiple file are present with title = ', what)
-    desired_file:GoogleDriveFile = query[0]
-    desired_file.GetContentFile(what)
+    query = drive.ListFile({'q': f"title = '{what}'"}).GetList()
+    if   len(query) > 1: print('[WARNING] multiple file are present with title = ', what)
+    elif len(query) < 1:print('[ERROR] no such file with title = ', what);return
+
+    desired_file = query[0]
+
+    if not out:out = what
+    desired_file.GetContentFile(out)
 
 
 if __name__ == '__main__':
