@@ -55,7 +55,7 @@ class ARGS:
         self.nbank = 1
         self.pool = ''
         self.assist = None
-        self.auto_order = '00'
+        self.auto_order = b'00'
         self.path = ''
         self.compact_dataset = False
 
