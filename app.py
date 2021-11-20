@@ -240,7 +240,7 @@ def motif_finding_chain(dataset_name,
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     # making compact dataset for cplus-workers
-    if make_compact_dataset_flag:make_compact_dataset(COMPACT_DATASET_TEMP_LOCATION, sequences, bundle, pwm)
+    if make_compact_dataset_flag:make_compact_dataset(COMPACT_DATASET_TEMP_LOCATION, sequences, bundles, pwm)
 
     ############### start to chain ###############
     if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
