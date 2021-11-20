@@ -2,16 +2,11 @@
 # ignoring false unbound reports
 
 from io import BufferedWriter
-from typing import List
-from constants import AKAGI_PREDICTION_EXPERIMENTAL, AKAGI_PREDICTION_STATISTICAL, CHAINING_FOUNDMAP_MODE, CR_HEADER, CR_TABLE_HEADER_SSMART, CR_TABLE_HEADER_SUMMIT, EXTRACT_OBJ, PIXELS_ANALYSIS, QUEUE_DISK, QUEUE_MEMO, QUEUE_MODE
-from pool import RankingPool, distance_to_summit_score, objective_function_pvalue
+from constants import CHAINING_FOUNDMAP_MODE, EXTRACT_OBJ
 from TrieFind import ChainNode, WatchNode, WatchNodeC
 from GKmerhood import GKHoodTree
-from misc import QueueDisk, clear_screen, heap_encode, lap_time, read_fasta, make_location, ExtraPosition
-from onSequence import OnSequenceDistribution
-from time import gmtime, strftime, time as currentTime
-from report import motif_chain_report, report_print
-import sys
+from misc import heap_encode, read_fasta, ExtraPosition
+from time import time as currentTime
 
 '''
     motif finding function -> first version of motif-finding algorithm using gkhood
@@ -119,6 +114,8 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
 #          chaining motifs section           #
 # ########################################## #
 
+# DEPRECATED
+'''
 def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overlap=0):
 
     # starting chaining report window
@@ -225,7 +222,7 @@ def motif_chain(zmotifs: List[WatchNode], sequences, bundles, q=-1, gap=0, overl
 
     pool_ssmart.all_ranks_report(AKAGI_PREDICTION_STATISTICAL, sequences)
     pool_summit.all_ranks_report(AKAGI_PREDICTION_EXPERIMENTAL, sequences)
-
+'''
 
 
 '''
@@ -293,6 +290,8 @@ def sequence_dataset_files(filename, sequences, frame_size):
 #           main function section            #
 # ########################################## #
 
+# DEPRECATED
+'''
 def main_chain():
     # inputs
     s_mask = None
@@ -330,7 +329,7 @@ def main_chain():
 
     make_location('.\\results\\%s'%dataset_name)
     motif_chain_report(motifs, '.\\results\\%s\\%s-6-%d-%d'%(dataset_name, dataset_name, d, overlap))
-
+'''
 
 # real main function for finding motifs using a generated dataset
 def main_find_motif():
@@ -387,4 +386,5 @@ def test_main():
 
 # main function call
 if __name__ == "__main__":
-    main_chain()
+    # main_chain()
+    pass

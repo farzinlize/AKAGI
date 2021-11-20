@@ -1,4 +1,3 @@
-from constants import CHAIN_REPORT_FILENAME, CHAIN_REPORT_LINE_LIMIT, CHAIN_REPORT_PRINT
 from TrieFind import ChainNode
 from functools import reduce
 from matplotlib import pyplot
@@ -150,7 +149,8 @@ class Ranking:
 #                 functions                  #
 # ########################################## #
 
-
+# DEPRECATED
+'''
 def report_print(saved, line, msg):
     if CHAIN_REPORT_PRINT:
         print(msg)
@@ -161,7 +161,7 @@ def report_print(saved, line, msg):
         return '', 0
 
     return saved+msg, line+1
-
+'''
 
 def colored_neighbours_analysis(chains, sequences, frame_size, figures_location):
 
