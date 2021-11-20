@@ -14,14 +14,14 @@ from report import FastaInstance, OnSequenceAnalysis, aPWM, Ranking
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
 from onSequence import OnSequenceDistribution
-from googledrive import download_checkpoint_from_drive, query_download_checkpoint, store_checkpoint_to_cloud
-from checkpoint import load_collection, observation_checkpoint_name
-from TrieFind import initial_chainNodes
+from googledrive import connect_drive, download_checkpoint_from_drive, query_download_checkpoint, store_single_file
+from checkpoint import load_collection, observation_checkpoint_name, save_checkpoint
+from TrieFind import ChainNode, initial_chainNodes
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, COMPACT_DATASET_TEMP_LOCATION, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
+from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT_TAG, COMPACT_DATASET_TEMP_LOCATION, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -57,6 +57,7 @@ class ARGS:
         self.assist = None
         self.auto_order = '00'
         self.path = ''
+        self.compact_dataset = False
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
@@ -104,7 +105,7 @@ def motif_finding_chain(dataset_name,
                         initial_pool='',
                         make_compact_dataset_flag=False):
 
-    def observation(q, save_collection=DEFAULT_COLLECTION):
+    def observation(q, save_collection=None):
 
         if multilayer:
             assert isinstance(gkhood_index, list) and isinstance(d, list) and isinstance(frame_size, list)
@@ -141,22 +142,12 @@ def motif_finding_chain(dataset_name,
 
         print('[lexicon] lexicon size = %d'%len(motifs))
 
-        # only return label and foundmap for forthur use as chain node instead of watch node
-        # make foundmap read-only afterward
-        # may failed due to database operation but if its not about server being down, so it will just file another shot for luck
-        
-        #     inserted_maps = initial_readonlymaps([motif.foundmap for motif in motifs], save_collection)
-        #     if isinstance(inserted_maps, ServerSelectionTimeoutError):return
-        #     if not isinstance(inserted_maps, list):may_fail -= 1
-
-        # if not isinstance(inserted_maps, list):return
-
-        # may_fail = LUCKY_SHOT
-        # while may_fail:
-        initial_jobs = initial_chainNodes([(motif.label, motif.foundmap) for motif in motifs], collection_name=save_collection)
+        # initialzed jobs should be returned as chain nodes
+        # foundmaps will be stored in database or memory
+        if save_collection:initial_jobs = initial_chainNodes([(motif.label, motif.foundmap) for motif in motifs], collection_name=save_collection)
+        else              :initial_jobs = [ChainNode(motif.label, motif.foundmap) for motif in motifs]
         if not isinstance(initial_jobs, list):raise initial_jobs
         return initial_jobs
-        # return [ChainNode(motif.label, foundmap) for motif, foundmap in zip(motifs, inserted_maps)]
 
 
     print('operation MFC: finding motif using chain algorithm (tree_index(s):%s)\n\
@@ -457,21 +448,27 @@ def download_observation_checkpoint(dataset_name, f, d, multilayer):
     download_checkpoint_from_drive(objects_file, drive=drive)
     
 
-def upload_observation_checkpoint(dataset_name, f, d, multilayer):
+def upload_observation_checkpoint(dataset_name, f, d, multilayer, onsequence_name):
 
-    checkpoint = observation_checkpoint_name(dataset_name, f, d, multilayer)
-
-    motifs = load_collection(checkpoint.split('.')[0])
+    checkpoint_collection = observation_checkpoint_name(dataset_name, f, d, multilayer, extention=False)
+    checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
+    motifs = load_collection(checkpoint_collection)
 
     # check for offline check-points
     if motifs == None:
         print('[CHECKPOINT] no checkpoint of interest was found, you need to run MFC operation first')
         print('[ERROR] upload failed')
         return
-
-    directory_name = APPDATA_PATH + checkpoint.split('.')[0] + '/'
     
-    store_checkpoint_to_cloud(checkpoint, directory_name)
+    # compact motifs and their observation data into a single file
+    save_checkpoint(motifs, checkpoint_file, compact=True)
+
+    # upload files into cloud
+    google_drive = connect_drive()
+    store_single_file(checkpoint_file, drive=google_drive)
+    store_single_file(onsequence_name, drive=google_drive)
+
+    print(f"[UPLOAD] obseration {checkpoint_collection} is uploaded into cloud")
         
 
 def testing(dataset_name):
@@ -497,10 +494,10 @@ if __name__ == "__main__":
     make_location(APPDATA_PATH)
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:'
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
         'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
-        'multi-layer', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining',
+        'multi-layer', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
 
     # default values in ARGS object
@@ -547,6 +544,7 @@ if __name__ == "__main__":
         elif o in ['-R', '--resume-chaining']:arguments.resume = True
         elif o in ['-S', '--score-pool']:arguments.pool = a
         elif o in ['-o', '--auto-order']:arguments.auto_order = bytes.fromhex(a)
+        elif o in ['-D', '--compact-dataset']:arguments.compact_dataset = True
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -580,7 +578,8 @@ if __name__ == "__main__":
             banks=arguments.nbank,
             resume=arguments.resume,
             on_sequence_compressed=arguments.additional_name,
-            initial_pool=arguments.pool)
+            initial_pool=arguments.pool,
+            make_compact_dataset_flag=arguments.compact_dataset)
     elif command == 'SDM':
         sequences_distance_matrix(arguments.sequences)
     elif command == 'ARS':
@@ -611,7 +610,8 @@ if __name__ == "__main__":
             arguments.sequences, 
             arguments.frame_size, 
             arguments.dmax, 
-            arguments.multilayer)
+            arguments.multilayer,
+            arguments.additional_name)
     elif command == 'MTH':
         auto_maintenance(arguments)
     elif command == 'NOP':
