@@ -490,9 +490,6 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception('request command must be specified (read the description for supported commands)')
 
-    # generating necessary paths for application to run 
-    make_location(APPDATA_PATH)
-
     # arguments and options
     shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
