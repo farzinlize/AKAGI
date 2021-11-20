@@ -75,3 +75,14 @@ int max_integer(int a, int b){
     if(a > b) return a;
     else      return b;
 }
+
+char * akagi_path(){
+    FILE * ap = fopen(AKAGI_PATH_FILE, "r");
+    fseek(ap, 0L, SEEK_END);
+    int numbytes = ftell(ap) - 1; //ignore next-line character at the end
+    fseek(ap, 0L, SEEK_SET);	
+    char * result = (char*)calloc(numbytes, sizeof(char));	
+    fread(result, sizeof(char), numbytes, ap);
+    fclose(ap);
+    return result;
+}
