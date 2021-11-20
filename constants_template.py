@@ -44,29 +44,26 @@ DATASET_TREES = [('', ''), ('gkhood56', 'cache56'), ('gkhood78', 'cache78')]
 #                locations                   #
 # ########################################## #
 
-RESULT_LOCATION = './results/'
-BINDING_SITE_LOCATION = './data/answers.fasta'
-TWOBIT_LOCATION = './2bits/'
-APPDATA_PATH = './appdata/'
-SECRET_FILE_ADDRESS = 'secret.json'
-MONGO_SECRET_ADDRESS = 'mongo.secret'
-AKAGI_PREDICTION_STATISTICAL = 'akagi_1.fasta'
-AKAGI_PREDICTION_EXPERIMENTAL = 'akagi_2.fasta'
-CHAIN_REPORT_FILENAME = 'reporting.temp'
-CR_FILE = 'chaining_report.window'
-PROCESS_REPORT_FILE = 'process_%d.report'
-PROCESS_ERRORS_FILE = 'process_%d.error'
-GOOGLE_CREDENTIALS_FILE = 'cred.txt'
-NETWORK_LOG = 'network.log'
-DATABASE_LOG = 'database.log'
-IMPORTANT_LOG = 'IMPORTANTE.log'
-DEBUG_LOG = 'debug.log'
-CHAINING_EXECUTION_STATUS = 'status.report'
-BANK_PORTS_REPORT = 'bankports.report'
-COMMAND_WHILE_CHAINING = 'command.app'
-BEST_PATTERNS_POOL = '%s_%d.pool'
-MEMORY_BALANCING_REPORT = 'queue.report'
-COMPACT_DATASET_TEMP_LOCATION = 'compact.temp'
+AKAGI_PATH = 'D:/Optic Lab/AKAGI/'
+
+BINDING_SITE_LOCATION = f'{AKAGI_PATH}data/answers.fasta'
+TWOBIT_LOCATION = f'{AKAGI_PATH}2bits/'
+APPDATA_PATH = f'{AKAGI_PATH}appdata/'
+SECRET_FILE_ADDRESS = f'{AKAGI_PATH}secret.json'
+MONGO_SECRET_ADDRESS = f'{AKAGI_PATH}mongo.secret'
+CR_FILE = f'{AKAGI_PATH}chaining_report.window'
+PROCESS_REPORT_FILE = f'{AKAGI_PATH}OnE/process_%d.report'
+PROCESS_ERRORS_FILE = f'{AKAGI_PATH}OnE/process_%d.error'
+GOOGLE_CREDENTIALS_FILE = f'{AKAGI_PATH}cred.txt'
+NETWORK_LOG = f'{AKAGI_PATH}network.log'
+DATABASE_LOG = f'{AKAGI_PATH}database.log'
+IMPORTANT_LOG = f'{AKAGI_PATH}IMPORTANTE.log'
+DEBUG_LOG = f'{AKAGI_PATH}debug.log'
+CHAINING_EXECUTION_STATUS = f'{AKAGI_PATH}status.report'
+BANK_PORTS_REPORT = f'{AKAGI_PATH}bankports.report'
+COMMAND_WHILE_CHAINING = f'{AKAGI_PATH}command.app'
+MEMORY_BALANCING_REPORT = f'{AKAGI_PATH}queue.report'
+COMPACT_DATASET_TEMP_LOCATION = f'{AKAGI_PATH}compact.temp'
 
 
 # ########################################## #
@@ -142,8 +139,8 @@ MAXIMUM_ORDER_SIZE = 10000
 AUTORECONNECT_TRY = 5
 DATABASE_ADDRESS = f'mongodb://%s:%s@localhost:{MONGO_PORT}/?authSource=' + DATABASE_NAME
 BANKBASE_ADDRESS = 'mongodb://%s:%s@localhost:%d/?authSource=' + DATABASE_NAME
-MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath {APPDATA_PATH}mongod/ --fork --logpath ~/logs/mongo.log --auth --port {MONGO_PORT}'
-RAW_MONGOD_SERVER_COMMAND_LINUX = 'mongod --dbpath %s --fork --logpath ~/logs/%s.log %s --port %d'
+MONGOD_RUN_SERVER_COMMAND_LINUX = f'mongod --dbpath {APPDATA_PATH}mongod/ --fork --logpath {AKAGI_PATH}logs/mongo.log --auth --port {MONGO_PORT}'
+RAW_MONGOD_SERVER_COMMAND_LINUX = f'mongod --dbpath %s --fork --logpath {AKAGI_PATH}logs/%s.log %s --port %d'
 MONGOD_SHUTDOWN_COMMAND = 'mongod --dbpath %s --shutdown'
 
 # document enums
@@ -195,7 +192,6 @@ TIMER_HELP_HOURS = 4
 HELP_PORTION = 0.6
 NEED_HELP = 50000
 SOCKET_BUFFSIZE = 4096
-LUCKY_SHOT = 1
 JUDGE_PORT = 2081
 
 POOL_SIZE = 100
@@ -238,7 +234,7 @@ WORKER_NAME = 'worker'
 WORKER_FAST = 'fworker'
 CPLUS_WORKER = True
 WORKER_MODE = WORKER_FAST
-WORKER_EXECUTABLE = f'./cplus/build/{WORKER_MODE}'
+WORKER_EXECUTABLE = f'{AKAGI_PATH}cplus/build/{WORKER_MODE}'
 
 # ########################################## #
 #                    enums                   #
@@ -292,3 +288,12 @@ MOTIF_KEY = 2
 MARGIN_KEY = 3
 
 TYPES_OF = {RANK:int, FDR_SCORE:float, P_VALUE:float, SUMMIT:int}
+
+# # # # # # # # # # # # # # # # # # # # #
+#    DEPRECATED VARIABLES FOR ARCHIVE   #
+# # # # # # # # # # # # # # # # # # # # #
+# AKAGI_PREDICTION_STATISTICAL = 'akagi_1.fasta'
+# AKAGI_PREDICTION_EXPERIMENTAL = 'akagi_2.fasta'
+# CHAIN_REPORT_FILENAME = 'reporting.temp'
+# BEST_PATTERNS_POOL = '%s_%d.pool'
+# # # # # # # # # # # # # # # # # # # # #
