@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
+#include "global.h"
 
 #define INTEGER_BYTES 4
 
@@ -19,5 +20,6 @@ int get_integer(uint8_t * here);
 double pwm_find(double * compact_pwm, int motif_size, char alphabet, int position, bool reverse);
 int max_integer(int a, int b);
 double max_double(double a, double b);
+char * akagi_path();
 
 #endif

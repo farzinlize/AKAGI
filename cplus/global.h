@@ -20,7 +20,7 @@
 #endif
 /* ------------------------------------------------ */
 
-#define AKAGI_PATH "/home/akagi/Documents/AKAGI/"
+#define AKAGI_PATH_FILE "akagi.pwd"
 #define DATABASE_LOG "database.log"
 #define DUMPER_FILE  "dumped.motifs"
 #define REPORT_MESSAGE_BUFSIZE 64

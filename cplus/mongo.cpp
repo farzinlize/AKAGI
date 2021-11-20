@@ -6,9 +6,12 @@ char * secret_pass(){
     char * js, filename[100];
     long numbytes;
     char * pass;
+
+    /* read akagi path from provided file */
+    char * akagi_path_location = akagi_path();
  
     /* read content of secret file */
-    sprintf(filename, MONGO_SECRET, AKAGI_PATH);
+    sprintf(filename, MONGO_SECRET, akagi_path_location);
     secretfile = fopen(filename, "r");
     fseek(secretfile, 0L, SEEK_END);
     numbytes = ftell(secretfile);
@@ -30,6 +33,7 @@ char * secret_pass(){
     for(int i=pass_token.start,j=0;i<pass_token.end;i++,j++)
         pass[j] = js[i];
     
+    free(akagi_path_location);
     free(js);
     return pass;
 }
