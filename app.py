@@ -455,7 +455,7 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer, onsequence_nam
     motifs = load_collection(checkpoint_collection)
 
     # check for offline check-points
-    if motifs == None:
+    if not motifs:
         print('[CHECKPOINT] no checkpoint of interest was found, you need to run MFC operation first')
         print('[ERROR] upload failed')
         return
