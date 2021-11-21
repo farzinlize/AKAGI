@@ -49,7 +49,7 @@ class ARGS:
         self.name = None
         self.resume = False
         self.megalexa = 0
-        self.additional_name = ''
+        self.onsequence = ''
         self.reference = 'hg18'
         self.disable_chaining = False
         self.nbank = 1
@@ -494,7 +494,7 @@ if __name__ == "__main__":
     shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
         'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
-        'multi-layer', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
+        'multi-layer', 'megalexa=', 'onsequence=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
 
     # default values in ARGS object
@@ -527,7 +527,7 @@ if __name__ == "__main__":
         elif o in ['-Q', '--find-max-q']:arguments.quorum = FIND_MAX
         elif o in ['-u', '--multi-layer']:arguments.multilayer = True
         elif o in ['-x', '--megalexa']:arguments.megalexa = int(a)
-        elif o in ['-A', '--additional-name']:arguments.additional_name = a
+        elif o in ['-A', '--onsequence']:arguments.onsequence = a
         elif o in ['-r', '--reference']:arguments.reference = a
         elif o == '--disable-chaining':arguments.disable_chaining = True
         elif o in ['-P', '--multicore']: arguments.multicore = True
@@ -574,7 +574,7 @@ if __name__ == "__main__":
             checkpoint=arguments.checkpoint,
             banks=arguments.nbank,
             resume=arguments.resume,
-            on_sequence_compressed=arguments.additional_name,
+            on_sequence_compressed=arguments.onsequence,
             initial_pool=arguments.pool,
             make_compact_dataset=arguments.compact_dataset)
     elif command == 'SDM':
@@ -608,7 +608,7 @@ if __name__ == "__main__":
             arguments.frame_size, 
             arguments.dmax, 
             arguments.multilayer,
-            arguments.additional_name)
+            arguments.onsequence)
     elif command == 'MTH':
         auto_maintenance(arguments)
     elif command == 'NOP':
