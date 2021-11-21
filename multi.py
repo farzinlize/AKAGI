@@ -27,7 +27,7 @@ from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, COMPACT_DATASET_TEMP_LOCATION, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE
+from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -344,7 +344,8 @@ def multicore_chaining_main(cores_order,
                             q, 
                             initial_flag=True,
                             network=False, 
-                            initial_pool=None):
+                            initial_pool=None,
+                            compact_dataset=None):
     
     try   :available_cores = len(os.sched_getaffinity(0))
     except:available_cores = 'unknown'
@@ -414,7 +415,7 @@ def multicore_chaining_main(cores_order,
     if CPLUS_WORKER:
         judge_pipe, mother_pipe = Pipe()
         judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, cores, initial_pool));judge.start()
-        workers = [FPopen(WORKER_EXECUTABLE+f' {bank_ports[i%bank_order]} {JUDGE_PORT} {on_sequence} {COMPACT_DATASET_TEMP_LOCATION} {overlap} {gap} {q}', stdin=PIPE, stdout=PIPE) for i in range(cores)]
+        workers = [FPopen(WORKER_EXECUTABLE+f' {bank_ports[i%bank_order]} {JUDGE_PORT} {on_sequence} {compact_dataset} {overlap} {gap} {q}', stdin=PIPE, stdout=PIPE) for i in range(cores)]
     
     else: # using python workers (slower) and shared memory queues
         message = Queue();merge = Queue()
@@ -563,7 +564,8 @@ def test_process(queue:Queue):
 
 if __name__ == '__main__':
     # test
-    on_seq = '/home/akagi/Documents/AKAGI/cplus/test.onseq'
-    judge_pipe, mother_pipe = Pipe()
-    judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, 2, None));judge.start()
-    workers = [FPopen([WORKER_EXECUTABLE, '2090' ,f'{JUDGE_PORT}', on_seq, COMPACT_DATASET_TEMP_LOCATION, '4', '4', '200'], stdin=PIPE, stdout=PIPE) for i in range(2)]
+    pass
+    # on_seq = '/home/akagi/Documents/AKAGI/cplus/test.onseq'
+    # judge_pipe, mother_pipe = Pipe()
+    # judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, 2, None));judge.start()
+    # workers = [FPopen([WORKER_EXECUTABLE, '2090' ,f'{JUDGE_PORT}', on_seq, COMPACT_DATASET_TEMP_LOCATION, '4', '4', '200'], stdin=PIPE, stdout=PIPE) for i in range(2)]

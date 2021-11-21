@@ -21,7 +21,7 @@ from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
 
 # importing constants
-from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT_TAG, COMPACT_DATASET_TEMP_LOCATION, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
+from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT_TAG, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -57,7 +57,7 @@ class ARGS:
         self.assist = None
         self.auto_order = b'00'
         self.path = ''
-        self.compact_dataset = False
+        self.compact_dataset = None
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
@@ -103,7 +103,7 @@ def motif_finding_chain(dataset_name,
                         resume=False,
                         on_sequence_compressed=None,
                         initial_pool='',
-                        make_compact_dataset_flag=False):
+                        make_compact_dataset=None):
 
     def observation(q, save_collection=None):
 
@@ -169,7 +169,7 @@ def motif_finding_chain(dataset_name,
     # reading sequences and its attachment including rank and summit
     sequences = read_fasta('%s.fasta'%(dataset_name))
     bundles = read_bundle('%s.bundle'%(dataset_name))
-    if not chaining_disable or make_compact_dataset_flag:
+    if not chaining_disable or make_compact_dataset:
         pwm = read_pfm_save_pwm(pfm)
     # bundle_name = dataset_name.split('/')[-1]
 
@@ -240,7 +240,7 @@ def motif_finding_chain(dataset_name,
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     # making compact dataset for cplus-workers
-    if make_compact_dataset_flag:make_compact_dataset(COMPACT_DATASET_TEMP_LOCATION, sequences, bundles, pwm)
+    if make_compact_dataset:make_compact_dataset(make_compact_dataset, sequences, bundles, pwm)
 
     ############### start to chain ###############
     if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
@@ -491,10 +491,10 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D'
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
         'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
-        'multi-layer', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset',
+        'multi-layer', 'megalexa=', 'additional-name=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
 
     # default values in ARGS object
@@ -541,7 +541,7 @@ if __name__ == "__main__":
         elif o in ['-R', '--resume-chaining']:arguments.resume = True
         elif o in ['-S', '--score-pool']:arguments.pool = a
         elif o in ['-o', '--auto-order']:arguments.auto_order = bytes.fromhex(a)
-        elif o in ['-D', '--compact-dataset']:arguments.compact_dataset = True
+        elif o in ['-D', '--compact-dataset']:arguments.compact_dataset = a
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -576,7 +576,7 @@ if __name__ == "__main__":
             resume=arguments.resume,
             on_sequence_compressed=arguments.additional_name,
             initial_pool=arguments.pool,
-            make_compact_dataset_flag=arguments.compact_dataset)
+            make_compact_dataset=arguments.compact_dataset)
     elif command == 'SDM':
         sequences_distance_matrix(arguments.sequences)
     elif command == 'ARS':
