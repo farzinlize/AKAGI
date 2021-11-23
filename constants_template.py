@@ -61,6 +61,7 @@ IMPORTANT_LOG = f'{AKAGI_PATH}IMPORTANTE.log'
 DEBUG_LOG = f'{AKAGI_PATH}debug.log'
 CHAINING_EXECUTION_STATUS = f'{AKAGI_PATH}status.report'
 BANK_PORTS_REPORT = f'{AKAGI_PATH}bankports.report'
+WORKERS_ID_REPORT = f'{AKAGI_PATH}workersid.report'
 COMMAND_WHILE_CHAINING = f'{AKAGI_PATH}command.app'
 MEMORY_BALANCING_REPORT = f'{AKAGI_PATH}queue.report'
 COMPACT_DATASET_TEMP_LOCATION = f'{AKAGI_PATH}compact.temp'
@@ -270,6 +271,11 @@ BANK_PATH = APPDATA_PATH + 'bank%d/'
 CONTINUE_SIGNAL = 'co'
 STATUS_RUNNING = 'running'
 STATUS_SUSSPENDED = 'sus'
+
+# cplus workers signals
+C_TERMINATE_SIGNAL = b'T'
+C_RESUME_SIGNAL = b'R'
+C_CHANGE_BANK_SIGNAL = b'C'
 
 # encode column indexes
 ENCODE_RANK = 0

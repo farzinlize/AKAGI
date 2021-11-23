@@ -21,13 +21,13 @@ from mongo import get_bank_client, initial_akagi_database, serve_database_server
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
 from pool import AKAGIPool, get_AKAGI_pools_configuration
-from misc import binary_to_list, bytes_to_int, log_it, time_has_ended
+from misc import binary_to_list, bytes_to_int, int_to_bytes, log_it, time_has_ended
 from TrieFind import ChainNode, initial_chainNodes, pop_chain_node
 from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE
+from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, C_RESUME_SIGNAL, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, DATASET_NAME, DEFAULT_COLLECTION, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, HELP_CLOUD, HELP_PORTION, HOPEFUL, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAIL_SERVICE, MAXIMUM_MEMORY_BALANCE, MAX_CORE, MEMORY_BALANCING_REPORT, MINIMUM_CHUNK_SIZE, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, NEAR_EMPTY, NEAR_FULL, NEED_HELP, PARENT_WORK, PERMIT_RESTORE_AFTER, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, RESET_BANK, SAVE_SIGNAL, STATUS_RUNNING, STATUS_SUSSPENDED, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE, WORKERS_ID_REPORT
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -274,6 +274,7 @@ def judge_process(mother_pipe:Connection, port, cores, initial_pool:AKAGIPool):
         elif command == EXIT_SIGNAL:
             report.write(f'judge is shutting down by admin command - goodbye\n')
             mother_active_signal = False
+
         else:
             report.write(f'command is not recognized\n')
         report.flush()
@@ -386,7 +387,7 @@ def multicore_chaining_main(cores_order,
             except Exception as e:print(f'[FATAL][ERROR] something went wrong {e}');return ERROR_EXIT
 
     # report bank and their ports
-    with open(BANK_PORTS_REPORT, 'w') as pr:pr.write('\n'.join([f'bank{index}:{port}' for index, port in enumerate(bank_ports)]))
+    with open(BANK_PORTS_REPORT, 'w') as pr:pr.write('\n'.join([f'bank[{index}]:{port}' for index, port in enumerate(bank_ports)]))
 
     # -> static job distribution between banks
     if initial_works:
@@ -422,6 +423,9 @@ def multicore_chaining_main(cores_order,
         judge = Process(target=global_pool_thread, args=(merge, dataset_dict, initial_pool));judge.start()
         workers = [Process(target=chaining_thread_and_local_pool, args=(bank_ports[i%bank_order],message,merge,on_sequence,dataset_dict,overlap,gap,q)) for i in range(cores)]
         for worker in workers:worker.start()
+    
+    # report workers and their process ids
+    with open(WORKERS_ID_REPORT, 'w') as wi:wi.write('\n'.join([f'worker[{index}]:{p.pid}' for index, p in enumerate(workers)]))
     #
     #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -442,8 +446,7 @@ def multicore_chaining_main(cores_order,
     else:
         exit_code = END_EXIT
         exec_time = datetime.now()
-        counter = 0
-        while counter <= 100:
+        while True:
 
             # just wait for next check round
             sleep(CHECK_TIME_INTERVAL)
@@ -477,16 +480,28 @@ def multicore_chaining_main(cores_order,
                             if CPLUS_WORKER:
                                 worker_index = int(command.split()[1])
                                 os.kill(workers[worker_index].pid, SIGINT)
-                                workers[worker_index].stdin.write(b'R') # TODO: R??????
+                                workers[worker_index].stdin.write(C_RESUME_SIGNAL)
                                 workers[worker_index].stdin.flush()
                             else:
                                 how_many = int(command.split()[1])
                                 for _ in range(how_many):message.put(CONTINUE_SIGNAL)
 
-                        elif command.startswith('reset'):
+                        # reset any bank database
+                        elif command.startswith(RESET_BANK):
                             bank_index = int(command.split()[1])
                             try:serve_database_server(BANK_NAME%bank_index, BANK_PATH%bank_index, bank_ports[bank_index])
                             except Exception as e:log_it(IMPORTANT_LOG, f'[PARENT] can not run database server bank{bank_index}\n{e}')
+                        
+                        # order worker to change its bank port
+                        elif command.startswith(REDIRECT_BANK):
+                            _, worker_index_st, order_bank_port_st = command.split()
+                            worker_index = int(worker_index_st)
+                            if CPLUS_WORKER:
+                                os.kill(workers[worker_index].pid, SIGINT)
+                                workers[worker_index].stdin.write(int_to_bytes(int(order_bank_port_st)))
+                                workers[worker_index].stdin.flush()
+                            else:
+                                message.put(REDIRECT_BANK + f' {workers[worker_index].pid} {order_bank_port_st}')
 
                         # ignore and log wrong commands
                         else:log_it(IMPORTANT_LOG, f'[PARENT] command not recognized {command}')
