@@ -103,8 +103,14 @@ int main(int argc, char* argv[]){
     /* initial mongo driver */
     mongoc_init();
 
+    /* check for any errors among arguments */
+    if(argc != NUMBER_OF_ARGS){fprintf(errors, "[FATAL] not a correct number of arguments\n");return EXIT_ERROR;}
+    if(access(argv[ONSEQUENCE_INDEX], F_OK) != 0 || access(argv[COMPACT_INDEX], F_OK) != 0){
+        fprintf(errors, "[FATAL] can't access necessary files under provided locations as arguments\n");
+        return EXIT_ERROR;
+    }
+
     /* parse arguments and load data */
-    if(argc != NUMBER_OF_ARGS){fprintf(report, "EXIT ON ERROR - not a correct number of arguments\n");return EXIT_ERROR;}
     bank_port = atoi(argv[BANK_PORT_INDEX]);
     int judge_port = atoi(argv[JUDGE_PORT_INDEX]);
     on_sequence onsequence = open_on_sequence(argv[ONSEQUENCE_INDEX]);
@@ -119,13 +125,14 @@ int main(int argc, char* argv[]){
 
     /* connecting to other processes */
     bank = get_client_c(bank_port);
+    if(bank==NULL){fprintf(errors, "[FATAL] bank could not be initiliazed - check database log\n");return EXIT_ERROR;}
 
     #ifdef DEBUG_WORKER
     fprintf(report, "[DEBUG] bank access is established\n");fflush(report);
     #endif
 
     int judge = connect_communication(judge_port);
-    if(judge == -1){fprintf(report, "EXIT ON ERROR - judge communication failed (port:%d)", judge_port); return EXIT_ERROR;}
+    if(judge == -1){fprintf(errors, "[FATAL] judge communication failed (port:%d)", judge_port); return EXIT_ERROR;}
 
     #ifdef DEBUG_WORKER
     fprintf(report, "[DEBUG] connection to other processes are established\n");fflush(report);

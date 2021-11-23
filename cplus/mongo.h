@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <mongoc.h>
+#include <unistd.h>
 #include "structures.h"
 #include "utility.h"
 #include "global.h"
@@ -16,7 +17,7 @@
 #define DB_USER "akagi"
 #define QUEUE_COLLECTION "queue"
 #define MONGO_PORT 2090
-#define MONGO_SECRET "%s/mongo.secret"
+#define MONGO_SECRET "mongo.secret"
 #define MONGO_ADDRESS "mongodb://%s:%s@localhost:%d/?authSource=%s"
 #define MAX_ORDER_SIZE 1000
 

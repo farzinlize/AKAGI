@@ -3,16 +3,17 @@
 char * secret_pass(){
 
     FILE * secretfile;
-    char * js, filename[100];
+    char *js, *pass;
     long numbytes;
-    char * pass;
-
-    /* read akagi path from provided file */
-    char * akagi_path_location = akagi_path();
  
+    /* check if secret is available */
+    if(access(MONGO_SECRET, F_OK) != 0){
+        logit("mongo secret file dose not exist", DATABASE_LOG);
+        return NULL;
+    }
+
     /* read content of secret file */
-    sprintf(filename, MONGO_SECRET, akagi_path_location);
-    secretfile = fopen(filename, "r");
+    secretfile = fopen(MONGO_SECRET, "r");
     fseek(secretfile, 0L, SEEK_END);
     numbytes = ftell(secretfile);
     fseek(secretfile, 0L, SEEK_SET);	
@@ -33,7 +34,6 @@ char * secret_pass(){
     for(int i=pass_token.start,j=0;i<pass_token.end;i++,j++)
         pass[j] = js[i];
     
-    free(akagi_path_location);
     free(js);
     return pass;
 }
@@ -42,7 +42,7 @@ char * secret_pass(){
 mongoc_client_t * get_client_c(int port){
 
     char uri_string[70];
-    char * password = secret_pass();
+    char * password = secret_pass(); if(password==NULL) return NULL;
     sprintf(uri_string, MONGO_ADDRESS, DB_USER, password, port, DB_NAME);
 
     mongoc_uri_t * uri = mongoc_uri_new (uri_string);
