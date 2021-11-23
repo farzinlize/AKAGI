@@ -21,8 +21,8 @@
 /* ------------------------------------------------ */
 
 #define AKAGI_PATH_FILE "akagi.pwd"
-#define DATABASE_LOG "database.log"
-#define DUMPER_FILE  "dumped.motifs"
+#define DATABASE_LOG    "database.log"
+#define DUMPER_FILE     "dumped.motifs"
 #define REPORT_MESSAGE_BUFSIZE 64
 #define FOUNDMAP_NOARRAY false
 #define FOUNDMAP_ARRAY   true
