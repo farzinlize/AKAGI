@@ -860,8 +860,8 @@ def bytes_to_int(b :bytes, signed=False, endian=BYTE_READ_INT_MODE):
     return int.from_bytes(b, endian, signed=signed)
 
 
-def int_to_bytes(i, int_size=INT_SIZE, signed=False):
-    return i.to_bytes(int_size, BYTE_READ_INT_MODE, signed=signed)
+def int_to_bytes(i, int_size=INT_SIZE, signed=False, endian=BYTE_READ_INT_MODE):
+    return i.to_bytes(int_size, endian, signed=signed)
 
 
 # ########################################## #
