@@ -103,7 +103,7 @@ def motif_finding_chain(dataset_name,
                         resume=False,
                         on_sequence_compressed=None,
                         initial_pool='',
-                        make_compact_dataset=None):
+                        compact_dataset=None):
 
     def observation(q, save_collection=None):
 
@@ -169,7 +169,7 @@ def motif_finding_chain(dataset_name,
     # reading sequences and its attachment including rank and summit
     sequences = read_fasta('%s.fasta'%(dataset_name))
     bundles = read_bundle('%s.bundle'%(dataset_name))
-    if not chaining_disable or make_compact_dataset:
+    if not chaining_disable or compact_dataset:
         pwm = read_pfm_save_pwm(pfm)
     # bundle_name = dataset_name.split('/')[-1]
 
@@ -250,7 +250,7 @@ def motif_finding_chain(dataset_name,
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     # making compact dataset for cplus-workers
-    if make_compact_dataset:make_compact_dataset(make_compact_dataset, sequences, bundles, pwm)
+    if compact_dataset:make_compact_dataset(compact_dataset, sequences, bundles, pwm)
 
     ############### start to chain ###############
     if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
@@ -265,8 +265,8 @@ def motif_finding_chain(dataset_name,
 
     if multicore:
         last_time = currentTime()
-        if not resume:code = multicore_chaining_main(cores, banks, motifs, on_sequence, dataset_dict, overlap, gap, q, compact_dataset=make_compact_dataset)
-        else         :code = multicore_chaining_main(cores, banks, None, on_sequence, dataset_dict, overlap, gap, q, initial_flag=False, initial_pool=pool, compact_dataset=make_compact_dataset)
+        if not resume:code = multicore_chaining_main(cores, banks, motifs, on_sequence, dataset_dict, overlap, gap, q, compact_dataset=compact_dataset)
+        else         :code = multicore_chaining_main(cores, banks, None, on_sequence, dataset_dict, overlap, gap, q, initial_flag=False, initial_pool=pool, compact_dataset=compact_dataset)
 
     else:        
         # changes must be applied
@@ -586,7 +586,7 @@ if __name__ == "__main__":
             resume=arguments.resume,
             on_sequence_compressed=arguments.onsequence,
             initial_pool=arguments.pool,
-            make_compact_dataset=arguments.compact_dataset)
+            compact_dataset=arguments.compact_dataset)
     elif command == 'SDM':
         sequences_distance_matrix(arguments.sequences)
     elif command == 'ARS':
