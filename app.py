@@ -15,7 +15,7 @@ from alignment import alignment_matrix
 from twobitHandler import download_2bit
 from onSequence import OnSequenceDistribution
 from googledrive import connect_drive, download_checkpoint_from_drive, query_download_checkpoint, store_single_file
-from checkpoint import load_collection, observation_checkpoint_name, save_checkpoint
+from checkpoint import load_checkpoint_file, load_collection, observation_checkpoint_name, save_checkpoint
 from TrieFind import ChainNode, initial_chainNodes
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
@@ -204,9 +204,13 @@ def motif_finding_chain(dataset_name,
     # search for observation checkpoint
     if not resume and checkpoint:
         checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
-        motifs = load_collection(checkpoint_collection)
+        checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
 
-        if __debug__:log_it(DEBUG_LOG, f'[CHECKPOINT] observation data in database: {bool(motifs)}')
+        # load from file if checkpoint file exist, otherwise load from database
+        if os.path.isfile(checkpoint_file):motifs = load_checkpoint_file(checkpoint_file)
+        else                              :motifs = load_collection(checkpoint_collection)
+
+        if __debug__:log_it(DEBUG_LOG, f'[CHECKPOINT] observation data existed: {bool(motifs)}')
 
         # run and save observation data
         if not motifs:motifs = observation(q, save_collection=checkpoint_collection)
@@ -225,7 +229,13 @@ def motif_finding_chain(dataset_name,
     # # # # # # # #  OnSequence data structure  # # # # # # # #
     # generate from motifs
     if not resume:
-        try:on_sequence = OnSequenceDistribution(motifs, sequences)
+        try:
+            generate_onsequence = OnSequenceDistribution(motifs, sequences)
+            if CPLUS_WORKER:
+                generate_onsequence.raw_file(filename=on_sequence_compressed)
+                on_sequence = on_sequence_compressed
+            else:
+                on_sequence = generate_onsequence
         except Exception as error:print(f'[FATAL][ERROR] cant make OnSequence {error}');return
     # read compressed from file or just pass the compressed file location in case of cplus-worker
     else:
@@ -255,8 +265,8 @@ def motif_finding_chain(dataset_name,
 
     if multicore:
         last_time = currentTime()
-        if not resume:code = multicore_chaining_main(cores, banks, motifs, on_sequence, dataset_dict, overlap, gap, q)
-        else         :code = multicore_chaining_main(cores, banks, None, on_sequence, dataset_dict, overlap, gap, q, initial_flag=False, initial_pool=pool)
+        if not resume:code = multicore_chaining_main(cores, banks, motifs, on_sequence, dataset_dict, overlap, gap, q, compact_dataset=make_compact_dataset)
+        else         :code = multicore_chaining_main(cores, banks, None, on_sequence, dataset_dict, overlap, gap, q, initial_flag=False, initial_pool=pool, compact_dataset=make_compact_dataset)
 
     else:        
         # changes must be applied
