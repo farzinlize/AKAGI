@@ -12,6 +12,15 @@ worker: $(worker_sources) Makefile
 fast-worker: $(worker_sources) Makefile
 	gcc -o build/fworker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE -O3 -DOPTIMIZED
 
+debug-worker: $(worker_sources) Makefile
+	gcc -o build/dworker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE -DDEBUG_WORKER
+
+debug2-worker: $(worker_sources) Makefile
+	gcc -o build/d2worker $(worker_sources) $(pkg-mongo) -fpermissive -DWORKER_MAIN -DMAKE_MAKE -DDEBUG_WORKER -DDEBUG_MONGO
+
+all-workers:
+	make worker fast-worker debug-worker debug2-worker
+
 algt: algorithm.cpp $(common_sources) Makefile
 	gcc -o build/algt algorithm.cpp $(common_sources) -DALG_MAIN -DMAKE_MAKE
 
