@@ -402,6 +402,9 @@ def multicore_chaining_main(cores_order,
             if not isinstance(result, list):print(f'[FATAL][ERROR] something went wrong {result}');return ERROR_EXIT
             del result # parent doesn't need job objects 
             bank_client.close()
+        
+        # mother no longer needs initial works
+        del initial_works
     #
     #
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -578,9 +581,10 @@ def test_process(queue:Queue):
 
 
 if __name__ == '__main__':
-    # test
-    pass
-    # on_seq = '/home/akagi/Documents/AKAGI/cplus/test.onseq'
-    # judge_pipe, mother_pipe = Pipe()
-    # judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, 2, None));judge.start()
-    # workers = [FPopen([WORKER_EXECUTABLE, '2090' ,f'{JUDGE_PORT}', on_seq, COMPACT_DATASET_TEMP_LOCATION, '4', '4', '200'], stdin=PIPE, stdout=PIPE) for i in range(2)]
+    import sys
+    print("[TEST][MULTI] testing cplus workers")
+    print("[TEST] onsequence = ", sys.argv[1])
+    print("[TEST] compact = ", sys.argv[2])
+    judge_pipe, mother_pipe = Pipe()
+    judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, 2, None));judge.start()
+    workers = [FPopen([WORKER_EXECUTABLE, '2090' ,f'{JUDGE_PORT}', sys.argv[1], sys.argv[2], '4', '4', '200'], stdin=PIPE, stdout=PIPE) for i in range(2)]
