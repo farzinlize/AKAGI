@@ -11,7 +11,7 @@ chain_link * next_chain(chain_node motif, on_sequence on_seq, int sequences_coun
         while (current_position != NULL){                       //positions
             for (int sliding=-overlap;sliding<=gap;sliding++){  // sliding
                 int next_position_location = current_position->location + current_position->size + sliding;
-                if(next_position_location >= on_seq.sequence_lengths[current_seq_id])continue;
+                if(next_position_location >= on_seq.sequence_lengths[current_seq_id] || next_position_location <= current_position->location)continue;
                 int next_position_size = current_position->size;
                 int i = 0; char * zero_motif = on_seq.data[current_seq_id][next_position_location][i++];
                 while (zero_motif != NULL){                  // zero-motifs
