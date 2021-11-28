@@ -473,10 +473,12 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer, onsequence_nam
     # compact motifs and their observation data into a single file
     save_checkpoint(motifs, checkpoint_file, compact=True)
 
-    # upload files into cloud
+    # upload checkpoint into cloud
     google_drive = connect_drive()
     store_single_file(checkpoint_file, drive=google_drive)
-    store_single_file(onsequence_name, drive=google_drive)
+
+    # upload compressed onsequence file into cloud if specified
+    if(onsequence_name):store_single_file(onsequence_name, drive=google_drive)
 
     print(f"[UPLOAD] obseration {checkpoint_collection} is uploaded into cloud")
         
