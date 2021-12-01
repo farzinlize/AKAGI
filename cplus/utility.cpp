@@ -86,3 +86,26 @@ char * akagi_path(){
     fclose(ap);
     return result;
 }
+
+char * concat_malloc(char * a, char * b){
+    int size_a = strlen(a), size_b = strlen(b);
+    int size = size_a + size_b + 1;
+    char * result = (char *) malloc(sizeof(char)*size);
+
+    int i = 0, ax = 0, bx = 0;
+    while(ax<size_a) result[i++] = a[ax++];
+    while(bx<size_b) result[i++] = b[bx++];
+
+    result[i] = '\0';
+    return result;
+}
+
+#ifdef UTILITY_MAIN
+int main(int argc, char * argv[]){
+    char * a = concat_malloc(argv[1], argv[2]);
+    printf("result is in here -> (%s) len=%ld\n", a, strlen(a));
+    int b;
+    if(((b=atoi(argv[3])) % 5) == 0) printf("a is %d and its devidable by 5\n", b);
+    else printf("a is %d but its not devidable by 5 oh no\n", b);
+}
+#endif

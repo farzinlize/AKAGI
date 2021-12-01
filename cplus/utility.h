@@ -21,5 +21,6 @@ double pwm_find(double * compact_pwm, int motif_size, char alphabet, int positio
 int max_integer(int a, int b);
 double max_double(double a, double b);
 char * akagi_path();
+char * concat_malloc(char * a, char * b);
 
 #endif
