@@ -21,6 +21,9 @@ debug2-worker: $(worker_sources) Makefile
 all-workers:
 	make worker fast-worker debug-worker debug2-worker
 
+interpreter: interpreter.cpp $(common_sources) Makefile
+	gcc -o build/inter interpreter.cpp $(common_sources) -DMAKE_MAKE -DINTERPRETER_MAIN
+
 algt: algorithm.cpp $(common_sources) Makefile
 	gcc -o build/algt algorithm.cpp $(common_sources) -DALG_MAIN -DMAKE_MAKE
 
