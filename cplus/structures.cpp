@@ -13,9 +13,9 @@ tree_node * initial_tree(char * label){
 
 void delete_tree_node(tree_node * node, bool preserve_data){
     if (!preserve_data){
-        free(node->label);
         destroy_foundmap(node->foundmap, FOUNDMAP_NOARRAY);
     }
+    free(node->label);
     free(node->children);
     free(node);
 }
