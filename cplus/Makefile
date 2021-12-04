@@ -21,8 +21,11 @@ debug2-worker: $(worker_sources) Makefile
 all-workers:
 	make worker fast-worker debug-worker debug2-worker
 
-interpreter: interpreter.cpp $(common_sources) Makefile
-	gcc -o build/inter interpreter.cpp $(common_sources) -DMAKE_MAKE -DINTERPRETER_MAIN
+interpreter: interpreter.cpp $(common_sources) algorithm.cpp Makefile
+	gcc -o build/inter interpreter.cpp $(common_sources) algorithm.cpp -DMAKE_MAKE -DINTERPRETER_MAIN
+
+onseq-interpreter: interpreter.cpp $(common_sources) algorithm.cpp Makefile
+	gcc -o build/onseqinter interpreter.cpp $(common_sources) algorithm.cpp -DMAKE_MAKE -DINTERPRETER_MAIN -DSCROLL_ONSEQ
 
 algt: algorithm.cpp $(common_sources) Makefile
 	gcc -o build/algt algorithm.cpp $(common_sources) -DALG_MAIN -DMAKE_MAKE
