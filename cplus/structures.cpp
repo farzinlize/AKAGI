@@ -97,7 +97,7 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
     }
 
     #ifdef DEBUG_STRUCTURE
-    printf("[FRAME] we selected the next step at %d:address\n", next_path);
+    printf("[FRAME] we selected the next step at %ld:address\n", (long int)next_path);
     #endif
 
     /* create path if not exist */
@@ -119,6 +119,28 @@ void add_frame(tree_node * node, char * frame, int seq_id, int location, int siz
     
     /* recursively go to path until reaching destination */
     add_frame(next_path, frame, seq_id, location, size, current_frame_index+1);
+}
+
+
+tree_node * search_node(tree_node * node, char * kmer, int current_frame_index){
+
+    /* end of the path */
+    if(kmer[current_frame_index] == '\0') return node;
+
+    /* select path */
+    tree_node * next_path;
+    switch (kmer[current_frame_index]){
+    case 'A':next_path = node->children[0];break;
+    case 'T':next_path = node->children[1];break;
+    case 'C':next_path = node->children[2];break;
+    case 'G':next_path = node->children[3];break;
+    }
+
+    /* no path exist */
+    if(next_path == NULL) return NULL;
+    
+    /* recursively go to path until reaching destination */
+    return search_node(next_path, kmer, current_frame_index+1);
 }
 
 
@@ -187,6 +209,48 @@ dataset load_compact_dataset(const char * filename){
 
     fclose(compact);
     return result;
+}
+
+
+int get_q(FoundMap * map){
+    int q = 0;
+    FoundMap * current = map;
+    while(current != NULL){
+        current = current->next;
+        q++;
+    }
+    return q;
+}
+
+
+void show_sequence_vector(FoundMap * map){
+    if(map == NULL) return;
+    FoundMap * current = map;
+    while(true){
+        printf("%d", current->seq_id);
+        current = current->next;
+        if(current != NULL) printf(", ");
+        else break;
+    }
+    printf("\n");
+}
+
+
+void show_position_vector_at(FoundMap * map, int seq_id){
+    FoundMap * current = map;
+    while(current != NULL){
+        if(current->seq_id == seq_id){
+            pos_link * current_position = current->positions;
+            while(true){
+                printf("(%d, %d)", current_position->location, current_position->size);
+                current_position = current_position->next;
+                if(current_position != NULL) printf(", ");
+                else break;
+            }
+            printf("\n");return;
+        }
+        current = current->next;
+    }printf("no sequence was found with %d as sequence id\n", seq_id);
 }
 
 

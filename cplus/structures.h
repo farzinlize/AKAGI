@@ -84,9 +84,15 @@ int len_chain_link(chain_link head);
 void clean_chain_link(chain_link * head);
 chain_link * initial_empty_chain_link();
 chain_link * insert_chain_link(chain_link * link, chain_node * node);
+int get_q(FoundMap * map);
 
 /* byte encode functions */
 uint8_t * structure_to_binary(FoundMap * map, uint32_t * binary_size);
 FoundMap * binary_to_structure(uint8_t * binary);
+
+/* visualization functions */
+void show_position_vector_at(FoundMap * map, int seq_id);
+void show_sequence_vector(FoundMap * map);
+tree_node * search_node(tree_node * node, char * kmer, int current_frame_index);
 
 #endif
