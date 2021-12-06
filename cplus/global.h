@@ -6,6 +6,8 @@
 /* DEBUG_WORKER: only activate main worker reports */
 /* DEBUG_STRUCTURE: structures module debug mode   */
 /* DEBUG_MONGO: database module debug mode         */
+/* DEBUG_PWM: pwm score debug                      */
+/* DEBUG_CHAINING: next_chain function debug parts */
 /* or simply nothing specifiec                     */
 
 
@@ -17,6 +19,8 @@
 #define STRUCT_MAIN
 #define COMMS_MAIN
 #define MONGO_MAIN
+#define UTILITY_MAIN
+#define INTERPRETER_MAIN
 #endif
 /* ------------------------------------------------ */
 
