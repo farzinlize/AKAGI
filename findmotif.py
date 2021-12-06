@@ -241,7 +241,6 @@ def next_chain(motif: ChainNode, on_sequence, overlap, gap, q, report:BufferedWr
     for index, seq_id in enumerate(bundle[0]):
         position: ExtraPosition
         for position in bundle[1][index]:
-            observation_size += 1
             for sliding in [i for i in range(-overlap, gap+1)]:
                 next_position = position.end_position() + sliding
                 if next_position >= len(on_sequence.struct[seq_id]):continue
@@ -255,6 +254,7 @@ def next_chain(motif: ChainNode, on_sequence, overlap, gap, q, report:BufferedWr
                         next_condidate, 
                         seq_id, 
                         ExtraPosition(position.start_position, position.size + len(next_condidate) + sliding))
+                    observation_size += 1
     
     report.write('OBSERVATION SIZE %d | CHAIN_ID %d | '%(observation_size, chain_id))
 
