@@ -851,6 +851,15 @@ def list_to_binary(found_list):
     return writer.getvalue()
 
 
+def create_motif_file(motif, filename):
+    with open(filename, 'wb') as f:
+        f.write(int_to_bytes(len(motif.label)))
+        f.write(bytes(motif.label, encoding='ascii'))
+        data = list_to_binary(motif.foundmap.get_list())
+        f.write(int_to_bytes(len(data)))
+        f.write(data)
+
+
 # ########################################## #
 #            byte read functions             #
 # ########################################## #
