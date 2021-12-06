@@ -243,7 +243,7 @@ def next_chain(motif: ChainNode, on_sequence, overlap, gap, q, report:BufferedWr
         for position in bundle[1][index]:
             for sliding in [i for i in range(-overlap, gap+1)]:
                 next_position = position.end_position() + sliding
-                if next_position >= len(on_sequence.struct[seq_id]):continue
+                if next_position >= len(on_sequence.struct[seq_id]) or next_position <= position.start_position:continue
 
                 for next_condidate in on_sequence.struct[seq_id][next_position]:
                     

@@ -136,7 +136,7 @@ class WatchNode(TrieNode):
                     if result_kmer==EXTRACT_KMER  :motifs += [self.label]
                     elif result_kmer==EXTRACT_OBJ :motifs += [self]
         for child in self.childs:
-            motifs += child.extract_motifs(q, result_kmer)
+            motifs += child.extract_motifs(q, result_kmer, greaterthan)
         return motifs
 
     
