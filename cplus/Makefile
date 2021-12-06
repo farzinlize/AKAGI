@@ -45,8 +45,8 @@ smongot: mongo.cpp $(common_sources) Makefile
 commst: comms.cpp $(common_sources) Makefile
 	gcc -o build/commst comms.cpp $(common_sources) -DCOMMS_MAIN -DMAKE_MAKE
 
-test: test.cpp Makefile
-	gcc -o build/test test.cpp $(common_sources) mongo.cpp $(pkg-mongo) -fpermissive -DMAKE_MAKE
+test-pwm: test.cpp $(common_sources) algorithm.cpp Makefile
+	gcc -o build/test test.cpp $(common_sources) algorithm.cpp -DMAKE_MAKE
 
 clean:
 	rm -rf build/*
