@@ -60,7 +60,7 @@ def save_checkpoint(motifs:List[ChainNode],
 
 
 # resumable files containing motifs plus additional data
-def load_checkpoint_file(objects_file:str, resumable=False):
+def load_checkpoint_file(objects_file:str, resumable=False) -> List[ChainNode]:
     
     if not os.path.isfile(objects_file):
         print("[CHECK-POINT] checkpoint doesn't exist")
