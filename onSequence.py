@@ -45,8 +45,8 @@ class OnSequenceDistribution:
         with open(filename, 'wb') as c:pickle.dump(self.struct, c)
 
 
-    def generate_list(self, motifs: List[ChainNode], sequences):
-        client = get_client()
+    def generate_list(self, motifs: List[ChainNode], sequences, client=None):
+        
         self.struct = [[[] for _ in range(len(sequence))] for sequence in sequences] 
         for motif in motifs:
 
@@ -66,7 +66,6 @@ class OnSequenceDistribution:
                         print('[ERROR] IndexError raised | seq_id=%d, position=%d, len(sequence[index])=%d and motif:%s'%(
                             seq_id, position.start_position, len(sequences[index]), motif.label
                         ))
-        client.close()
                 
 
     def analysis(self):
