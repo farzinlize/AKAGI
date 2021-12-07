@@ -420,7 +420,11 @@ def multicore_chaining_main(cores_order,
         judge_pipe, mother_pipe = Pipe()
         judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, cores, initial_pool));judge.start()
         try:workers = [FPopen([WORKER_EXECUTABLE, str(bank_ports[i%bank_order]), str(JUDGE_PORT), str(on_sequence), str(compact_dataset), str(overlap), str(gap), str(q)], stdin=PIPE, stdout=PIPE) for i in range(cores)]
-        except Exception as e:print(f"[FATAL][ERROR] cant run cplus-workers {e}")
+        except Exception as e:
+            # somthing went wrong so we shut down mongods safely
+            print(f"[FATAL][ERROR] cant run cplus-workers {e}")
+            for index in range(len(bank_ports)):os.system(MONGOD_SHUTDOWN_COMMAND%(BANK_PATH%index))
+            return ERROR_EXIT
     
     else: # using python workers (slower) and shared memory queues
         message = Queue();merge = Queue()
