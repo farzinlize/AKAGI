@@ -291,7 +291,7 @@ def judge_process(mother_pipe:Connection, port, cores, initial_pool:AKAGIPool):
     server.bind(('127.0.0.1', port))
     if cores > 80:report.write(f"using a single judge is not recommended for high number of workers (cores={cores})\n")
     server.listen(cores)
-    report.write("socket is set for listenting\n")
+    report.write("socket is set for listenting\n");report.flush()
     
     # register server and moother pipe to monitor
     event_selector.register(server, EVENT_READ, accept_worker)
@@ -419,7 +419,7 @@ def multicore_chaining_main(cores_order,
     if CPLUS_WORKER:
         judge_pipe, mother_pipe = Pipe()
         judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, cores, initial_pool));judge.start()
-        workers = [FPopen(WORKER_EXECUTABLE+f' {bank_ports[i%bank_order]} {JUDGE_PORT} {on_sequence} {compact_dataset} {overlap} {gap} {q}', stdin=PIPE, stdout=PIPE) for i in range(cores)]
+        workers = [FPopen([WORKER_EXECUTABLE, bank_ports[i%bank_order], JUDGE_PORT, on_sequence, compact_dataset, overlap, gap, q], stdin=PIPE, stdout=PIPE) for i in range(cores)]
     
     else: # using python workers (slower) and shared memory queues
         message = Queue();merge = Queue()
