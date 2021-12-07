@@ -169,9 +169,6 @@ def motif_finding_chain(dataset_name,
     # reading sequences and its attachment including rank and summit
     sequences = read_fasta('%s.fasta'%(dataset_name))
     bundles = read_bundle('%s.bundle'%(dataset_name))
-    if not chaining_disable or compact_dataset:
-        pwm = read_pfm_save_pwm(pfm)
-    # bundle_name = dataset_name.split('/')[-1]
 
     if AUTO_DATABASE_SETUP:run_mongod_server()
 
@@ -226,6 +223,10 @@ def motif_finding_chain(dataset_name,
 
     if not resume and not motifs:print('[FATAL][ERROR] no observation data is available (error)');return
 
+    ############### disable chaining? ###############
+    if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
+    ###############  start to chain   ###############
+
     # # # # # # # #  OnSequence data structure  # # # # # # # #
     # generate from motifs
     if not resume:
@@ -249,11 +250,11 @@ def motif_finding_chain(dataset_name,
     if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+    # read pfm from jaspar and calculate pwm
+    pwm = read_pfm_save_pwm(pfm)
+
     # making compact dataset for cplus-workers
     if compact_dataset:make_compact_dataset(compact_dataset, sequences, bundles, pwm)
-
-    ############### start to chain ###############
-    if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
     dataset_dict = {SEQUENCES:sequences, SEQUENCE_BUNDLES:bundles, PWM:pwm, DATASET_NAME:dataset_name}
 
     # load pool to start with
