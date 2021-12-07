@@ -247,7 +247,7 @@ def motif_finding_chain(dataset_name,
         if BYTES_OR_PICKLE:on_sequence.raw_file(filename=on_sequence_compressed)
         else:              on_sequence.compress(filename=on_sequence_compressed)
     # reports for analysis
-    if ON_SEQUENCE_ANALYSIS:print(on_sequence.analysis())
+    if ON_SEQUENCE_ANALYSIS and isinstance(on_sequence, OnSequenceDistribution):print(on_sequence.analysis())
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
     # read pfm from jaspar and calculate pwm
