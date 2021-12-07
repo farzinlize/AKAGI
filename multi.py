@@ -561,7 +561,7 @@ def multicore_chaining_main(cores_order,
     ###########  all working process are dead  ###########
 
     # message judge to terminate
-    if CPLUS_WORKER:judge_pipe.send(EXIT_SIGNAL)
+    if CPLUS_WORKER:judge_pipe.send(REPORT_SIGNAL);judge_pipe.send(EXIT_SIGNAL)
     else           :merge.put(EXIT_SIGNAL)
     judge.join()
 
