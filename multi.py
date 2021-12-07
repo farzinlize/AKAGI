@@ -419,7 +419,8 @@ def multicore_chaining_main(cores_order,
     if CPLUS_WORKER:
         judge_pipe, mother_pipe = Pipe()
         judge = Process(target=judge_process, args=(mother_pipe, JUDGE_PORT, cores, initial_pool));judge.start()
-        workers = [FPopen([WORKER_EXECUTABLE, bank_ports[i%bank_order], JUDGE_PORT, on_sequence, compact_dataset, overlap, gap, q], stdin=PIPE, stdout=PIPE) for i in range(cores)]
+        try:workers = [FPopen([WORKER_EXECUTABLE, str(bank_ports[i%bank_order]), str(JUDGE_PORT), str(on_sequence), str(compact_dataset), str(overlap), str(gap), str(q)], stdin=PIPE, stdout=PIPE) for i in range(cores)]
+        except Exception as e:print(f"[FATAL][ERROR] cant run cplus-workers {e}")
     
     else: # using python workers (slower) and shared memory queues
         message = Queue();merge = Queue()
