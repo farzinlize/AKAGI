@@ -272,7 +272,8 @@ def judge_process(mother_pipe:Connection, port, cores, initial_pool:AKAGIPool):
             global_pool.save_snap(f"judge_{os.getpid()}_{report_count}"+POOL_TAG)
 
         elif command == EXIT_SIGNAL:
-            report.write(f'judge is shutting down by admin command - goodbye\n')
+            report.write(f'judge is shutting down by admin command (saving into file) - goodbye\n')
+            global_pool.save_snap(f"judge_{os.getpid()}_{report_count}"+POOL_TAG)
             mother_active_signal = False
 
         else:
@@ -481,7 +482,8 @@ def multicore_chaining_main(cores_order,
 
                         # manually command to save global pool
                         if command.startswith(SAVE_SIGNAL):
-                            judge_pipe.send(SAVE_SIGNAL)
+                            if CPLUS_WORKER:judge_pipe.send(SAVE_SIGNAL)
+                            else           :merge.put(SAVE_SIGNAL)
 
                         # signal workers to continue 
                         elif command.startswith(CONTINUE_SIGNAL):
