@@ -9,7 +9,7 @@ import sys
 # project imports
 from GKmerhood import DummyTree, GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, multiple_layer_window_find_motif
-from misc import brief_sequence, change_global_constant_py, log_it, make_compact_dataset, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta, read_pfm_save_pwm
+from misc import brief_sequence, change_global_constant_py, log_it, make_compact_dataset, read_bundle, read_fasta, make_location, edit_distances_matrix, extract_from_fasta
 from report import FastaInstance, OnSequenceAnalysis, aPWM, Ranking
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
@@ -19,6 +19,7 @@ from checkpoint import load_checkpoint_file, load_collection, observation_checkp
 from TrieFind import ChainNode, initial_chainNodes
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
+from jaspar import read_pfm_save_pwm
 
 # importing constants
 from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT_TAG, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES

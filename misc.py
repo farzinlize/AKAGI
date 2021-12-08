@@ -9,6 +9,7 @@ from time import time as currentTime
 from multiprocessing.synchronize import Lock
 
 from constants import APPDATA_PATH, BYTE_READ_INT_MODE, DEL, DISK_QUEUE_LIMIT, DISK_QUEUE_NAMETAG, END, MAX_SEQUENCE_COUNT, MAX_SEQUENCE_LENGTH, PATH_LENGTH, INT_SIZE, PSEUDOCOUNT, P_VALUE, RANK, SUMMIT, TYPES_OF, STR
+from jaspar import read_pfm_save_pwm
 
 
 # ########################################## #
@@ -338,63 +339,6 @@ def read_meme_motif_to_pwm(memechip_motif_address):
 
             pwm.append(col)
         
-    return pwm
-
-
-def read_pfm(filename):
-
-    with open(filename, 'r') as pfm:
-        _ = pfm.readline()
-
-        A = [int(float(a)) for a in pfm.readline().split()]
-        C = [int(float(a)) for a in pfm.readline().split()]
-        G = [int(float(a)) for a in pfm.readline().split()]
-        T = [int(float(a)) for a in pfm.readline().split()]
-
-        assert len(A) == len(C) and len(C) == len(G) and len(G) == len(T)
-        sites_count = A[0]+C[0]+G[0]+T[0]
-        for i in range(1, len(A)): assert A[i]+C[i]+G[i]+T[i] == sites_count
-
-        return [{'A':A[i], 'C':C[i], 'G':G[i], 'T':T[i]} for i in range(len(A))]
-
-
-def read_pfm_save_pwm(filename):
-
-    cal = lambda col, row:log2( ( (col[row]+(PSEUDOCOUNT/4) ) / (A[row]+C[row]+G[row]+T[row]+PSEUDOCOUNT) )/0.25 )
-
-    with open(filename, 'r') as pfm:
-        _ = pfm.readline()
-
-        A = [int(float(a)) for a in pfm.readline().split()]
-        C = [int(float(a)) for a in pfm.readline().split()]
-        G = [int(float(a)) for a in pfm.readline().split()]
-        T = [int(float(a)) for a in pfm.readline().split()]
-
-        rA = list(reversed(T))
-        rC = list(reversed(G))
-        rG = list(reversed(C))
-        rT = list(reversed(A))
-
-        assert len(A) == len(C) and len(C) == len(G) and len(G) == len(T)
-
-        # for some unknown reseon site count at each row is not equal in JASPAR dataset
-        # sites_count = A[0]+C[0]+G[0]+T[0]
-        # for i in range(1, len(A)): assert A[i]+C[i]+G[i]+T[i] == sites_count
-
-        return [{'A':cal(A, i), 'C':cal(C, i), 'G':cal(G, i), 'T':cal(T, i)} for i in range(len(A))], \
-            [{'A':cal(rA, i), 'C':cal(rC, i), 'G':cal(rG, i), 'T':cal(rT, i)} for i in range(len(A))]
-
-
-# deprecated -> integrated into other functions
-def pfm_to_pwm(pfm):
-
-    sites_count = pfm[0]['A']+pfm[0]['C']+pfm[0]['G']+pfm[0]['T']
-    pwm = [{'A':0, 'C':0, 'G':0, 'T':0} for i in range(len(pfm))]
-
-    for i in range(len(pfm)):
-        for letter in 'ACGT':
-            pwm[i][letter] = log2( ( (pfm[i][letter]+(PSEUDOCOUNT/4) ) / (sites_count+PSEUDOCOUNT) )/0.25 )
-
     return pwm
 
 
