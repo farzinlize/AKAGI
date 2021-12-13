@@ -20,9 +20,10 @@ from TrieFind import ChainNode, initial_chainNodes
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
 from mongo import run_mongod_server
 from jaspar import read_pfm_save_pwm
+from doctor import initial_banks_manual
 
 # importing constants
-from constants import APPDATA_PATH, AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT_TAG, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
+from constants import AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT, CHECKPOINT_TAG, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -46,7 +47,6 @@ class ARGS:
         self.multicore = False
         self.ncores = MAX_CORE
         self.jaspar = ''
-        self.checkpoint = True
         self.name = None
         self.resume = False
         self.megalexa = 0
@@ -59,6 +59,7 @@ class ARGS:
         self.auto_order = b'00'
         self.path = ''
         self.compact_dataset = None
+        self.manual_banking = False
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
@@ -96,10 +97,10 @@ def motif_finding_chain(dataset_name,
                         multilayer=None, 
                         megalexa=None, 
                         chaining_disable=False,
+                        manual_banking=False,
                         multicore=False, 
                         cores=1,
                         pfm=None,
-                        checkpoint=None,
                         banks=1,
                         resume=False,
                         on_sequence_compressed=None,
@@ -200,7 +201,7 @@ def motif_finding_chain(dataset_name,
     # ----------------------------------------------------------------------------------- #
 
     # search for observation checkpoint
-    if not resume and checkpoint:
+    if not resume and CHECKPOINT:
         checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
         checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
 
@@ -214,7 +215,7 @@ def motif_finding_chain(dataset_name,
         if not motifs:motifs = observation(q, save_collection=checkpoint_collection)
     
     # run observation without checkpoint check
-    elif not resume and not checkpoint:motifs = observation(q)
+    elif not resume and not CHECKPOINT:motifs = observation(q)
 
     # # # # # # # #
     # - update motifs are reported as chain node from `observation()` 
@@ -225,7 +226,11 @@ def motif_finding_chain(dataset_name,
     if not resume and not motifs:print('[FATAL][ERROR] no observation data is available (error)');return
 
     ############### disable chaining? ###############
-    if chaining_disable:print('[CHAINING] chaining is disabled - end of process');return
+    if chaining_disable:
+        # manual banking only works with disabled chaining
+        if manual_banking:initial_banks_manual(banks, motifs)
+        print('[CHAINING] chaining is disabled - end of process')
+        return
     ###############  start to chain   ###############
 
     # # # # # # # #  OnSequence data structure  # # # # # # # #
@@ -505,8 +510,8 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:'
-    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining',
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:B'
+    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining', 'manual-banking'
         'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
         'multi-layer', 'megalexa=', 'onsequence=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
@@ -556,6 +561,7 @@ if __name__ == "__main__":
         elif o in ['-S', '--score-pool']:arguments.pool = a
         elif o in ['-o', '--auto-order']:arguments.auto_order = bytes.fromhex(a)
         elif o in ['-D', '--compact-dataset']:arguments.compact_dataset = a
+        elif o in ['-B', '--manual-banking']:arguments.manual_banking = True
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -582,10 +588,10 @@ if __name__ == "__main__":
             multilayer=arguments.multilayer,
             megalexa=arguments.megalexa,
             chaining_disable=arguments.disable_chaining,
+            manual_banking=arguments.manual_banking,
             multicore=arguments.multicore,
             cores=arguments.ncores,
             pfm=arguments.jaspar,
-            checkpoint=arguments.checkpoint,
             banks=arguments.nbank,
             resume=arguments.resume,
             on_sequence_compressed=arguments.onsequence,
@@ -623,6 +629,8 @@ if __name__ == "__main__":
             arguments.dmax, 
             arguments.multilayer,
             arguments.onsequence)
+    elif command == 'IBM':
+        pass
     elif command == 'MTH':
         auto_maintenance(arguments)
     elif command == 'NOP':
