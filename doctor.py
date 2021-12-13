@@ -1,8 +1,8 @@
-import sys
-
+import sys, os
 from GKmerhood import GKHoodTree
-
-from constants import DATASET_TREES, DNA_ALPHABET
+from TrieFind import initial_chainNodes
+from constants import BANK_NAME, BANK_PATH, DATASET_TREES, DNA_ALPHABET, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION
+from mongo import get_bank_client, initial_akagi_database
 
 def test_gkhood_dataset_k(gkhood_index, k):
     tree = GKHoodTree(DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
@@ -32,6 +32,31 @@ def generate_possible_kmers(k):
         return result
 
     return recursive_helper('', k)
+
+
+def initial_banks_manual(bank_order, initial_works):
+
+    manual_ports = []
+    for i in range(bank_order):
+        new_bank_port = 3038 + 20 + i*10
+        manual_ports.append(new_bank_port)
+        try:initial_akagi_database(BANK_NAME%i, BANK_PATH%i, new_bank_port, serve=True)
+        except Exception as e:print(f'[FATAL][ERROR] something went wrong {e}');return 
+
+    # -> static job distribution between banks
+    bank_initial_lists = [[] for _ in range(bank_order)]
+    for index, motif in enumerate(initial_works):
+        bank_initial_lists[index%bank_order].append(motif)
+
+    # -> insert jobs into banks
+    for index, port in enumerate(manual_ports):
+        bank_client = get_bank_client(port)
+        result = initial_chainNodes([(m.label, m.foundmap) for m in bank_initial_lists[index]], QUEUE_COLLECTION, bank_client)
+        if not isinstance(result, list):print(f'[FATAL][ERROR] something went wrong {result}');return
+        bank_client.close()
+
+    # shutdown banks after work
+    for index in range(len(manual_ports)):os.system(MONGOD_SHUTDOWN_COMMAND%(BANK_PATH%index))
 
 
 if __name__ == "__main__":
