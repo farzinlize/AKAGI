@@ -511,7 +511,7 @@ if __name__ == "__main__":
 
     # arguments and options
     shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:B'
-    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining', 'manual-banking'
+    longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining', 'manual-banking',
         'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
         'multi-layer', 'megalexa=', 'onsequence=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
