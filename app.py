@@ -147,7 +147,7 @@ def motif_finding_chain(dataset_name,
         print('[lexicon] lexicon size = %d'%len(motifs))
 
         # save collection may be refer to a file but we use it as collection, removing its name tag
-        if not save_collection:save_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
+        if save_collection == '':save_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
         elif save_collection.endswith(CHECKPOINT_TAG):save_collection = save_collection[:-len(CHECKPOINT_TAG)]
 
         # initialzed jobs should be returned as chain nodes
