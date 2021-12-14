@@ -109,7 +109,7 @@ def motif_finding_chain(dataset_name,
                         compact_dataset=None,
                         checkpoint:str=None):
 
-    def observation(q, save_collection=None):
+    def observation(q, save_collection:str=None):
 
         if multilayer:
             assert isinstance(gkhood_index, list) and isinstance(d, list) and isinstance(frame_size, list)
@@ -145,6 +145,10 @@ def motif_finding_chain(dataset_name,
             motifs += motif_tree.extract_motifs(q, EXTRACT_OBJ, greaterthan=False)
 
         print('[lexicon] lexicon size = %d'%len(motifs))
+
+        # save collection may be refer to a file but we use it as collection, removing its name tag
+        if not save_collection:save_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
+        elif save_collection.endswith(CHECKPOINT_TAG):save_collection = save_collection[:-len(CHECKPOINT_TAG)]
 
         # initialzed jobs should be returned as chain nodes
         # foundmaps will be stored in database or memory
@@ -218,7 +222,7 @@ def motif_finding_chain(dataset_name,
         if __debug__:log_it(DEBUG_LOG, f'[CHECKPOINT] observation data existed: {bool(motifs)}')
 
         # run and save observation data
-        if not motifs:motifs = observation(q, save_collection=checkpoint_collection)
+        if not motifs:motifs = observation(q, save_collection=checkpoint)
     
     # run observation without checkpoint check
     elif not resume and not CHECKPOINT:motifs = observation(q)
