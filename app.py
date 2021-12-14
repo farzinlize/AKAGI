@@ -475,10 +475,10 @@ def download_observation_checkpoint(dataset_name, f, d, multilayer):
     download_checkpoint_from_drive(objects_file, drive=drive)
     
 
-def upload_observation_checkpoint(dataset_name, f, d, multilayer, onsequence_name):
+def upload_observation_checkpoint(dataset_name, f, d, multilayer, onsequence_name, checkpoint_file=''):
 
     checkpoint_collection = observation_checkpoint_name(dataset_name, f, d, multilayer, extention=False)
-    checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
+    if not checkpoint_file:checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
     motifs = load_collection(checkpoint_collection)
 
     # check for offline check-points
@@ -640,7 +640,8 @@ if __name__ == "__main__":
             arguments.frame_size, 
             arguments.dmax, 
             arguments.multilayer,
-            arguments.onsequence)
+            arguments.onsequence,
+            checkpoint_file=arguments.checkpoint)
     elif command == 'IBM':
         pass
     elif command == 'MTH':
