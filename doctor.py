@@ -1,7 +1,8 @@
 import sys, os
 from GKmerhood import GKHoodTree
 from TrieFind import initial_chainNodes
-from constants import BANK_NAME, BANK_PATH, DATASET_TREES, DNA_ALPHABET, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION
+from checkpoint import load_checkpoint_file, load_collection
+from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_ALPHABET, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION
 from mongo import get_bank_client, initial_akagi_database
 
 def test_gkhood_dataset_k(gkhood_index, k):
@@ -34,7 +35,12 @@ def generate_possible_kmers(k):
     return recursive_helper('', k)
 
 
-def initial_banks_manual(bank_order, initial_works):
+def initial_banks_manual(bank_order, initial_works_address:str):
+
+    if initial_works_address.endswith(CHECKPOINT_TAG):initial_works = load_checkpoint_file(initial_works_address)
+    else                                             :initial_works = load_collection(initial_works_address)
+    if not isinstance(initial_works, list):print(f"[ERROR] error loading from collection: {initial_works}");return
+    if not initial_works:print("[ERROR] nothing found for initializing banks")                             ;return
 
     manual_ports = []
     for i in range(bank_order):
