@@ -60,6 +60,7 @@ class ARGS:
         self.path = ''
         self.compact_dataset = None
         self.manual_banking = False
+        self.checkpoint = ''
 
 def single_level_dataset(kmin, kmax, level, dmax):
     print('operation SLD: generating single level dataset\n\
@@ -105,7 +106,8 @@ def motif_finding_chain(dataset_name,
                         resume=False,
                         on_sequence_compressed=None,
                         initial_pool='',
-                        compact_dataset=None):
+                        compact_dataset=None,
+                        checkpoint:str=None):
 
     def observation(q, save_collection=None):
 
@@ -202,12 +204,16 @@ def motif_finding_chain(dataset_name,
 
     # search for observation checkpoint
     if not resume and CHECKPOINT:
-        checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
-        checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
+        if checkpoint:
+            if checkpoint.endswith(CHECKPOINT_TAG):motifs = load_checkpoint_file(checkpoint)
+            else                                  :motifs = load_collection(checkpoint)
+        else:
+            checkpoint_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
+            checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
 
-        # load from file if checkpoint file exist, otherwise load from database
-        if os.path.isfile(checkpoint_file):motifs = load_checkpoint_file(checkpoint_file)
-        else                              :motifs = load_collection(checkpoint_collection)
+            # load from file if checkpoint file exist, otherwise load from database
+            if os.path.isfile(checkpoint_file):motifs = load_checkpoint_file(checkpoint_file)
+            else                              :motifs = load_collection(checkpoint_collection)
 
         if __debug__:log_it(DEBUG_LOG, f'[CHECKPOINT] observation data existed: {bool(motifs)}')
 
@@ -510,11 +516,11 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:B'
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:BP:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining', 'manual-banking',
         'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
         'multi-layer', 'megalexa=', 'onsequence=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
-        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=']
+        'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=', 'checkpoint=']
 
     # default values in ARGS object
     arguments = ARGS()
@@ -562,6 +568,7 @@ if __name__ == "__main__":
         elif o in ['-o', '--auto-order']:arguments.auto_order = bytes.fromhex(a)
         elif o in ['-D', '--compact-dataset']:arguments.compact_dataset = a
         elif o in ['-B', '--manual-banking']:arguments.manual_banking = True
+        elif o in ['-P', '--checkpoint']:arguments.checkpoint = a
         
         # only available with NOP command
         elif o in ['-C', '--change']:
@@ -596,7 +603,8 @@ if __name__ == "__main__":
             resume=arguments.resume,
             on_sequence_compressed=arguments.onsequence,
             initial_pool=arguments.pool,
-            compact_dataset=arguments.compact_dataset)
+            compact_dataset=arguments.compact_dataset,
+            checkpoint=arguments.checkpoint)
     elif command == 'SDM':
         sequences_distance_matrix(arguments.sequences)
     elif command == 'ARS':
