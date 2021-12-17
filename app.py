@@ -150,6 +150,8 @@ def motif_finding_chain(dataset_name,
         if save_collection == '':save_collection = observation_checkpoint_name(dataset_name, frame_size, d, multilayer, extention=False)
         elif save_collection.endswith(CHECKPOINT_TAG):save_collection = save_collection[:-len(CHECKPOINT_TAG)]
 
+        print("[CHECKPOINT] saving observation? ", save_collection)
+
         # initialzed jobs should be returned as chain nodes
         # foundmaps will be stored in database or memory
         if save_collection:initial_jobs = initial_chainNodes([(motif.label, motif.foundmap) for motif in motifs], collection_name=save_collection)
