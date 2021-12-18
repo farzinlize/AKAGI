@@ -522,7 +522,7 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Pn:j:a:kh:b:RS:o:D:BP:'
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Xn:j:a:kh:b:RS:o:D:BP:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining', 'manual-banking',
         'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
         'multi-layer', 'megalexa=', 'onsequence=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
@@ -561,7 +561,7 @@ if __name__ == "__main__":
         elif o in ['-A', '--onsequence']:arguments.onsequence = a
         elif o in ['-r', '--reference']:arguments.reference = a
         elif o == '--disable-chaining':arguments.disable_chaining = True
-        elif o in ['-P', '--multicore']: arguments.multicore = True
+        elif o in ['-X', '--multicore']: arguments.multicore = True
         elif o in ['-n', '--ncores']:arguments.ncores = int(a)
         elif o in ['-j', '--jaspar']:arguments.jaspar = a
         elif o in ['-a', '--arguments']:
