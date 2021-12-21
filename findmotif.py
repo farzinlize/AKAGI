@@ -77,12 +77,26 @@ def find_motif_all_neighbours(gkhood_tree, dmax, frame_size, sequences):
     return motifs_tree
 
 
+'''
+    motif finding function using MITRA-like algorithm
+    Observation phase of AKAGI execution using multiple frame sizes and distances
+    progress tag indicates parts necessary for showing progress while execution -> activate or deactivate by prepy script
+'''
 def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences):
     motifs_tree = WatchNode()
-    
+
+    #-> progress
+    number_of_observations = 0
+    #--
+
     for seq_id in range(len(sequences)):
         lframe_start = [0 for _ in range(len(ldmax))]
         lframe_end = [frame_size for frame_size in lframe_size if frame_size <= len(sequences[seq_id])]
+
+        #-> progress
+        sequence_observations = 0
+        iteration_time = currentTime()
+        #--
 
         while lframe_end:
 
@@ -97,6 +111,10 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
                 motifs_tree.add_frame(frame, seq_id, ExtraPosition(lframe_start[index], len(frame)))
                 for each in dneighbours:
                     motifs_tree.add_frame(each[0], seq_id, ExtraPosition(lframe_start[index], len(each[0])))
+                    #-> progress
+                    sequence_observations+=1;number_of_observations+=1
+                sequence_observations+=1;number_of_observations+=1
+                #--
             
             for i in range(len(lframe_start)):
                 lframe_start[i] += 1
@@ -106,7 +124,12 @@ def multiple_layer_window_find_motif(gkhood_trees, ldmax, lframe_size, sequences
                 if lframe_end[end_index] >= len(sequences[seq_id]):
                     lframe_end = lframe_end[:end_index] + lframe_end[end_index+1:]
                     lframe_start = lframe_start[:end_index] + lframe_start[end_index+1:]
-    
+            
+        #-> progress
+        print(f"done with seq_id={seq_id} adding {sequence_observations} number of observations in {currentTime() - iteration_time}")
+    print(f"observation finished using {number_of_observations} total observations")
+    #--
+
     return motifs_tree
 
 
