@@ -384,20 +384,20 @@ def pwm_score_sequence_bad(sequence, pwm):
     return max_score, max_position
 
 
-def brief_sequence(sequences, bundles:List[Dict]):
+def brief_sequence(sequences, bundles:List[Dict], max_seq=MAX_SEQUENCE_COUNT, max_len=MAX_SEQUENCE_LENGTH):
     zipped = [(sequences[i], bundles[i]) for i in range(len(sequences))]
     zipped.sort(key=lambda x:x[1][P_VALUE], reverse=True)
 
-    if len(zipped) > MAX_SEQUENCE_COUNT:
-        zipped = zipped[:MAX_SEQUENCE_COUNT]
+    if len(zipped) > max_seq:
+        zipped = zipped[:max_seq]
 
     brief_sequences = []
     brief_bundles = []
     for sequence, bundle in zipped:
-        if len(sequence) > MAX_SEQUENCE_LENGTH:
+        if len(sequence) > max_len:
             summit = bundle[SUMMIT]
-            start = ceil((2*summit-MAX_SEQUENCE_LENGTH)/2)
-            end = ceil((2*summit+MAX_SEQUENCE_LENGTH)/2)
+            start = ceil((2*summit-max_len)/2)
+            end = ceil((2*summit+max_len)/2)
 
             if start < 0:
                 end += abs(start)
