@@ -485,6 +485,10 @@ def multicore_chaining_main(cores_order,
                             if CPLUS_WORKER:judge_pipe.send(SAVE_SIGNAL)
                             else           :merge.put(SAVE_SIGNAL)
 
+                        elif command.startswith(REPORT_SIGNAL):
+                            if CPLUS_WORKER:judge_pipe.send(REPORT_SIGNAL)
+                            else           :merge.put(SAVE_SIGNAL)
+
                         # signal workers to continue 
                         elif command.startswith(CONTINUE_SIGNAL):
                             if CPLUS_WORKER:
