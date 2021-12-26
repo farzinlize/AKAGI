@@ -4,6 +4,8 @@ from TrieFind import initial_chainNodes
 from checkpoint import load_checkpoint_file, load_collection
 from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_ALPHABET, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION
 from mongo import get_bank_client, initial_akagi_database
+from onSequence import OnSequenceDistribution
+from misc import read_fasta, read_bundle, brief_sequence
 
 def test_gkhood_dataset_k(gkhood_index, k):
     tree = GKHoodTree(DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
@@ -35,13 +37,22 @@ def generate_possible_kmers(k):
     return recursive_helper('', k)
 
 
-def initial_banks_manual(bank_order, initial_works_address:str):
+# initial banks and generate onsequence raw file for cplus-workers
+def manual_initial(bank_order, initial_works_address:str, dataset, onsequence_name):
 
     if initial_works_address.endswith(CHECKPOINT_TAG):initial_works = load_checkpoint_file(initial_works_address)
     else                                             :initial_works = load_collection(initial_works_address)
     if not isinstance(initial_works, list):print(f"[ERROR] error loading from collection: {initial_works}");return
     if not initial_works:print("[ERROR] nothing found for initializing banks")                             ;return
 
+    # initial onsequence, briefing uses constants parameters
+    sequences = read_fasta(dataset + '.fasta')
+    bundles = read_bundle(dataset + '.bundle')
+    sequences, bundles = brief_sequence(sequences, bundles)
+    onsequence = OnSequenceDistribution(initial_works, sequences)
+    onsequence.raw_file(onsequence_name)
+
+    # allocate ports
     manual_ports = []
     for i in range(bank_order):
         new_bank_port = 3038 + 20 + i*10
@@ -66,4 +77,13 @@ def initial_banks_manual(bank_order, initial_works_address:str):
 
 
 if __name__ == "__main__":
-    test_gkhood_dataset_k(int(sys.argv[1]), int(sys.argv[2]))
+    print("manual initial procedure for chaining\nenter how many banks?")
+    bank_order = int(input())
+    print("enter checkpoint file location or mongo-collection for initial works:")
+    initial_works_address = input()
+    print("enter dataset address:")
+    dataset = input()
+    print("enter a name for onsequence file as result:")
+    onseq_name = input()
+    manual_initial(bank_order, initial_works_address, dataset, onseq_name)
+    # test_gkhood_dataset_k(int(sys.argv[1]), int(sys.argv[2]))
