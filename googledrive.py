@@ -13,7 +13,7 @@ from constants import APPDATA_PATH, CHECKPOINT_TAG, GOOGLE_CREDENTIALS_FILE, INT
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
-CLOUD_FILE_SIZE_LIMIT = 100 * (2**20)
+CLOUD_FILE_SIZE_LIMIT = 50 * (2**20)
 
 def connect_and_save_credentials():
     auth = GoogleAuth()
@@ -131,12 +131,35 @@ def query_download_checkpoint(checkpoint=None, filter_resumable=False) -> Google
 
 def store_single_file(single_file:str, drive=None):
 
-    if drive == None:
-        drive = connect_drive()
+    return
+
+    # if drive == None:
+    #     drive = connect_drive()
     
-    drive_file = drive.CreateFile({'title': single_file.split('/')[-1]})
-    drive_file.SetContentFile(single_file)
-    drive_file.Upload()
+    # # extract name
+    # name = single_file.split('/')[-1]
+
+    # with open(single_file, 'rb') as data:
+    #     # read first chunk
+    #     chunk_idx = 0;chunk = data.read(CLOUD_FILE_SIZE_LIMIT)
+
+    #     # upload the whole file if its size is less than cloud limit size
+    #     if not data.read(1):
+    #         whole_file = drive.CreateFile({'title': name})
+    #         whole_file.content = io.BytesIO(chunk)
+    #         whole_file.Upload()
+
+    #     else:
+    #         data.seek(-1, 1) # undo reading one byte
+    #         while chunk:
+
+    #             # upload a chunk
+    #             chunk_drive = drive.CreateFile({'title': f'{chunk_idx}-{name}'})
+    #             chunk_drive.content = io.BytesIO(chunk)
+    #             chunk_drive.Upload()
+
+    #             # check for more chunk
+    #             chunk_idx+=1;chunk = data.read(CLOUD_FILE_SIZE_LIMIT)
 
 
 def download_file(what, out=None, drive=None):
