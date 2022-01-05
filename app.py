@@ -480,6 +480,8 @@ def download_observation_checkpoint(dataset_name, f, d, multilayer):
 
 def upload_observation_checkpoint(dataset_name, f, d, multilayer, onsequence_name, checkpoint_file=''):
 
+    if AUTO_DATABASE_SETUP:run_mongod_server()
+
     checkpoint_collection = observation_checkpoint_name(dataset_name, f, d, multilayer, extention=False)
     if not checkpoint_file:checkpoint_file = checkpoint_collection + CHECKPOINT_TAG
     motifs = load_collection(checkpoint_collection)
@@ -501,6 +503,8 @@ def upload_observation_checkpoint(dataset_name, f, d, multilayer, onsequence_nam
     if(onsequence_name):store_single_file(onsequence_name, drive=google_drive)
 
     print(f"[UPLOAD] obseration {checkpoint_collection} is uploaded into cloud")
+
+    if AUTO_DATABASE_SETUP:shutdown_mongod()
         
 
 def testing(dataset_name):
