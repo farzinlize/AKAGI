@@ -1,4 +1,6 @@
 '''
+    DEPRECATED MODULE - can not upload files more than 100MB -__-
+    
     googledrive.py module
         - all functions responsible of downloading and uploading checkpoints are safe
         to use with any kind of checkpoint (observation or jobs)
@@ -22,9 +24,10 @@ def connect_and_save_credentials():
 
 
 def connect_drive():
-    auth = GoogleAuth()
-    auth.LoadCredentialsFile(GOOGLE_CREDENTIALS_FILE)
-    return GoogleDrive(auth)
+    return 
+    # auth = GoogleAuth()
+    # auth.LoadCredentialsFile(GOOGLE_CREDENTIALS_FILE)
+    # return GoogleDrive(auth)
 
 
 def download_checkpoint_from_drive(checkpoint_drive:GoogleDriveFile, drive=None, clear_cloud=False):
