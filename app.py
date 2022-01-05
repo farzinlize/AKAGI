@@ -18,7 +18,7 @@ from googledrive import connect_drive, download_checkpoint_from_drive, query_dow
 from checkpoint import load_checkpoint_file, load_collection, observation_checkpoint_name, save_checkpoint
 from TrieFind import ChainNode, initial_chainNodes
 from multi import END_EXIT, ERROR_EXIT, TIMESUP_EXIT, multicore_chaining_main
-from mongo import run_mongod_server
+from mongo import run_mongod_server, shutdown_mongod
 from jaspar import read_pfm_save_pwm
 from doctor import manual_initial
 
@@ -241,6 +241,7 @@ def motif_finding_chain(dataset_name,
     if chaining_disable:
         # manual banking only works with disabled chaining
         if manual_banking:manual_initial(banks, motifs, dataset_name, on_sequence_compressed)
+        if AUTO_DATABASE_SETUP:shutdown_mongod()
         print('[CHAINING] chaining is disabled - end of process')
         return
     ###############  start to chain   ###############

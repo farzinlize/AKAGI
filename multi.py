@@ -17,7 +17,7 @@ from selectors import DefaultSelector, EVENT_READ
 
 # project modules
 from FoundMap import MemoryMap
-from mongo import get_bank_client, initial_akagi_database, serve_database_server
+from mongo import get_bank_client, initial_akagi_database, serve_database_server, shutdown_bank
 from checkpoint import lock_checkpoint, query_resumable_checkpoints, remove_checkpoint
 from networking import AssistanceService
 from pool import AKAGIPool, get_AKAGI_pools_configuration
@@ -27,7 +27,7 @@ from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, C_RESUME_SIGNAL, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAX_CORE, MEMORY_BALANCING_REPORT, MONGOD_SHUTDOWN_COMMAND, MONGO_PORT, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, RESET_BANK, SAVE_SIGNAL, STATUS_RUNNING, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE, WORKERS_ID_REPORT
+from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, C_RESUME_SIGNAL, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAX_CORE, MEMORY_BALANCING_REPORT, MONGO_PORT, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, RESET_BANK, SAVE_SIGNAL, STATUS_RUNNING, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE, WORKERS_ID_REPORT
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -424,7 +424,7 @@ def multicore_chaining_main(cores_order,
         except Exception as e:
             # somthing went wrong so we shut down mongods safely
             print(f"[FATAL][ERROR] cant run cplus-workers {e}")
-            for index in range(len(bank_ports)):os.system(MONGOD_SHUTDOWN_COMMAND%(BANK_PATH%index))
+            for index in range(len(bank_ports)):shutdown_bank(BANK_PATH%index)
             return ERROR_EXIT
     
     else: # using python workers (slower) and shared memory queues
@@ -572,7 +572,7 @@ def multicore_chaining_main(cores_order,
     judge.join()
 
     # shut down banks
-    for index in range(len(bank_ports)):os.system(MONGOD_SHUTDOWN_COMMAND%(BANK_PATH%index))
+    for index in range(len(bank_ports)):shutdown_bank(BANK_PATH%index)
 
     return exit_code
 
