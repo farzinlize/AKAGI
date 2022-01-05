@@ -1,7 +1,7 @@
 import os, json
 from io import BytesIO
 from misc import binary_to_list, log_it, make_location
-from constants import AUTORECONNECT_TRY, BANKBASE_ADDRESS, BINARY_DATA, CLEAR, COLLECTION, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, DROP, END, FIND_ONE, INSERT_MANY, INSERT_ONE, INT_SIZE, LABEL, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGOD_SHUTDOWN_COMMAND, MONGO_ID, MONGO_PORT, MONGO_SECRET_ADDRESS, MONGO_USERNAME, POP, RAW_MONGOD_SERVER_COMMAND_LINUX, STR, UPDATE
+from constants import APPDATA_PATH, AUTORECONNECT_TRY, BANKBASE_ADDRESS, BINARY_DATA, CLEAR, COLLECTION, DATABASE_ADDRESS, DATABASE_LOG, DATABASE_NAME, DEL, DROP, END, FIND_ONE, INSERT_MANY, INSERT_ONE, INT_SIZE, LABEL, MONGOD_RUN_SERVER_COMMAND_LINUX, MONGOD_SHUTDOWN_COMMAND, MONGO_ID, MONGO_PORT, MONGO_SECRET_ADDRESS, MONGO_USERNAME, POP, RAW_MONGOD_SERVER_COMMAND_LINUX, STR, UPDATE
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
@@ -63,6 +63,10 @@ def run_mongod_server():
     output = stream.read()
     with open(DATABASE_LOG, 'a') as log:log.write('[MONGO][SERVER] running server via python:\n' + output)
     if output.split('\n')[2].startswith('ERROR'):raise Exception(f'cant run mongo server check {DATABASE_LOG}')
+
+
+def shutdown_mongod()  :os.system(MONGOD_SHUTDOWN_COMMAND%(f"{APPDATA_PATH}mongod/"))
+def shutdown_bank(path):os.system(MONGOD_SHUTDOWN_COMMAND%(path))
 
 
 def safe_operation(collection:Collection, command, order=None, order_filter=None, try_tokens=AUTORECONNECT_TRY):
