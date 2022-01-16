@@ -283,6 +283,13 @@ class ThatException(Exception):
 #                 functions                  #
 # ########################################## #
 
+def text_to_size(text:str):
+    multipliers = {'b':1, 'KB':1024, 'MB':1024*1024, 'GB':1024*1024*1024}
+    for key, value in multipliers.items():
+        if text.endswith(key):return int(text.split(key)[0]) * value
+    raise Exception('must indicate multiplier (b/KB/MB/GB)')
+    
+
 def time_has_ended(since, hours):
     return (datetime.now() - since) > timedelta(hours=hours)
 

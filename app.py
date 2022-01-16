@@ -1,15 +1,15 @@
 # python libraries 
-import os
+import sys, os
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 from time import time as currentTime
 from time import strftime, gmtime
 from getopt import getopt
-import sys
+if sys.platform != "win32":import resource
 
 # project imports
 from GKmerhood import DummyTree, GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, multiple_layer_window_find_motif
-from misc import brief_sequence, change_global_constant_py, log_it, make_compact_dataset, read_bundle, read_fasta, edit_distances_matrix, extract_from_fasta
+from misc import brief_sequence, change_global_constant_py, log_it, make_compact_dataset, read_bundle, read_fasta, edit_distances_matrix, extract_from_fasta, text_to_size
 from report import FastaInstance, OnSequenceAnalysis, aPWM, Ranking
 from alignment import alignment_matrix
 from twobitHandler import download_2bit
@@ -527,9 +527,9 @@ if __name__ == "__main__":
         raise Exception('request command must be specified (read the description for supported commands)')
 
     # arguments and options
-    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Xn:j:a:kh:b:RS:o:D:BP:'
+    shortopt = 'd:m:M:l:s:g:O:q:f:G:p:Qux:A:C:r:Xn:j:a:kh:b:RS:o:D:BP:i:'
     longopts = ['kmin=', 'kmax=', 'distance=', 'level=', 'sequences=', 'gap=', 'resume-chaining', 'manual-banking',
-        'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=',
+        'overlap=', 'mask=', 'quorum=', 'frame=', 'gkhood=', 'path=', 'find-max-q', 'bank=', 'auto-order=', 'ram-limit=',
         'multi-layer', 'megalexa=', 'onsequence=', 'change=', 'reference=', 'disable-chaining', 'compact-dataset=',
         'multicore', 'ncores=', 'jaspar=', 'arguments=', 'check-point', 'name=', 'assist=', 'score-pool=', 'checkpoint=']
 
@@ -580,6 +580,10 @@ if __name__ == "__main__":
         elif o in ['-D', '--compact-dataset']:arguments.compact_dataset = a
         elif o in ['-B', '--manual-banking']:arguments.manual_banking = True
         elif o in ['-P', '--checkpoint']:arguments.checkpoint = a
+
+        # only works with linux operating system
+        elif o in ['-i', '--ram-limit']:
+            if sys.platform != "win32":resource.setrlimit(resource.RLIMIT_AS, (text_to_size(a), text_to_size(a)))
         
         # only available with NOP command
         elif o in ['-C', '--change']:
