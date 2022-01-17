@@ -63,6 +63,12 @@ class AKAGIPool:
         return ranks
 
 
+    # WARNING - depend on current configuration 
+    def is_it_enough(self, ranks):
+        if ranks[1] != -1 or ranks[2] != -1:return True
+        return False
+
+
     def place(self, pattern:ChainNode, ranks):
         for rank, table in zip(ranks, self.tables):
             if rank == -1: continue
@@ -71,7 +77,7 @@ class AKAGIPool:
 
     def remove_blank(self, ranks):
         for table_index, rank in enumerate(ranks):
-            self.tables[table_index] = self.tables[table_index][:rank] + self.tables[table_index][rank+1:]
+            if rank!=-1:self.tables[table_index] = self.tables[table_index][:rank] + self.tables[table_index][rank+1:]
 
 
     def judge(self, pattern:ChainNode):
@@ -356,6 +362,7 @@ class AKAGIPool:
             self.tables.append(new_table[:])
 
 
+# DEPRECATED CLASS
 class RankingPool:
 
     class Entity:

@@ -236,7 +236,8 @@ def judge_process(mother_pipe:Connection, port, cores, initial_pool:AKAGIPool):
         scores = struct.unpack("ddd", read_packet)
         ranks = global_pool.insert_blank(scores)
         report.write(f"---- ranks = {ranks} and scores = {scores}\n");report.flush()
-        if reduce(lambda a, b:a or (b!=-1), ranks, False):
+
+        if global_pool.is_it_enough(ranks):
             report.write('---- job accepted\n');report.flush()
             worker.send(b'\1') # request data
             label_size = bytes_to_int(worker.recv(INT_SIZE), endian='little')
@@ -253,8 +254,10 @@ def judge_process(mother_pipe:Connection, port, cores, initial_pool:AKAGIPool):
 
             global_pool.place(ChainNode(label, MemoryMap(initial=foundlist)), ranks)
         
-        # ignore patterns that appears in no pools
-        else:worker.send(b'\0')
+        # ignore patterns if their aren't enough XD
+        else:
+            global_pool.remove_blank(ranks)
+            worker.send(b'\0')
 
     def admin_respond(mother:Connection):
         nonlocal report_count, mother_active_signal
