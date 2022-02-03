@@ -458,6 +458,9 @@ def multicore_chaining_main(cores_order,
     else:
         exit_code = END_EXIT
         exec_time = datetime.now()
+
+        sleep(60) # initial mother wait to make sure all processes started their without trouble
+
         while True:
 
             # just wait for next check round
@@ -470,12 +473,21 @@ def multicore_chaining_main(cores_order,
             if time_has_ended(exec_time, TIMER_CHAINING_HOURS):
                 exit_code = TIMESUP_EXIT;break
 
-            # check for status
+            # check for status (manual exit)
             if not os.path.isfile(CHAINING_EXECUTION_STATUS):
                 exit_code = MANUAL_EXIT;break
 
-            # check for processes activity
-            if not reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers]):
+            # DEPRECATED -> check for error an activity alongside together
+            # check for processes activity (halt if all dead)
+            # if not reduce(lambda a, b:a or b, [worker.is_alive() for worker in workers]):
+            #     exit_code = ERROR_EXIT;break
+        
+            # check for errors and activity (halt if all dead or troubled)
+            checklist = []
+            for worker in workers:
+                if not worker.is_alive():checklist.append(False);continue
+                with open(f'process_{worker.pid}.errors', 'r') as stderr:checklist.append(len(stderr.read())==0)
+            if not reduce(lambda a, b:a or b, checklist):
                 exit_code = ERROR_EXIT;break
 
             # check for commands while chaining
