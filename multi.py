@@ -544,6 +544,7 @@ def multicore_chaining_main(cores_order,
     # message the workers to terminate their job and merge for last time
     for worker in workers:
         if CPLUS_WORKER:
+            if not worker.is_alive():continue
             os.kill(worker.pid, SIGINT)
             worker.stdin.write(b'T');worker.stdin.flush()
 
