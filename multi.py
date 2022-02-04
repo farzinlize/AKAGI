@@ -27,7 +27,7 @@ from onSequence import OnSequenceDistribution
 from findmotif import next_chain
 
 # settings and global variables
-from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, C_RESUME_SIGNAL, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAX_CORE, MEMORY_BALANCING_REPORT, MONGO_PORT, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, RESET_BANK, SAVE_SIGNAL, STATUS_RUNNING, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE, WORKERS_ID_REPORT
+from constants import BANK_NAME, BANK_PATH, BANK_PORTS_REPORT, C_CHANGE_BANK_SIGNAL, C_RESUME_SIGNAL, C_TERMINATE_SIGNAL, CHAINING_EXECUTION_STATUS, CHAINING_PERMITTED_SIZE, CHECK_TIME_INTERVAL, COMMAND_WHILE_CHAINING, CONTINUE_SIGNAL, CPLUS_WORKER, CR_FILE, EXECUTION, GLOBAL_POOL_NAME, GOOD_HIT, IMPORTANT_LOG, INT_SIZE, JUDGE_PORT, MAX_CORE, MEMORY_BALANCING_REPORT, MONGO_PORT, PARENT_WORK, POOL_HIT_SCORE, POOL_TAG, PROCESS_ENDING_REPORT, PROCESS_ERRORS_FILE, PROCESS_REPORT_FILE, QUEUE_COLLECTION, REDIRECT_BANK, REPORT_SIGNAL, RESET_BANK, SAVE_SIGNAL, STATUS_RUNNING, TIMER_CHAINING_HOURS, EXIT_SIGNAL, WORKER_EXECUTABLE, WORKERS_ID_REPORT
 
 # global multi variables
 MANUAL_EXIT = -3
@@ -527,6 +527,7 @@ def multicore_chaining_main(cores_order,
                             worker_index = int(worker_index_st)
                             if CPLUS_WORKER:
                                 os.kill(workers[worker_index].pid, SIGINT)
+                                workers[worker_index].stdin.write(C_CHANGE_BANK_SIGNAL)
                                 workers[worker_index].stdin.write(int_to_bytes(int(order_bank_port_st)))
                                 workers[worker_index].stdin.flush()
                             else:
@@ -558,7 +559,7 @@ def multicore_chaining_main(cores_order,
         if CPLUS_WORKER:
             if not worker.is_alive():continue
             os.kill(worker.pid, SIGINT)
-            worker.stdin.write(b'T');worker.stdin.flush()
+            worker.stdin.write(C_TERMINATE_SIGNAL);worker.stdin.flush()
 
         else:message.put(EXIT_SIGNAL)
 
