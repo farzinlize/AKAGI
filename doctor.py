@@ -2,7 +2,7 @@ from io import BytesIO
 import sys, os
 from FoundMap import MemoryMap
 from GKmerhood import GKHoodTree
-from TrieFind import ChainNode, initial_chainNodes
+from TrieFind import ChainNode, initial_chainNodes, pop_chain_node
 from checkpoint import load_checkpoint_file, load_collection
 from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_ALPHABET, INT_SIZE, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION
 from mongo import get_bank_client, initial_akagi_database
@@ -107,6 +107,25 @@ def restore_dumped_motifs(dumped='dumped.motifs', back_bank=None):
     
     if not back_bank:return restored, corrupted
     return initial_chainNodes([(m.label, m.foundmap) for m in restored], QUEUE_COLLECTION, get_bank_client(back_bank)), corrupted
+
+
+def all_into_bank_zero(zero_port, other_ports):
+    zero = get_bank_client(zero_port)
+    for port in other_ports:
+        other = get_bank_client(port)
+
+        # extract works
+        stuff = []
+        item = pop_chain_node(other)
+        while item:
+            if isinstance(item, ChainNode):stuff.append(item)
+            else:break
+            item = pop_chain_node(other)
+        other.close()
+        
+        # move them into zero
+        initial_chainNodes([(m.label, m.foundmap) for m in stuff], QUEUE_COLLECTION, zero)
+    zero.close()
 
 
 if __name__ == "__main__":
