@@ -3,7 +3,7 @@ import sys, os
 from FoundMap import MemoryMap
 from GKmerhood import GKHoodTree
 from TrieFind import ChainNode, initial_chainNodes, pop_chain_node
-from checkpoint import load_checkpoint_file, load_collection
+from checkpoint import load_checkpoint_file, load_collection, save_checkpoint
 from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_ALPHABET, INT_SIZE, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION
 from mongo import get_bank_client, initial_akagi_database
 from onSequence import OnSequenceDistribution
@@ -126,6 +126,20 @@ def all_into_bank_zero(zero_port, other_ports):
         # move them into zero
         initial_chainNodes([(m.label, m.foundmap) for m in stuff], QUEUE_COLLECTION, zero)
     zero.close()
+
+
+def clean_bank(bank_port, rest_file):
+    bank = get_bank_client(bank_port)
+
+    stuff = []
+    item = pop_chain_node(bank)
+    while item:
+        if isinstance(item, ChainNode):stuff.append(item)
+        else:break
+        item = pop_chain_node(bank)
+    bank.close()
+
+    save_checkpoint(stuff, rest_file, compact=True)
 
 
 if __name__ == "__main__":
