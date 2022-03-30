@@ -1,5 +1,6 @@
-from functools import reduce
 import struct
+from sys import maxsize as MAXSIZE
+from functools import reduce
 from io import BufferedReader, BytesIO
 from math import ceil, e, log2, inf
 from datetime import datetime, timedelta
@@ -653,17 +654,33 @@ def editDistDP(str1, str2):
             else: 
                 dp[i][j] = 1 + min(dp[i][j-1],        # Insert 
                                    dp[i-1][j],        # Remove 
-                                   dp[i-1][j-1])    # Replace 
-    
-    # for e in dp:
-    #     for r in e:
-    #         if len(str(r)) == 2:
-    #             print(r, end=' ')
-    #         else:
-    #             print(r, end='  ')
-    #     print()
+                                   dp[i-1][j-1])      # Replace 
 
     return dp[m][n] 
+
+
+def maxSubArraySum(a,size):
+ 
+    max_so_far = -MAXSIZE - 1
+    max_ending_here = 0
+    start = 0
+    end = 0
+    s = 0
+ 
+    for i in range(0,size):
+ 
+        max_ending_here += a[i]
+ 
+        if max_so_far < max_ending_here:
+            max_so_far = max_ending_here
+            start = s
+            end = i
+ 
+        if max_ending_here < 0:
+            max_ending_here = 0
+            s = i+1
+ 
+    return max_so_far, start, end
 
 
 def edit_distances_matrix(sequences):
