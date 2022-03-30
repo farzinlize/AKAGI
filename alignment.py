@@ -5,7 +5,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.Align.Applications import MuscleCommandline
 
-def alignment_matrix(sequences):
+def alignment_strings(sequences):
     records = [SeqRecord(Seq(sequence)) for sequence in sequences]
     muscle_cline = MuscleCommandline(clwstrict=True, cmd='muscle')
 
@@ -25,7 +25,7 @@ def alignment_matrix(sequences):
 ######################################
 
 if __name__ == "__main__":
-    res = alignment_matrix(['AGGAACAGAGTGTTC', 
+    res = alignment_strings(['AGGAACAGAGTGTTC', 
     'AGGAACAGAGTGTGC', 
     'AGGAACAGAGTGTGC', 
     'AGGAACAGAGTGTTC', 

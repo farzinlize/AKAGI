@@ -11,7 +11,7 @@ from GKmerhood import DummyTree, GKmerhood, GKHoodTree
 from findmotif import find_motif_all_neighbours, multiple_layer_window_find_motif
 from misc import brief_sequence, change_global_constant_py, log_it, make_compact_dataset, read_bundle, read_fasta, edit_distances_matrix, extract_from_fasta, text_to_size
 from report import FastaInstance, OnSequenceAnalysis, aPWM, Ranking
-from alignment import alignment_matrix
+from alignment import alignment_strings
 from twobitHandler import download_2bit
 from onSequence import OnSequenceDistribution
 from googledrive import connect_drive, download_checkpoint_from_drive, query_download_checkpoint, store_single_file
@@ -349,7 +349,7 @@ def analysis_raw_statistics(dataset_name, results_location):
         pattern_statistics = pattern_analysis.extract_raw_statistics()
 
         # align all pattern instances for scoring
-        align_matrix = alignment_matrix(alignment_set)
+        align_matrix = alignment_strings(alignment_set)
         alignment_set = []
 
         # measure score and ranking
@@ -445,7 +445,7 @@ def alignment_fasta(fasta_location):
             if read:
                 if '>' in line:
                     if instances:
-                        alignments = alignment_matrix(instances)
+                        alignments = alignment_strings(instances)
                         for alignment in alignments:
                             align.write(alignment+'\n')
                     read = False
