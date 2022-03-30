@@ -43,6 +43,17 @@ class FoundMap(Bytable):
                     sequences[seq_id][start_index:end_index], 
                     (end_index-start_index))
         return result
+    
+    def instances_string_list(self, sequences):
+        instances = []
+        bundle = self.get_list()
+        for index, seq_id in enumerate(bundle[0]):
+            position: ExtraPosition
+            for position in bundle[1][index]:
+                end_index = position.end_position()
+                start_index = position.start_position
+                instances.append(sequences[seq_id][start_index:end_index])
+        return instances
 
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
