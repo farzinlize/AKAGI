@@ -142,6 +142,13 @@ def clean_bank(bank_port, rest_file):
     save_checkpoint(stuff, rest_file, compact=True)
 
 
+def open_dataset(dataset, sequence_count, maximum_length):
+    sequences = read_fasta(dataset + '.fasta')
+    bundles = read_bundle(dataset + '.bundle')
+    sequences, bundles = brief_sequence(sequences, bundles, max_seq=sequence_count, max_len=maximum_length)
+    return sequences, bundles
+
+
 if __name__ == "__main__":
     print("manual initial procedure for chaining\nenter how many banks?")
     bank_order = int(input())
