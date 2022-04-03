@@ -55,6 +55,27 @@ class FoundMap(Bytable):
                 instances.append(sequences[seq_id][start_index:end_index])
         return instances
 
+    def does_exist(self, seq_id, position):
+        bundle = self.get_list()
+        for index, sid in enumerate(bundle[0]):
+            if sid == seq_id:
+                for p in bundle[1][index]:
+                    if p == position:return True
+                return False
+        return False
+
+    '''
+    removing redundant instances and return new non-redundant map in memory
+    '''
+    def remove_redundant(self):
+        bundle = self.get_list()
+        nr_bun = MemoryMap()
+        for index, seq_id in enumerate(bundle[0]):
+            position: ExtraPosition
+            for position in bundle[1][index]:
+                if not nr_bun.does_exist(seq_id, position):nr_bun.add_location(seq_id, position)
+        return nr_bun
+
 
 # static foundmap choose based on global variable of FOUNDMAP_MODE
 def get_foundmap(batch_limit=BATCH_SIZE, foundmap_type=FOUNDMAP_MODE) -> FoundMap:

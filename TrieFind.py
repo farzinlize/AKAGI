@@ -241,9 +241,12 @@ class ChainNode(Bytable):
             foundmap = read_foundmap(buffer)
             return ChainNode(label, foundmap)
             
-    
-    def instances_fasta(self, sequences):return self.foundmap.instances_to_string_fastalike(self.label, sequences)
-    def instances_list(self, sequences):return self.foundmap.instances_string_list(sequences)
+    '''
+    instances of pattern (non-redundant instances)
+        use instances_fasta for exact location of each instance or instances_list for only sequences
+    '''
+    def instances_fasta(self, sequences):return self.foundmap.remove_redundant().instances_to_string_fastalike(self.label, sequences)
+    def instances_list(self, sequences):return self.foundmap.remove_redundant().instances_string_list(sequences)
 
 
 def initial_chainNodes(tuples:List[Tuple[str, FoundMap]], collection_name, client:MongoClient=None)->List[ChainNode]:
