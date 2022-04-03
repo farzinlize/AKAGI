@@ -43,7 +43,6 @@ cplus/build/*
 
 *secret*
 *test*
-*log*
 mprofile*
 massif*
 
@@ -55,3 +54,4 @@ quickreport
 totalchain
 constants.py
 akagi.pwd
+Dockerfile

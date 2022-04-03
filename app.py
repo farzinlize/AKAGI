@@ -23,7 +23,7 @@ from jaspar import read_pfm_save_pwm
 from doctor import manual_initial
 
 # importing constants
-from constants import AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT, CHECKPOINT_TAG, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
+from constants import AUTO_DATABASE_SETUP, BRIEFING, BYTES_OR_PICKLE, CHECKPOINT, CHECKPOINT_TAG, CPLUS_WORKER, DATASET_NAME, DATASET_TREES, DEBUG_LOG, DEFAULT_COLLECTION, EXECUTION, EXTRACT_OBJ, FOUNDMAP_DISK, FOUNDMAP_MEMO, FOUNDMAP_MODE, GLOBAL_POOL_NAME, IMPORTANT_LOG, MAX_CORE, MAX_SEQUENCE_LENGTH, ON_SEQUENCE_ANALYSIS, PWM, P_VALUE, BINDING_SITE_LOCATION, ARG_UNSET, FIND_MAX, DELIMETER, SAVE_ONSEQUENCE_FILE, SEQUENCES, SEQUENCE_BUNDLES
 
 # [WARNING] related to DATASET_TREES in constants 
 # any change to one of these lists must be applied to another
@@ -186,7 +186,7 @@ def motif_finding_chain(dataset_name,
     if BRIEFING:
         sequences, bundles = brief_sequence(sequences, bundles)
         assert len(sequences) == len(bundles)
-        print('[BRIEFING] number of sequences = %d'%len(sequences))
+        print('[BRIEFING] number of sequences = %d | maximum length = %d'%(len(sequences), MAX_SEQUENCE_LENGTH))
         if __debug__:
             with open(DEBUG_LOG, 'a') as log:
                 for seq, bundle in zip(sequences, bundles):

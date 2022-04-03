@@ -659,8 +659,9 @@ def editDistDP(str1, str2):
     return dp[m][n] 
 
 
-def maxSubArraySum(a,size):
+def maxSubArraySum(a):
  
+    size = len(a)
     max_so_far = -MAXSIZE - 1
     max_ending_here = 0
     start = 0
