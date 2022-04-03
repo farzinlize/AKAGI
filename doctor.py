@@ -8,6 +8,7 @@ from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_A
 from mongo import get_bank_client, initial_akagi_database
 from onSequence import OnSequenceDistribution
 from misc import binary_to_list, bytes_to_int, pwm_score_sequence, read_fasta, read_bundle, brief_sequence
+from pool import AKAGIPool, get_AKAGI_pools_configuration
 
 def test_gkhood_dataset_k(gkhood_index, k):
     tree = GKHoodTree(DATASET_TREES[gkhood_index][0], DATASET_TREES[gkhood_index][1])
@@ -147,6 +148,12 @@ def open_dataset(dataset, sequence_count, maximum_length):
     bundles = read_bundle(dataset + '.bundle')
     sequences, bundles = brief_sequence(sequences, bundles, max_seq=sequence_count, max_len=maximum_length)
     return sequences, bundles
+
+
+def load_pool(address):
+    pooly = AKAGIPool(get_AKAGI_pools_configuration())
+    pooly.read_snap(address)
+    return pooly
 
 
 if __name__ == "__main__":
