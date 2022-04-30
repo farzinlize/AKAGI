@@ -1,13 +1,15 @@
 from io import BytesIO
 import sys, os
+import matplotlib.pyplot as plt
+from numpy import linspace
 from FoundMap import MemoryMap
 from GKmerhood import GKHoodTree
 from TrieFind import ChainNode, initial_chainNodes, pop_chain_node
 from checkpoint import load_checkpoint_file, load_collection, save_checkpoint
-from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_ALPHABET, INT_SIZE, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION
+from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_ALPHABET, INT_SIZE, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION, SUMMIT
 from mongo import get_bank_client, initial_akagi_database
 from onSequence import OnSequenceDistribution
-from misc import binary_to_list, bytes_to_int, pwm_score_sequence, read_fasta, read_bundle, brief_sequence
+from misc import ExtraPosition, binary_to_list, bytes_to_int, pwm_score_sequence, read_fasta, read_bundle, brief_sequence
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 
 def test_gkhood_dataset_k(gkhood_index, k):
@@ -154,6 +156,33 @@ def load_pool(address):
     pooly = AKAGIPool(get_AKAGI_pools_configuration())
     pooly.read_snap(address)
     return pooly
+
+
+def centrality_plot(pattern:ChainNode, bundles, save=None):
+    x_axis = linspace(-len(bundles), len(bundles), 2 * len(bundles)+1)
+    hist = [0 for _ in range(-len(bundles), len(bundles)+1)]
+    zero = len(bundles)
+    bun = pattern.foundmap.remove_redundant().get_list()
+    for index, seq_id in enumerate(bun[0]):
+        position:ExtraPosition
+        for position in bun[1][index]:
+            end_index = position.end_position() # int(position) + len(pattern.label)
+            start_index = position.start_position
+            # if len(position.chain) != 0:
+            #     start_index = position.chain[0]
+            mid_index = (end_index + start_index)//2
+            shifted_distance = (bundles[seq_id][SUMMIT] - mid_index) + zero
+            if shifted_distance < 0 or shifted_distance >= len(hist):
+                print("[DOCTOR][CENTRALITY] very far instaces")
+                continue
+            hist[shifted_distance] += 1
+    plt.plot(x_axis, hist)
+    plt.axvline(0, color='red')
+    plt.xlabel('distance to summit')
+    plt.ylabel('number of instances')
+    if save:plt.savefig(save)
+    else   :plt.show()
+    plt.clf()
 
 
 if __name__ == "__main__":
