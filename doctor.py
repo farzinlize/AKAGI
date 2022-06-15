@@ -1,3 +1,4 @@
+from cmath import inf
 from io import BytesIO
 import sys, os
 import matplotlib.pyplot as plt
@@ -9,7 +10,7 @@ from checkpoint import load_checkpoint_file, load_collection, save_checkpoint
 from constants import BANK_NAME, BANK_PATH, CHECKPOINT_TAG, DATASET_TREES, DNA_ALPHABET, INT_SIZE, MONGOD_SHUTDOWN_COMMAND, QUEUE_COLLECTION, SUMMIT
 from mongo import get_bank_client, initial_akagi_database
 from onSequence import OnSequenceDistribution
-from misc import ExtraPosition, binary_to_list, bytes_to_int, pwm_score_sequence, read_fasta, read_bundle, brief_sequence
+from misc import ExtraPosition, binary_to_list, bytes_to_int, pwm_score_sequence, read_fasta, read_bundle, brief_sequence, read_pfm_save_pwm
 from pool import AKAGIPool, get_AKAGI_pools_configuration
 
 def test_gkhood_dataset_k(gkhood_index, k):
@@ -185,6 +186,68 @@ def centrality_plot(pattern:ChainNode, bundles, save=None):
     plt.clf()
 
 
+def one_instance_per_sequence_analysis(pattern:ChainNode, dataset, nseq, length, pwm):
+    bundle = pattern.foundmap.get_list()
+    s, b = open_dataset(dataset, nseq, length)
+    pa, pr = read_pfm_save_pwm(pwm)
+
+    total_j = 0             # total j scores
+    total_distance = 0      # total distances
+    total_distance_j = 0    # total j score of best distances
+    total_j_distance = 0    # total distances of best j score
+    j_positions = []
+    distance_positions = []
+
+    for index, seq_id in enumerate(bundle[0]):
+
+        position: ExtraPosition
+        best_j_position: ExtraPosition
+        best_distance_position: ExtraPosition
+        best_j = 0
+        best_distance = inf
+
+        for position in bundle[1][index]:
+
+            # retrive data
+            end_index = position.end_position() 
+            start_index = position.start_position
+            sequence = s[seq_id][start_index:end_index]
+            score, _ = pwm_score_sequence(sequence, pa)
+            r_score, _ = pwm_score_sequence(sequence, pr)
+            mid_index = (end_index + start_index)//2
+
+            # calculating score
+            distance = abs(b[seq_id][SUMMIT] - mid_index)
+            j = max(score, r_score)
+
+            # choose the best
+            if j > best_j:
+                best_j = j
+                best_j_position = position
+                best_j_distance = distance
+
+            if distance < best_distance:
+                best_distance = distance
+                best_distance_position = position
+                best_distance_j = j
+        
+        # aggregated
+        total_j += best_j
+        total_distance += best_distance
+        total_distance_j += best_distance_j
+        total_j_distance += best_j_distance
+        j_positions.append(best_j_position)
+        distance_positions.append(best_distance_position)
+    
+    nseq = len(bundle[0])
+    return {'j':total_j/nseq, 
+            'j_summit':total_j_distance/nseq, 
+            'summit':total_distance/nseq, 
+            'summit_j':total_distance_j/nseq, 
+            'j positions':j_positions, 
+            'summit positions':distance_positions}
+
+ 
 if __name__ == "__main__":
     print("manual initial procedure for chaining\nenter how many banks?")
     bank_order = int(input())
