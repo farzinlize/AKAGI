@@ -1,6 +1,9 @@
 from TrieFind import ChainNode
-from misc import ExtraPosition, int_to_bytes, bytes_to_int
+from misc import int_to_bytes, bytes_to_int
 from constants import INT_SIZE
+from doctor import open_dataset
+from checkpoint import load_checkpoint_file
+import sys
 
 class JungleNode(ChainNode):
     def __init__(self, node:ChainNode, id=-1):
@@ -63,3 +66,10 @@ def make_jungle(motifs:list[ChainNode], sequences:list[str]) -> list[JungleNode]
     print("family check done")
     
     return the_jungle
+
+
+if __name__ == '__main__':
+    s, b = open_dataset(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
+    motifs = load_checkpoint_file(sys.argv[4])
+    j = make_jungle(motifs, s)
+    jungle_to_file(j, sys.argv[5])
